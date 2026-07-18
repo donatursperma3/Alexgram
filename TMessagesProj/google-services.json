@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:482033834017:android:66b1d11ea4bb803408eb60",
         "android_client_info": {
-          "package_name": "org.tele.alexgram"
+          "package_name": "org.tele.alexgram.ax"
         }
       },
       "oauth_client": [],
@@ -29,4 +29,4 @@
     }
   ],
   "configuration_version": "1"
-}
+}
