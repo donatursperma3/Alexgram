@@ -8918,12 +8918,12 @@
     <string name="Gift2HideChannelInfo">You can hide your name and message from all visitors of this channel except its admins.</string>
     <string name="Gift2HideSelf">Hide My Name</string>
     <string name="Gift2HideSelfInfo">Hide my name and message from visitors to my profile</string>
-    <string name="Gift2AuctionInfo_one">%d gift is dropped at varying intervals to the top %d bidder by bid amount.</string>
-    <string name="Gift2AuctionInfo_other">%d gifts are dropped at varying intervals to the top %d bidders by bid amount.</string>
-    <string name="Gift2AuctionInfoLearnMore2_one">%d gift is dropped at varying intervals to the top %d bidder by bid amount. **Learn More >**</string>
-    <string name="Gift2AuctionInfoLearnMore2_other">%d gifts are dropped at varying intervals to the top %d bidders by bid amount. **Learn More >**</string>
-    <string name="Gift2AuctionInfo2_one">Top **%d** bidder will get an **%s**\nthis round.</string>
-    <string name="Gift2AuctionInfo2_other">Top **%d** bidders will get an **%s**\nthis round.</string>
+    <string name="Gift2AuctionInfo_one">%1$d gift is dropped at varying intervals to the top %2$d bidder by bid amount.</string>
+    <string name="Gift2AuctionInfo_other">%1$d gifts are dropped at varying intervals to the top %2$d bidders by bid amount.</string>
+    <string name="Gift2AuctionInfoLearnMore2_one">%1$d gift is dropped at varying intervals to the top %2$d bidder by bid amount. **Learn More >**</string>
+    <string name="Gift2AuctionInfoLearnMore2_other">%1$d gifts are dropped at varying intervals to the top %2$d bidders by bid amount. **Learn More >**</string>
+    <string name="Gift2AuctionInfo2_one">Top **%1$d** bidder will get an **%2$s**\nthis round.</string>
+    <string name="Gift2AuctionInfo2_other">Top **%1$d** bidders will get an **%2$s**\nthis round.</string>
     <string name="Gift2AuctionInfo3">**%1$s** gifts are dropped in **%2$d** rounds\nto the top **%3$d** bidders. %4$s</string>
     <string name="Gift2AuctionTableStarted">Started</string>
     <string name="Gift2AuctionTableEnded">Ended</string>
@@ -9921,21 +9921,21 @@
     <string name="SuggestAPostBelowHint">Tap here to suggest a post for %s</string>
     <string name="SuggestAPostBelowSubtitle">Tap to offer a price for publishing</string>
     <string name="SuggestAPostBelowSubtitleStars">⭐️ %s for publishing anytime</string>
-    <string name="SuggestAPostBelowSubtitleStarsAndTime">⭐️ %s %s</string>
+    <string name="SuggestAPostBelowSubtitleStarsAndTime">⭐️ %1$s %2$s</string>
     <string name="SuggestAPostTooMuch">You can offer maximum %s</string>
     <string name="SuggestAPostTooSmall">You must offer minimum %s</string>
 
     <string name="SuggestionAgreementReached">🤝 **Agreement Reached!**</string>
 
-    <string name="SuggestionAgreementReachedUser1">📆 Your post will be automatically published on **%s** **%s**</string>
+    <string name="SuggestionAgreementReachedUser1">📆 Your post will be automatically published on **%1$s** **%2$s**</string>
     <string name="SuggestionAgreementReachedUser1PresentPerfect">📆 Your post has been published on **%s**</string>
-    <string name="SuggestionAgreementReachedUser1PastSimple">📆 Your post was automatically published on **%s** **%s**</string>
-    <string name="SuggestionAgreementReachedAdmin1">📆 This post will be automatically published **%s** **%s**</string>
+    <string name="SuggestionAgreementReachedUser1PastSimple">📆 Your post was automatically published on **%1$s** **%2$s**</string>
+    <string name="SuggestionAgreementReachedAdmin1">📆 This post will be automatically published **%1$s** **%2$s**</string>
     <string name="SuggestionAgreementReachedAdmin1PresentPerfect">📆 This post has been published on **%s**</string>
-    <string name="SuggestionAgreementReachedAdmin1PastSimple">📆 This post was automatically published on **%s** **%s**</string>
+    <string name="SuggestionAgreementReachedAdmin1PastSimple">📆 This post was automatically published on **%1$s** **%2$s**</string>
 
     <string name="SuggestionAgreementReachedUser2">💰 You have been charged ⭐️ **%s**.</string>
-    <string name="SuggestionAgreementReachedAdmin2">💰 **%s** has been charged ⭐️ **%s**.</string>
+    <string name="SuggestionAgreementReachedAdmin2">💰 **%1$s** has been charged ⭐️ **%2$s**.</string>
     <string name="SuggestionAgreementReachedUser3Stars">⏳ **%s** will receive your **Stars** once the post has been live for **%d** hours.</string>
     <string name="SuggestionAgreementReachedAdmin3Stars">⏳ **%s** will receive the **Stars** once the post has been live for **%d** hours.</string>
     <string name="SuggestionAgreementReachedUser4Stars">🔁 If **%s** removes the post before it has been live for **%d** hours, your **Stars** will be refunded.</string>
@@ -10277,8 +10277,8 @@
     <string name="GiftAuctionInfoText">Join the battle for exclusive gifts.</string>
     <string name="GiftAuctionInfo1Header_one">Top %d Bidder</string>
     <string name="GiftAuctionInfo1Header_other">Top %d Bidders</string>
-    <string name="GiftAuctionInfo1Text_one">%d gift is dropped at varying intervals to the top %d bidder by bid amount.</string>
-    <string name="GiftAuctionInfo1Text_other">%d gifts are dropped at varying intervals to the top %d bidders by bid amount.</string>
+    <string name="GiftAuctionInfo1Text_one">%1$d gift is dropped at varying intervals to the top %2$d bidder by bid amount.</string>
+    <string name="GiftAuctionInfo1Text_other">%1$d gifts are dropped at varying intervals to the top %2$d bidders by bid amount.</string>
     <string name="GiftAuctionInfo2Header">Bid Carryover</string>
     <string name="GiftAuctionInfo2Text_one">If your bid leaves the top %d, it will automatically join the next round.</string>
     <string name="GiftAuctionInfo2Text_other">If your bid leaves the top %d, it will automatically join the next round.</string>
@@ -10422,9 +10422,9 @@
     <string name="Gift2ActiveAuctionsActiveStatusOutbid">You\'ve been outbid.</string>
     <string name="Gift2ActiveAuctionsActiveStatusEarly">You\'ve placed an early bid.</string>
 
-    <string name="Gift2ActiveAuctionsActiveRound">Round %s of %s</string>
+    <string name="Gift2ActiveAuctionsActiveRound">Round %1$s of %2$s</string>
     <string name="Gift2ActiveAuctionsActiveRaiseBid">Raise Bid</string>
-    <string name="Gift2ActiveAuctionsActiveBidActive">Your bid **%s** is ranked **#%d**</string>
+    <string name="Gift2ActiveAuctionsActiveBidActive">Your bid **%1$s** is ranked **#%2$d**</string>
     <string name="Gift2ActiveAuctionsActiveBidOutbid">Your bid **%s** is outbid</string>
     <string name="Gift2AuctionsItemsBought2_one">%1$d %2$s item bought ></string>
     <string name="Gift2AuctionsItemsBought2_other">%1$d %2$s items bought ></string>
@@ -10439,7 +10439,7 @@
     <string name="Gift2AuctionsBidHasBeenPlaced">Your bid has been placed</string>
     <string name="Gift2AuctionsBidHasBeenIncreased">Your bid has been increased</string>
     <string name="Gift2AuctionsChangeRecipient">Change Recipient</string>
-    <string name="Gift2AuctionsChangeRecipient2">You’ve already placed a bid on this gift for **%s.** Do you want to raise your bid and change the recipient to **%s?**</string>
+    <string name="Gift2AuctionsChangeRecipient2">You’ve already placed a bid on this gift for **%1$s.** Do you want to raise your bid and change the recipient to **%2$s?**</string>
     <string name="Passkey">Passkeys</string>
     <string name="PasskeyDeleteTitle">Delete Passkey</string>
     <string name="PasskeyDeleteText">Once deleted, this passkey can\'t be used to log in.\n\nDon\'t forget to remove it from your password manager too.</string>
@@ -10498,7 +10498,7 @@
     <string name="GiftOfferRowValue">Value</string>
     <string name="GiftOfferRowDuration">Duration</string>
     <string name="GiftOfferPay">Pay ⭐️%s</string>
-    <string name="GiftOfferPayMulti">Pay %s and %s</string>
+    <string name="GiftOfferPayMulti">Pay %1$s and %2$s</string>
     <string name="GiftOfferPayMultiPart">⭐️%s</string>
     <string name="GiftOfferSellFor">Sell for ⭐️%s</string>
     <string name="GiftOfferAmount">⭐️ %s</string>
