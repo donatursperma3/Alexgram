@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "482033834017",
-    "project_id": "alexgram-6e860",
-    "storage_bucket": "alexgram-6e860.firebasestorage.app"
+    "project_number": "739033841954",
+    "project_id": "axgram-915f7",
+    "storage_bucket": "axgram-915f7.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:482033834017:android:66b1d11ea4bb803408eb60",
+        "mobilesdk_app_id": "1:739033841954:android:0e67a3d15353fc1e89257b",
         "android_client_info": {
           "package_name": "org.tele.alexgram.ax"
         }
@@ -15,15 +15,12 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAYZ0Xans1xi7nbGLD7rVLjnc3NEFiO3kU"
+          "current_key": "AIzaSyChXq7dAWQB3q5k7k84d9BodNhjVP9KY00"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": []
-        },
-        "analytics_service": {
-          "status": 1
         }
       }
     }

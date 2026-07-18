@@ -1,26 +1,33 @@
 name: Build Telegram APK
 
-# Kapan workflow ini dijalankan
+# Run on push to main/dev and manually
 on:
-  # Berjalan manual dari tab Actions di GitHub (Sangat disarankan)
   workflow_dispatch:
-  # Berjalan otomatis saat ada push ke branch tertentu (opsional)
   push:
     branches:
-      - master
+      - main
+      - dev
+      - alpha
       - 'fix-**'
       - 'feat-**'
+
+permissions:
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # LOCAL_PROPERTIES should contain base64(local.properties)
+      LOCAL_PROPERTIES: ${{ secrets.LOCAL_PROPERTIES }}
+      GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+      TELEGRAM_APP_ID: ${{ secrets.APP_ID }}
+      TELEGRAM_APP_HASH: ${{ secrets.APP_HASH }}
 
     steps:
-      # 1. Checkout kode dari repository
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 2. Setup Java (Telegram fork modern biasanya butuh JDK 17)
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -32,25 +39,58 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # 4. (PENTING) Decode google-services.json dari GitHub Secrets
-      # Jika build Anda tidak butuh file ini, Anda bisa menghapus step ini
-      - name: Decode google-services.json
-        env:
-          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      # Menyiapkan Android SDK dan paket terkait agar Gradle dapat membangun proyek
+      # (build-tools, NDK, dan platform yang diperlukan)
+      - name: Set up Android SDK Tools
+        uses: android-actions/setup-android@v3
+        with:
+          packages: "build-tools;36.0.0 ndk;27.2.12479018 platforms;android-36"
+
+      - name: Configure Android SDK Path
         run: |
-          if [ ! -z "$GOOGLE_SERVICES_JSON" ]; then
-            echo "Membuat google-services.json dari secrets..."
-            echo $GOOGLE_SERVICES_JSON | base64 --decode > TMessagesProj/google-services.json
+          echo "sdk.dir=${ANDROID_HOME}" >> local.properties
+
+      - name: Decode google-services.json (optional)
+        run: |
+          if [ ! -z "${GOOGLE_SERVICES_JSON}" ]; then
+            echo "Decoding google-services.json from secrets"
+            echo "${GOOGLE_SERVICES_JSON}" | base64 --decode > TMessagesProj/google-services.json
           else
-            echo "Secret tidak ditemukan, melewati step ini."
+            echo "No GOOGLE_SERVICES_JSON provided; skipping"
           fi
 
-      # 5. Bersihkan dan Build APK
-      # Catatan: Telegram biasanya menggunakan flavor 'afat'. Jika gagal, coba ganti 'assembleRelease' dengan 'assembleAfat'
-      - name: Build APK
-        run: ./gradlew assembleRelease --no-daemon
+      - name: Prepare LOCAL_PROPERTIES (optional)
+        run: |
+          if [ ! -z "${LOCAL_PROPERTIES}" ]; then
+            echo "Writing local.properties from LOCAL_PROPERTIES secret"
+            echo "${LOCAL_PROPERTIES}" | base64 --decode > local.properties
+          else
+            echo "No LOCAL_PROPERTIES secret provided; Gradle will fallback to project local.properties if present"
+          fi
 
-      # 6. Upload APK sebagai Artifact (Agar bisa didownload)
+      # Jalankan task Gradle yang sesuai berdasarkan branch
+      # - main -> assembleRelease
+      # - dev  -> assembleStaging
+      # - lainnya -> assembleDebug
+      - name: Build APK (select task by branch)
+        env:
+          GIT_REF_NAME: ${{ github.ref_name }}
+        run: |
+          echo "Building on branch: ${GIT_REF_NAME}"
+          if [ "${GIT_REF_NAME}" = "main" ]; then
+            ./gradlew TMessagesProj:assembleRelease --no-daemon
+          elif [ "${GIT_REF_NAME}" = "dev" ]; then
+            ./gradlew TMessagesProj:assembleStaging --no-daemon
+          else
+            ./gradlew TMessagesProj:assembleDebug --no-daemon
+          fi
+
+      # Upload file APK yang dihasilkan sebagai artifact untuk diunduh dari halaman run
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
