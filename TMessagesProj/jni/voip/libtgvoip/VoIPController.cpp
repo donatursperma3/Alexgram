@@ -2122,7 +2122,7 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 						f=sentVideoFrames.erase(f);
 						continue;
 					}else{
-						LOGE("!!!!!!!!!!!!!!11 VIDEO FRAME LOSS DETECTED [1] %zu of %zu fragments", sentVideoFrames[0].unacknowledgedPackets.size(), sentVideoFrames[0].fragmentCount);
+						LOGE("!!!!!!!!!!!!!!11 VIDEO FRAME LOSS DETECTED [1] %zu of %u fragments", sentVideoFrames[0].unacknowledgedPackets.size(), (unsigned int)sentVideoFrames[0].fragmentCount);
 						videoPacketLossCount++;
 						videoKeyframeRequested=true;
 						videoSource->RequestKeyFrame();
@@ -2131,7 +2131,7 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 				}else if(first){
 					first=false;
 				}else if(!first && f->unacknowledgedPackets.size()<f->fragmentCount){
-					LOGE("!!!!!!!!!!!!!!11 VIDEO FRAME LOSS DETECTED [2] %zu of %zu fragments", f->unacknowledgedPackets.size(), f->fragmentCount);
+					LOGE("!!!!!!!!!!!!!!11 VIDEO FRAME LOSS DETECTED [2] %zu of %u fragments", f->unacknowledgedPackets.size(), (unsigned int)f->fragmentCount);
 					videoPacketLossCount++;
 					videoKeyframeRequested=true;
 					videoSource->RequestKeyFrame();

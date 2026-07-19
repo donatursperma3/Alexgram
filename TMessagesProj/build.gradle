@@ -82,7 +82,11 @@ android {
         compilerOptions {
             jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
             // Opt in to apply some annotations to both the value parameter and the backing field
-            freeCompilerArgs.set(['-Xannotation-default-target=param-property'])
+            freeCompilerArgs.set([
+                '-Xannotation-default-target=param-property',
+                '-Xlint:-deprecation',
+                '-Xlint:-unchecked'
+            ])
         }
     }
 
@@ -96,7 +100,7 @@ android {
 
     splits {
         abi {
-            enable = false
+            enable = true
             reset()
             universalApk = false
             if (!nativeTarget.isBlank()) {
@@ -104,7 +108,7 @@ android {
                     include abi
                 }
             } else {
-                include 'arm64-v8a', 'x86_64'
+                include 'armeabi-v7a', 'arm64-v8a', 'x86_64'
             }
         }
     }

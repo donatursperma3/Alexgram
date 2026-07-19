@@ -90,10 +90,11 @@ jobs:
             ./gradlew TMessagesProj:assembleDebug --no-daemon
           fi
 
-      # Upload file APK yang dihasilkan sebagai artifact untuk diunduh dari halaman run
-      - name: Upload APK Artifact
+      # Upload APK split per ABI sebagai artifact agar ukuran unduhan lebih kecil dan file lebih terpisah
+      - name: Upload Split APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Alexgram-APK
+          name: Alexgram-APK-Split
           path: TMessagesProj/build/outputs/apk/**/*.apk
+          if-no-files-found: error
           retention-days: 7000 # APK akan dihapus dari server GitHub setelah 7000 hari
