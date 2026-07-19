@@ -35,6 +35,7 @@ using std::vector;
 using std::map;
 using std::make_shared;
 using std::initializer_list;
+using std::move;
 
 /* Helper for representing null - just a do-nothing struct, plus comparison
  * operators so the helpers in JsonValue work. We can't use nullptr_t because

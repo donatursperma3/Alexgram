@@ -87,7 +87,7 @@ class AnalyticsManager @Inject constructor(
         if (!isEnabled) return
         
         if (id == NotificationCenter.didReceiveNewMessages) {
-            val messages = args[1] as ArrayList<MessageObject>
+            val messages = args.getOrNull(1) as? ArrayList<MessageObject> ?: return
             scope.launch {
                 messages.forEach { msg ->
                     // Exclude Service Messages (User joined, etc.)
