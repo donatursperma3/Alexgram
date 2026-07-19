@@ -477,11 +477,21 @@
     <string name="ShowAdminTagInVoiceChatDesc">Display admin or owner badges next to user names in voice/video chats.</string>
     <!-- [Alexgram: Admin Tag in Voice Chat] - End -->
     <!-- [Alexgram: Sender Name on Stickers] - Start -->
+    <string name="ShowSenderNameOnOutgoingMessages">Show sender name on outgoing messages</string>
+    <string name="ShowSenderNameOnOutgoingMessagesDesc">Display the sender name above your own messages in chats.</string>
     <string name="ShowSenderNameOnSticker">Show sender name on stickers</string>
     <string name="ShowSenderNameOnStickerDesc">Display the sender\'s name directly on sticker messages in group chats.</string>
     <string name="ShowSenderNameOnGif">Show sender name on GIFs</string>
     <string name="ShowSenderNameOnGifDesc">Display the sender\'s name on GIF messages (works when sender name on stickers is enabled).</string>
     <!-- [Alexgram: Sender Name on Stickers] - End -->
+    <!-- [Alexgram: Avatar Visibility] - Start -->
+    <string name="ShowOutgoingAvatarInGroupChat">Show outgoing avatar in groups</string>
+    <string name="ShowOutgoingAvatarInGroupChatDesc">Display your avatar on outgoing messages in group chats.</string>
+    <string name="ShowOutgoingAvatarInPersonalChat">Show outgoing avatar in personal chats</string>
+    <string name="ShowOutgoingAvatarInPersonalChatDesc">Display your avatar on outgoing messages in one-on-one chats.</string>
+    <string name="ShowIncomingAvatarInPersonalChat">Show incoming avatar in personal chats</string>
+    <string name="ShowIncomingAvatarInPersonalChatDesc">Display avatars for incoming messages in one-on-one chats.</string>
+    <!-- [Alexgram: Avatar Visibility] - End -->
     <!-- [Alexgram: Sender Name on Media] - Start -->
     <string name="ShowSenderNameOnMedia">Show sender name on media like Telegram Desktop</string>
     <string name="ShowSenderNameOnMediaDesc">Display the sender\'s name overlaying photos and videos instead of above them, similar to Telegram Desktop.</string>

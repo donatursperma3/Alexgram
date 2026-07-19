@@ -20009,6 +20009,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         if (currentMessageObject.isSponsored()) {
             return false;
         }
+        if (tw.nekomimi.nekogram.NekoConfig.showSenderNameOnOutgoingMessages.Bool() && currentMessageObject.isOutOwner()) {
+            return true;
+        }
         if (currentMessageObject.isGiveawayOrGiveawayResults()) {
             return false;
         }
@@ -29584,6 +29587,25 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     }
 
     public boolean needDrawAvatar() {
+        if (currentMessageObject == null) {
+            return false;
+        }
+        if (currentMessageObject.forceAvatar || currentMessageObject.getDialogId() == UserObject.VERIFY && currentMessageObject.messageOwner != null && currentMessageObject.messageOwner.fwd_from != null) {
+            return true;
+        }
+        if (currentMessageObject.isSponsored()) {
+            return false;
+        }
+        if (currentMessageObject.isOutOwner()) {
+            if (DialogObject.isChatDialog(currentMessageObject.getDialogId()) && !tw.nekomimi.nekogram.NekoConfig.showOutgoingAvatarInGroupChat.Bool()) {
+                return false;
+            }
+            if (DialogObject.isUserDialog(currentMessageObject.getDialogId()) && !tw.nekomimi.nekogram.NekoConfig.showOutgoingAvatarInPersonalChat.Bool()) {
+                return false;
+            }
+        } else if (DialogObject.isUserDialog(currentMessageObject.getDialogId()) && !tw.nekomimi.nekogram.NekoConfig.showIncomingAvatarInPersonalChat.Bool()) {
+            return false;
+        }
         return (
             isChat && !isSavedPreviewChat && (!isThreadPost || isForum) && (
                 currentMessageObject != null && !currentMessageObject.isOutOwner() && currentMessageObject.needDrawAvatar()

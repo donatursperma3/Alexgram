@@ -197,10 +197,16 @@ public class NekoConfig {
     public static ConfigItem forceSelectVoiceChatProfile = addConfig("forceSelectVoiceChatProfile", configTypeBool, false);
     // [Alexgram: Always Ask How to Join Voice Chats] - End
     // [Alexgram: Sender Name on Stickers] - Start
+    public static ConfigItem showSenderNameOnOutgoingMessages = addConfig("showSenderNameOnOutgoingMessages", configTypeBool, false);
     public static ConfigItem showSenderNameOnSticker = addConfig("showSenderNameOnSticker", configTypeBool, false);
     public static ConfigItem showSenderNameOnGif = addConfig("showSenderNameOnGif", configTypeBool, false);
     public static ConfigItem showSenderNameOnMedia = addConfig("showSenderNameOnMedia", configTypeBool, false);
     // [Alexgram: Sender Name on Stickers] - End
+    // [Alexgram: Avatar Visibility] - Start
+    public static ConfigItem showOutgoingAvatarInGroupChat = addConfig("showOutgoingAvatarInGroupChat", configTypeBool, true);
+    public static ConfigItem showOutgoingAvatarInPersonalChat = addConfig("showOutgoingAvatarInPersonalChat", configTypeBool, true);
+    public static ConfigItem showIncomingAvatarInPersonalChat = addConfig("showIncomingAvatarInPersonalChat", configTypeBool, true);
+    // [Alexgram: Avatar Visibility] - End
     public static ConfigItem enableCustomPrivacy = addConfig("enableCustomPrivacy", configTypeBool, true);
     public static ConfigItem enableSelectRangeInSharedMedia = addConfig("enableSelectRangeInSharedMedia", configTypeBool, true);
     // [Alexgram: Hide Birthdays] - Start

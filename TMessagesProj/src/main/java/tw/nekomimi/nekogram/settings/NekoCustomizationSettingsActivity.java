@@ -101,6 +101,10 @@ public class NekoCustomizationSettingsActivity extends BaseNekoXSettingsActivity
             LocaleController.getString("AlwaysAskHowToJoinVoiceChatDesc", R.string.AlwaysAskHowToJoinVoiceChatDesc),
             LocaleController.getString("AlwaysAskHowToJoinVoiceChat", R.string.AlwaysAskHowToJoinVoiceChat)
     ));
+    private final AbstractConfigCell showSenderNameOnOutgoingMessagesRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.showSenderNameOnOutgoingMessages, LocaleController.getString("ShowSenderNameOnOutgoingMessagesDesc", R.string.ShowSenderNameOnOutgoingMessagesDesc), LocaleController.getString("ShowSenderNameOnOutgoingMessages", R.string.ShowSenderNameOnOutgoingMessages)));
+    private final AbstractConfigCell showOutgoingAvatarInGroupChatRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.showOutgoingAvatarInGroupChat, LocaleController.getString("ShowOutgoingAvatarInGroupChatDesc", R.string.ShowOutgoingAvatarInGroupChatDesc), LocaleController.getString("ShowOutgoingAvatarInGroupChat", R.string.ShowOutgoingAvatarInGroupChat)));
+    private final AbstractConfigCell showOutgoingAvatarInPersonalChatRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.showOutgoingAvatarInPersonalChat, LocaleController.getString("ShowOutgoingAvatarInPersonalChatDesc", R.string.ShowOutgoingAvatarInPersonalChatDesc), LocaleController.getString("ShowOutgoingAvatarInPersonalChat", R.string.ShowOutgoingAvatarInPersonalChat)));
+    private final AbstractConfigCell showIncomingAvatarInPersonalChatRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.showIncomingAvatarInPersonalChat, LocaleController.getString("ShowIncomingAvatarInPersonalChatDesc", R.string.ShowIncomingAvatarInPersonalChatDesc), LocaleController.getString("ShowIncomingAvatarInPersonalChat", R.string.ShowIncomingAvatarInPersonalChat)));
     private final AbstractConfigCell showSenderNameOnStickerRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.showSenderNameOnSticker, LocaleController.getString("ShowSenderNameOnStickerDesc", R.string.ShowSenderNameOnStickerDesc), LocaleController.getString("ShowSenderNameOnSticker", R.string.ShowSenderNameOnSticker)));
     private final AbstractConfigCell showSenderNameOnGifRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.showSenderNameOnGif, LocaleController.getString("ShowSenderNameOnGifDesc", R.string.ShowSenderNameOnGifDesc), LocaleController.getString("ShowSenderNameOnGif", R.string.ShowSenderNameOnGif)));
     private final AbstractConfigCell showSenderNameOnMediaRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.showSenderNameOnMedia, LocaleController.getString("ShowSenderNameOnMediaDesc", R.string.ShowSenderNameOnMediaDesc), LocaleController.getString("ShowSenderNameOnMedia", R.string.ShowSenderNameOnMedia)));
@@ -207,6 +211,11 @@ public class NekoCustomizationSettingsActivity extends BaseNekoXSettingsActivity
                 tooltip.showWithAction(0, UndoView.ACTION_NEED_RESTART, null, null);
             } else if (key.equals(NekoConfig.enableLocalEditorPlus.getKey())) {
                 tooltip.showWithAction(0, UndoView.ACTION_NEED_RESTART, null, null);
+            } else if (key.equals(NekoConfig.showSenderNameOnOutgoingMessages.getKey()) || key.equals(NekoConfig.showOutgoingAvatarInGroupChat.getKey()) || key.equals(NekoConfig.showOutgoingAvatarInPersonalChat.getKey()) || key.equals(NekoConfig.showIncomingAvatarInPersonalChat.getKey())) {
+                NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.reloadInterface);
+                if (getParentLayout() != null) {
+                    getParentLayout().rebuildAllFragmentViews(false, false);
+                }
             } else if (key.equals(NekoConfig.showSenderNameOnSticker.getKey())) {
                 // Show or hide the GIF sub-option based on sticker name toggle
                 if ((boolean) newValue) {

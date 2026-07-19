@@ -4786,6 +4786,7 @@ public class ChatActivity extends BaseFragment implements
 			headerItem = menu.addItem(chat_menu_options, otherIcon);
 			otherIcon.addView(headerItem.getIconView());
 			headerItem.setContentDescription(LocaleController.getString(R.string.AccDescrMoreOptions));
+			bindHeaderMenuItem(headerItem);
 			if (avatarContainer != null) {
 				avatarContainer.setAvatarOptionsMenuItem(headerItem);
 			}
@@ -5077,6 +5078,7 @@ public class ChatActivity extends BaseFragment implements
 			headerItem = menu.addItem(chat_menu_options, otherIcon);
 			otherIcon.addView(headerItem.getIconView());
 			headerItem.setContentDescription(LocaleController.getString(R.string.AccDescrMoreOptions));
+			bindHeaderMenuItem(headerItem);
 
 			headerItem.lazilyAddSubItem(copy_business_link, R.drawable.msg_copy, getString(R.string.Copy));
 			headerItem.lazilyAddSubItem(share_business_link, R.drawable.msg_share, getString(R.string.LinkActionShare));
@@ -46768,6 +46770,17 @@ public class ChatActivity extends BaseFragment implements
 		int width;
 		int height;
 		int lastBottom;
+	}
+
+	private void bindHeaderMenuItem(ActionBarMenuItem item) {
+		if (item == null) {
+			return;
+		}
+		item.setOnClickListener(v -> {
+			if (item.getVisibility() == View.VISIBLE) {
+				item.toggleSubMenu();
+			}
+		});
 	}
 
 	private void nkbtn_onclick_actionbar(int id) {
