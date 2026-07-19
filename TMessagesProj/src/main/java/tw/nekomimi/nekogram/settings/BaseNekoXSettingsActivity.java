@@ -404,18 +404,26 @@ public class BaseNekoXSettingsActivity extends BaseFragment {
             return;
         }
         AbstractConfigCell cell = cellGroup.rows.get(position);
-        switch (cell) {
-            case ConfigCellTextCheck c -> c.onClick((TextCheckCell) view);
-            case ConfigCellTextCheck2 c -> c.onClick();
-            case ConfigCellTextCheckIcon c -> c.onClick();
-            case ConfigCellSelectBox c -> c.onClick(view);
-            case ConfigCellTextInput c -> c.onClick();
-            case ConfigCellTextInput2 c -> c.onClick();
-            case ConfigCellTextDetail c -> c.onClick(view, position);
-            case ConfigCellCheckBox ignored -> onCheckBoxCellClick(view, position);
-            case ConfigCellCustom ignored -> onCustomCellClick(view, position, x, y);
-            case WithOnClick withOnClick -> withOnClick.onClick();
-            case null, default -> {}
+        if (cell instanceof ConfigCellTextCheck) {
+            ((ConfigCellTextCheck) cell).onClick((TextCheckCell) view);
+        } else if (cell instanceof ConfigCellTextCheck2) {
+            ((ConfigCellTextCheck2) cell).onClick();
+        } else if (cell instanceof ConfigCellTextCheckIcon) {
+            ((ConfigCellTextCheckIcon) cell).onClick();
+        } else if (cell instanceof ConfigCellSelectBox) {
+            ((ConfigCellSelectBox) cell).onClick(view);
+        } else if (cell instanceof ConfigCellTextInput) {
+            ((ConfigCellTextInput) cell).onClick();
+        } else if (cell instanceof ConfigCellTextInput2) {
+            ((ConfigCellTextInput2) cell).onClick();
+        } else if (cell instanceof ConfigCellTextDetail) {
+            ((ConfigCellTextDetail) cell).onClick(view, position);
+        } else if (cell instanceof ConfigCellCheckBox) {
+            onCheckBoxCellClick(view, position);
+        } else if (cell instanceof ConfigCellCustom) {
+            onCustomCellClick(view, position, x, y);
+        } else if (cell instanceof WithOnClick) {
+            ((WithOnClick) cell).onClick();
         }
     }
 

@@ -1099,25 +1099,25 @@ public class NekoTranslatorSettingsActivity extends BaseNekoXSettingsActivity {
                 boolean divider = position < items.size() - 1;
                 String query = currentQuery[0];
                 int highlightColor = Theme.getColor(Theme.key_windowBackgroundWhiteBlueText4, resourcesProvider);
-                switch (holder.itemView) {
-                    case TextSettingsCell cell -> {
-                        if (item.type == MODEL_ITEM_TYPE_DEFAULT) {
-                            CharSequence text = formatModelNameForList(item.text);
-                            text = highlightQueryInText(text, query, highlightColor);
-                            cell.setTextAndValue(text, item.value, divider);
-                            cell.setIcon(0);
-                        } else if (item.type == MODEL_ITEM_TYPE_LOADING) {
-                            cell.setText(item.text, divider);
-                            cell.setIcon(0);
-                        } else if (item.type == MODEL_ITEM_TYPE_MODEL) {
-                            CharSequence text = highlightQueryInText(item.text, query, highlightColor);
-                            cell.setText(text, divider);
-                            cell.setIcon(0);
-                        } else {
-                            cell.setText(item.text, divider);
-                            cell.setIcon(item.type == MODEL_ITEM_TYPE_ERROR ? R.drawable.msg_retry : 0);
-                        }
+                if (holder.itemView instanceof TextSettingsCell) {
+                    TextSettingsCell cell = (TextSettingsCell) holder.itemView;
+                    if (item.type == MODEL_ITEM_TYPE_DEFAULT) {
+                        CharSequence text = formatModelNameForList(item.text);
+                        text = highlightQueryInText(text, query, highlightColor);
+                        cell.setTextAndValue(text, item.value, divider);
+                        cell.setIcon(0);
+                    } else if (item.type == MODEL_ITEM_TYPE_LOADING) {
+                        cell.setText(item.text, divider);
+                        cell.setIcon(0);
+                    } else if (item.type == MODEL_ITEM_TYPE_MODEL) {
+                        CharSequence text = highlightQueryInText(item.text, query, highlightColor);
+                        cell.setText(text, divider);
+                        cell.setIcon(0);
+                    } else {
+                        cell.setText(item.text, divider);
+                        cell.setIcon(item.type == MODEL_ITEM_TYPE_ERROR ? R.drawable.msg_retry : 0);
                     }
+                }
                     case TextInfoPrivacyCell cell -> cell.setText(item.text);
                     default -> {
                     }

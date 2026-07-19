@@ -257,12 +257,16 @@ public class AyuViewDeleted extends NekoDelegateFragment {
     @Override
     public View createView(Context context) {
         var peer = getMessagesController().getUserOrChat(dialogId);
-        String name = switch (peer) {
-            case null -> getString(R.string.ViewDeleted);
-            case TLRPC.User user -> user.first_name;
-            case TLRPC.Chat chat -> chat.title;
-            default -> getString(R.string.ViewDeleted);
-        };
+        String name;
+        if (peer == null) {
+            name = getString(R.string.ViewDeleted);
+        } else if (peer instanceof TLRPC.User) {
+            name = ((TLRPC.User) peer).first_name;
+        } else if (peer instanceof TLRPC.Chat) {
+            name = ((TLRPC.Chat) peer).title;
+        } else {
+            name = getString(R.string.ViewDeleted);
+        }
 
         actionBar.setBackButtonImage(R.drawable.ic_ab_back);
         actionBar.setAllowOverlayTitle(true);

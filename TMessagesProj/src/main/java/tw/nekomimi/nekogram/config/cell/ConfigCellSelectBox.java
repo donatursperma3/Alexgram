@@ -32,10 +32,12 @@ public class ConfigCellSelectBox extends AbstractConfigCell implements WithBindC
             key1 = bindConfig.getKey();
         }
         this.key = key1;
-        switch (selectList_s) {
-            case String s -> this.selectList = s.split("\n");
-            case String[] strings -> this.selectList = strings;
-            case null, default -> this.selectList = null;
+        if (selectList_s instanceof String) {
+            this.selectList = ((String) selectList_s).split("\n");
+        } else if (selectList_s instanceof String[]) {
+            this.selectList = (String[]) selectList_s;
+        } else {
+            this.selectList = null;
         }
         title = getString(this.key);
         this.onClickCustom = customOnClick;

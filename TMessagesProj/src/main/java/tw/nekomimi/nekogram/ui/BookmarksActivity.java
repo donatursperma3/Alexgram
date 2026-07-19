@@ -345,12 +345,16 @@ public class BookmarksActivity extends NekoDelegateFragment {
     @Override
     public View createView(Context context) {
         var peer = getMessagesController().getUserOrChat(dialogId);
-        String name = switch (peer) {
-            case null -> getString(R.string.BookmarksManager);
-            case TLRPC.User user -> user.first_name;
-            case TLRPC.Chat chat -> chat.title;
-            default -> getString(R.string.BookmarksManager);
-        };
+        String name;
+        if (peer == null) {
+            name = getString(R.string.BookmarksManager);
+        } else if (peer instanceof TLRPC.User) {
+            name = ((TLRPC.User) peer).first_name;
+        } else if (peer instanceof TLRPC.Chat) {
+            name = ((TLRPC.Chat) peer).title;
+        } else {
+            name = getString(R.string.BookmarksManager);
+        }
 
         actionBar.setBackButtonImage(R.drawable.ic_ab_back);
         actionBar.setAllowOverlayTitle(true);
