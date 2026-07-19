@@ -9153,6 +9153,12 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     messageObject.isImportedForward() && messageObject.messageOwner.fwd_from.from_id == null ||
                     isSideMenuEnabled && !messageObject.isOutOwner() && (isForum || isMonoForum && isAllChats)
                 );
+                if (!drawName && tw.nekomimi.nekogram.NekoConfig.showSenderNameOnMedia.Bool()) {
+                    drawName = true;
+                }
+                if (!drawName && tw.nekomimi.nekogram.NekoConfig.showSenderNameOnOutgoingMessages.Bool() && messageObject.isOutOwner()) {
+                    drawName = true;
+                }
                 int maxWidth;
                 if (AndroidUtilities.isTablet()) {
                     backgroundWidth = maxWidth = Math.min(AndroidUtilities.getMinTabletSide() - dp(50 + (isSideMenued ? ChatActivity.SIDE_MENU_WIDTH : drawAvatar ? 52 : 0)), dp(270));
@@ -13991,7 +13997,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             }
 
             if (isAvatarVisible) {
-                avatarImage.setImageCoords(dp(currentMessageObject.isRepostPreview ? 15 : 6), avatarImage.getImageY(), dp(currentMessageObject.isRepostPreview ? 36 : 42), dp(currentMessageObject.isRepostPreview ? 36 : 42));
+                int avatarX = currentMessageObject.isOutOwner()
+                    ? layoutWidth - dp(currentMessageObject.isRepostPreview ? 15 : 6) - dp(currentMessageObject.isRepostPreview ? 36 : 42)
+                    : dp(currentMessageObject.isRepostPreview ? 15 : 6);
+                avatarImage.setImageCoords(avatarX, avatarImage.getImageY(), dp(currentMessageObject.isRepostPreview ? 36 : 42), dp(currentMessageObject.isRepostPreview ? 36 : 42));
             }
 
             if (currentMessageObject.type == MessageObject.TYPE_EXTENDED_MEDIA_PREVIEW && currentUnlockString != null) {
@@ -20684,7 +20693,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             } else {
                 currentBackgroundShadowDrawable = currentBackgroundDrawable.getShadowDrawable();
             }
-            backgroundDrawableLeft = layoutWidth - backgroundWidth - (!mediaBackground ? 0 : dp(9));
+            backgroundDrawableLeft = layoutWidth - backgroundWidth - (isAvatarVisible ? dp(48) : 0) - (!mediaBackground ? 0 : dp(9));
             backgroundDrawableRight = backgroundWidth - (mediaBackground ? 0 : dp(3));
             if (currentMessagesGroup != null && !currentMessagesGroup.isDocuments) {
                 if (!currentPosition.edge) {
@@ -20764,7 +20773,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 currentBackgroundShadowDrawable = currentBackgroundDrawable.getShadowDrawable();
             }
 
-            backgroundDrawableLeft = dp(isSideMenuEnabled ? ChatActivity.SIDE_MENU_WIDTH : (isChat || currentMessageObject != null && (currentMessageObject.isRepostPreview || currentMessageObject.forceAvatar || currentMessageObject.messageOwner.guestchat_via_from != null) || currentMessageObject.getDialogId() == UserObject.VERIFY) && isAvatarVisible ? 48 : 0) + dp(!mediaBackground ? 3 : 9);
+            boolean isUserDialog = DialogObject.isUserDialog(currentMessageObject.getDialogId());
+            boolean needAvatarOffset = (isChat || isUserDialog || currentMessageObject.isRepostPreview || currentMessageObject.forceAvatar || currentMessageObject.messageOwner.guestchat_via_from != null || currentMessageObject.getDialogId() == UserObject.VERIFY) && isAvatarVisible;
+            backgroundDrawableLeft = dp(isSideMenuEnabled ? ChatActivity.SIDE_MENU_WIDTH : (needAvatarOffset ? 48 : 0)) + dp(!mediaBackground ? 3 : 9);
             backgroundDrawableRight = backgroundWidth - (mediaBackground ? 0 : dp(3));
             if (currentMessagesGroup != null && !currentMessagesGroup.isDocuments) {
                 if (!currentPosition.edge) {
@@ -22166,17 +22177,20 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     public int getBackgroundDrawableLeft() {
         MessageObject messageObject = getMessageObject();
         if (messageObject != null && messageObject.isOutOwner()) {
+            int avatarMargin = isAvatarVisible ? dp(48) : 0;
             if (isRoundVideo) {
-                return layoutWidth - backgroundWidth - (int) ((1f - getVideoTranscriptionProgress()) * dp(9));
+                return layoutWidth - backgroundWidth - avatarMargin - (int) ((1f - getVideoTranscriptionProgress()) * dp(9));
             }
-            return layoutWidth - backgroundWidth - (!mediaBackground ? 0 : dp(9));
+            return layoutWidth - backgroundWidth - avatarMargin - (!mediaBackground ? 0 : dp(9));
         } else {
             int r;
+            boolean isUserDialog = DialogObject.isUserDialog(messageObject.getDialogId());
+            boolean needAvatarOffset = (isChat || isUserDialog || messageObject.isRepostPreview || messageObject.forceAvatar || messageObject.messageOwner.guestchat_via_from != null || messageObject.getDialogId() == UserObject.VERIFY) && isAvatarVisible;
             if (isRoundVideo) {
-                r = dp(isSideMenuLeftMargin() ? ChatActivity.SIDE_MENU_WIDTH : ((isChat || messageObject != null && (messageObject.isRepostPreview || messageObject.forceAvatar || messageObject.messageOwner.guestchat_via_from != null) || messageObject.getDialogId() == UserObject.VERIFY) && isAvatarVisible ? 48 : 0) + 3);
+                r = dp(isSideMenuLeftMargin() ? ChatActivity.SIDE_MENU_WIDTH : (needAvatarOffset ? 48 : 0) + 3);
                 r += (int) (dp(6) * (1f - getVideoTranscriptionProgress()));
             } else {
-                r = dp(isSideMenuLeftMargin() ? ChatActivity.SIDE_MENU_WIDTH : ((isChat || messageObject != null && (messageObject.isRepostPreview || messageObject.forceAvatar || messageObject.messageOwner.guestchat_via_from != null) || messageObject.getDialogId() == UserObject.VERIFY) && isAvatarVisible ? 48 : 0)) + dp(!mediaBackground ? 3 : 9);
+                r = dp(isSideMenuLeftMargin() ? ChatActivity.SIDE_MENU_WIDTH : (needAvatarOffset ? 48 : 0)) + dp(!mediaBackground ? 3 : 9);
             }
             if (currentMessagesGroup != null && !currentMessagesGroup.isDocuments) {
                 if (currentPosition.leftSpanOffset != 0) {
@@ -29598,18 +29612,19 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         }
         boolean isUserDialog = DialogObject.isUserDialog(currentMessageObject.getDialogId());
         boolean isChatDialog = DialogObject.isChatDialog(currentMessageObject.getDialogId());
+        boolean isPersonalDialog = isUserDialog || currentMessageObject.getDialogId() == UserObject.REPLY_BOT;
 
         if (currentMessageObject.isOutOwner()) {
             if (isChatDialog) {
                 return tw.nekomimi.nekogram.NekoConfig.showOutgoingAvatarInGroupChat.Bool() && currentMessageObject.needDrawAvatar();
             }
-            if (isUserDialog) {
+            if (isPersonalDialog) {
                 return tw.nekomimi.nekogram.NekoConfig.showOutgoingAvatarInPersonalChat.Bool() && currentMessageObject.needDrawAvatar();
             }
             return currentMessageObject.needDrawAvatar();
         }
 
-        if (isUserDialog && !tw.nekomimi.nekogram.NekoConfig.showIncomingAvatarInPersonalChat.Bool()) {
+        if (isPersonalDialog && !tw.nekomimi.nekogram.NekoConfig.showIncomingAvatarInPersonalChat.Bool()) {
             return false;
         }
 
