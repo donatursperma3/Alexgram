@@ -93,8 +93,11 @@ jobs:
       # Upload APK split per ABI sebagai artifact agar ukuran unduhan lebih kecil dan file lebih terpisah
       - name: Upload Split APK Artifact
         uses: actions/upload-artifact@v4
+        if: success()
         with:
           name: Alexgram-APK-Split
-          path: TMessagesProj/build/outputs/apk/**/*.apk
+          path: |
+            TMessagesProj/build/outputs/apk/**/*.apk
+            TMessagesProj/build/outputs/apk/*/*/*.apk
           if-no-files-found: error
           retention-days: 7000 # APK akan dihapus dari server GitHub setelah 7000 hari
