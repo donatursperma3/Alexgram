@@ -123,6 +123,8 @@ public class ContextLinkCell extends FrameLayout implements DownloadController.F
     private RadialProgress2 radialProgress;
 
     private boolean scaled;
+    private String gifMediaSizeText;
+    private StaticLayout gifMediaSizeLayout;
     private static AccelerateInterpolator interpolator = new AccelerateInterpolator(0.5f);
 
     private boolean hideLoadProgress;
@@ -540,6 +542,8 @@ public class ContextLinkCell extends FrameLayout implements DownloadController.F
         if (forceGif) {
             documentAttachType = DOCUMENT_ATTACH_TYPE_GIF;
         }
+        gifMediaSizeText = getGifSizeText();
+        gifMediaSizeLayout = null;
         requestLayout();
         fileName = null;
         cacheFile = null;
@@ -572,6 +576,8 @@ public class ContextLinkCell extends FrameLayout implements DownloadController.F
         isForceGif = true;
         setAttachType();
         documentAttachType = DOCUMENT_ATTACH_TYPE_GIF;
+        gifMediaSizeText = getGifSizeText();
+        gifMediaSizeLayout = null;
         requestLayout();
         fileName = null;
         cacheFile = null;
@@ -843,6 +849,7 @@ public class ContextLinkCell extends FrameLayout implements DownloadController.F
             canvas.scale(s, s, getMeasuredWidth() / 2, getMeasuredHeight() / 2);
             linkImageView.draw(canvas);
             canvas.restore();
+            drawGifSize(canvas);
         }
         if (mediaWebpage && (documentAttachType == DOCUMENT_ATTACH_TYPE_PHOTO || documentAttachType == DOCUMENT_ATTACH_TYPE_GIF)) {
             radialProgress.draw(canvas);
@@ -859,6 +866,46 @@ public class ContextLinkCell extends FrameLayout implements DownloadController.F
             Theme.chat_contextResult_shadowUnderSwitchDrawable.setBounds(0, 0, getMeasuredWidth(), AndroidUtilities.dp(3));
             Theme.chat_contextResult_shadowUnderSwitchDrawable.draw(canvas);
         }
+    }
+
+    private void drawGifSize(Canvas canvas) {
+        if (TextUtils.isEmpty(gifMediaSizeText) || !drawLinkImageView || linkImageView == null || !linkImageView.hasBitmapImage()) {
+            return;
+        }
+
+        if (gifMediaSizeLayout == null) {
+            int textWidth = (int) Math.ceil(Theme.chat_timeTextPaint.measureText(gifMediaSizeText));
+            if (textWidth <= 0) {
+                return;
+            }
+            gifMediaSizeLayout = new StaticLayout(gifMediaSizeText, Theme.chat_timeTextPaint, textWidth, Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
+        }
+
+        float left = linkImageView.getImageX() + AndroidUtilities.dp(5);
+        float top = linkImageView.getImageY() + AndroidUtilities.dp(5);
+        float width = gifMediaSizeLayout.getWidth();
+        float height = AndroidUtilities.dp(17);
+
+        AndroidUtilities.rectTmp.set(left, top, left + width + AndroidUtilities.dp(12), top + height);
+        int oldAlpha = Theme.chat_timeBackgroundPaint.getAlpha();
+        Theme.chat_timeBackgroundPaint.setAlpha(oldAlpha);
+        canvas.drawRoundRect(AndroidUtilities.rectTmp, AndroidUtilities.dp(4), AndroidUtilities.dp(4), Theme.chat_timeBackgroundPaint);
+        Theme.chat_timeBackgroundPaint.setAlpha(oldAlpha);
+
+        canvas.save();
+        canvas.translate(left + AndroidUtilities.dp(6), top + (height - gifMediaSizeLayout.getHeight()) / 2f);
+        int oldTextAlpha = Theme.chat_timeTextPaint.getAlpha();
+        Theme.chat_timeTextPaint.setAlpha(oldTextAlpha);
+        gifMediaSizeLayout.draw(canvas);
+        Theme.chat_timeTextPaint.setAlpha(oldTextAlpha);
+        canvas.restore();
+    }
+
+    private String getGifSizeText() {
+        if (!NekoConfig.showSharedMediaGifSize.Bool() || documentAttach == null || documentAttach.size <= 0) {
+            return null;
+        }
+        return AndroidUtilities.formatFileSize(documentAttach.size);
     }
 
     private int getIconForCurrentState() {

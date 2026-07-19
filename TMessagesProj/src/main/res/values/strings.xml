@@ -3205,6 +3205,9 @@
     <string name="SharedFilesTab2">Files</string>
     <string name="SharedMediaTab2">Media</string>
     <string name="SharedMediaTabFull2">Shared Media</string>
+    <string name="ShowSharedMediaPhotoSize">Show photo size in shared media</string>
+    <string name="ShowSharedMediaVideoSize">Show video size in shared media</string>
+    <string name="ShowSharedMediaGifSize">Show GIF size in shared media</string>
     <string name="SharedGroupsTab2">Groups</string>
     <string name="SharedLinksTab2">Links</string>
     <string name="SharedMusicTab2">Music</string>

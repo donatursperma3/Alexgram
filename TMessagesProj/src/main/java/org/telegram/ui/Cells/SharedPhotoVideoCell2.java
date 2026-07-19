@@ -53,6 +53,7 @@ import org.telegram.messenger.R;
 import org.telegram.messenger.Utilities;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.Theme;
+import tw.nekomimi.nekogram.NekoConfig;
 import org.telegram.ui.AvatarSpan;
 import org.telegram.ui.Components.AnimatedFloat;
 import org.telegram.ui.Components.AnimatedTextView;
@@ -71,6 +72,7 @@ import org.telegram.ui.Stories.StoryWidgetsImageDecorator;
 import org.telegram.ui.Stories.recorder.DominantColors;
 import org.telegram.ui.Stories.recorder.StoryPrivacyBottomSheet;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 
 public class SharedPhotoVideoCell2 extends FrameLayout {
@@ -105,6 +107,8 @@ public class SharedPhotoVideoCell2 extends FrameLayout {
     AnimatedTextView.AnimatedTextDrawable viewsText = new AnimatedTextView.AnimatedTextDrawable(false, true, true);
 
     private Text authorText;
+    private String sharedMediaSizeText;
+    private StaticLayout sharedMediaSizeLayout;
 
     CheckBoxBase checkBoxBase;
     SharedResources sharedResources;
@@ -461,6 +465,8 @@ public class SharedPhotoVideoCell2 extends FrameLayout {
         }
 
         updateAccessibilityDescription();
+        sharedMediaSizeText = getSharedMediaSizeText(messageObject);
+        sharedMediaSizeLayout = null;
         invalidate();
     }
 
@@ -793,6 +799,7 @@ public class SharedPhotoVideoCell2 extends FrameLayout {
             Theme.chat_livePhoto.draw(canvas);
         }
         drawDuration(canvas, bounds, customsAlpha);
+        drawSize(canvas, bounds, customsAlpha);
         drawViews(canvas, bounds, customsAlpha);
         if (!isSearchingHashtag) {
             drawPrivacy(canvas, bounds, customsAlpha);
@@ -921,6 +928,85 @@ public class SharedPhotoVideoCell2 extends FrameLayout {
             drawViews = false;
             viewsText.setText("", false);
         }
+    }
+
+    public void drawSize(Canvas canvas, RectF bounds, float alpha) {
+        if (TextUtils.isEmpty(sharedMediaSizeText) || imageReceiver != null && !imageReceiver.getVisible()) {
+            return;
+        }
+
+        if (sharedMediaSizeLayout == null) {
+            int textWidth = (int) Math.ceil(sharedResources.textPaint.measureText(sharedMediaSizeText));
+            if (textWidth <= 0) {
+                return;
+            }
+            sharedMediaSizeLayout = new StaticLayout(sharedMediaSizeText, sharedResources.textPaint, textWidth, Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
+        }
+
+        float left = bounds.left + dp(5);
+        float top = bounds.top + dp(5);
+        float width = sharedMediaSizeLayout.getWidth();
+        float height = dp(17);
+
+        AndroidUtilities.rectTmp.set(left, top, left + width + dp(12), top + height);
+        int oldAlpha = Theme.chat_timeBackgroundPaint.getAlpha();
+        Theme.chat_timeBackgroundPaint.setAlpha((int) (oldAlpha * alpha));
+        canvas.drawRoundRect(AndroidUtilities.rectTmp, dp(4), dp(4), Theme.chat_timeBackgroundPaint);
+        Theme.chat_timeBackgroundPaint.setAlpha(oldAlpha);
+
+        canvas.save();
+        canvas.translate(left + dp(6), top + (height - sharedMediaSizeLayout.getHeight()) / 2f);
+        int oldTextAlpha = sharedResources.textPaint.getAlpha();
+        sharedResources.textPaint.setAlpha((int) (oldTextAlpha * alpha));
+        sharedMediaSizeLayout.draw(canvas);
+        sharedResources.textPaint.setAlpha(oldTextAlpha);
+        canvas.restore();
+    }
+
+    private String getSharedMediaSizeText(MessageObject messageObject) {
+        if (messageObject == null) {
+            return null;
+        }
+
+        long size = 0;
+        if ((messageObject.isVideo() || messageObject.isRoundVideo() || messageObject.isLivePhoto()) && NekoConfig.showSharedMediaVideoSize.Bool()) {
+            TLRPC.Document document = messageObject.getDocument();
+            if (document != null) {
+                size = document.size;
+            }
+        } else if (messageObject.isPhoto() && NekoConfig.showSharedMediaPhotoSize.Bool()) {
+            TLRPC.Photo photo = messageObject.getPhoto();
+            if (photo != null) {
+                size = getLargestPhotoSize(photo, messageObject.photoThumbs);
+            }
+        }
+
+        if (size <= 0) {
+            return null;
+        }
+        return AndroidUtilities.formatFileSize(size);
+    }
+
+    private long getLargestPhotoSize(TLRPC.Photo photo, ArrayList<TLRPC.PhotoSize> fallbackSizes) {
+        if (photo == null) {
+            return 0;
+        }
+        long size = 0;
+        if (photo.sizes != null) {
+            for (TLRPC.PhotoSize photoSize : photo.sizes) {
+                if (photoSize != null) {
+                    size = Math.max(size, photoSize.size);
+                }
+            }
+        }
+        if (size <= 0 && fallbackSizes != null) {
+            for (TLRPC.PhotoSize photoSize : fallbackSizes) {
+                if (photoSize != null) {
+                    size = Math.max(size, photoSize.size);
+                }
+            }
+        }
+        return size;
     }
 
     public boolean viewsOnLeft(float width) {

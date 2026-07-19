@@ -179,6 +179,9 @@ public class NekoChatSettingsActivity extends BaseNekoXSettingsActivity implemen
     private final AbstractConfigCell disablePreviewVideoSoundShortcutRow = cellGroup.appendCell(new ConfigCellTextCheck(NaConfig.INSTANCE.getDisablePreviewVideoSoundShortcut(), getString(R.string.DisablePreviewVideoSoundShortcutNotice)));
     private final AbstractConfigCell dontAutoPlayNextVoiceRow = cellGroup.appendCell(new ConfigCellTextCheck(NaConfig.INSTANCE.getDontAutoPlayNextVoice()));
     private final AbstractConfigCell showSpoilersDirectlyRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.showSpoilersDirectly));
+    private final AbstractConfigCell showSharedMediaPhotoSizeRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.showSharedMediaPhotoSize));
+    private final AbstractConfigCell showSharedMediaVideoSizeRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.showSharedMediaVideoSize));
+    private final AbstractConfigCell showSharedMediaGifSizeRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.showSharedMediaGifSize));
     private final AbstractConfigCell dividerMedia = cellGroup.appendCell(new ConfigCellDivider());
 
     // Stickers
