@@ -625,9 +625,13 @@ void VoIPGroupController::SendPacket(unsigned char *data, size_t len, Endpoint& 
 		out.WriteBytes(msgKey, 16);
 		//LOGV("<- MSG KEY: %08x %08x %08x %08x, hashed %u", *reinterpret_cast<int32_t*>(msgKey), *reinterpret_cast<int32_t*>(msgKey+4), *reinterpret_cast<int32_t*>(msgKey+8), *reinterpret_cast<int32_t*>(msgKey+12), inner.GetLength()-4);
 
-		unsigned char aesOut[MSC_STACK_FALLBACK(inner.GetLength(), 1500)];
+		size_t aesOutSize = std::max<size_t>(inner.GetLength(), 1500);
+		unsigned char *aesOut = static_cast<unsigned char *>(malloc(aesOutSize));
+		if(!aesOut)
+			return;
 		crypto.aes_ige_encrypt(inner.GetBuffer(), aesOut, inner.GetLength(), key, iv);
 		out.WriteBytes(aesOut, inner.GetLength());
+		free(aesOut);
 	}
 
 	// relay signature

@@ -24,6 +24,7 @@ def alias = null
 def pwd = null
 
 Properties properties
+
 def base64 = System.getenv('LOCAL_PROPERTIES')
 if (base64 != null && !base64.isBlank()) {
     properties = new Properties()

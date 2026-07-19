@@ -1,0 +1,11 @@
+# Android SDK path (ubah sesuai lokasi SDK Anda)
+sdk.dir=C:\\Android\\Sdk
+
+# Telegram API credentials
+TELEGRAM_APP_ID=1234567
+TELEGRAM_APP_HASH=0123456789abcdef0123456789abcdef
+
+# Opsi tambahan jika diperlukan
+# KEYSTORE_PASS=android
+# ALIAS_NAME=androidkey
+# ALIAS_PASS=android
