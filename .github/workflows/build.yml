@@ -53,7 +53,10 @@ jobs:
 
       - name: Configure Android SDK Path
         run: |
-          echo "sdk.dir=${ANDROID_HOME}" >> local.properties
+          export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME}}"
+          mkdir -p "$ANDROID_SDK_ROOT"
+          echo "sdk.dir=$ANDROID_SDK_ROOT" >> local.properties
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
 
       - name: Decode google-services.json (optional)
         run: |
@@ -81,7 +84,9 @@ jobs:
         env:
           GIT_REF_NAME: ${{ github.ref_name }}
         run: |
+          export ENABLE_ABI_SPLITS="${ENABLE_ABI_SPLITS:-false}"
           echo "Building on branch: ${GIT_REF_NAME}"
+          echo "ENABLE_ABI_SPLITS=${ENABLE_ABI_SPLITS}"
           if [ "${GIT_REF_NAME}" = "main" ]; then
             ./gradlew TMessagesProj:assembleRelease --no-daemon
           elif [ "${GIT_REF_NAME}" = "dev" ]; then
@@ -90,12 +95,19 @@ jobs:
             ./gradlew TMessagesProj:assembleDebug --no-daemon
           fi
 
+      - name: Prepare artifact name
+        id: artifact_name
+        run: |
+          BRANCH_SAFE="${GITHUB_REF_NAME//\//-}"
+          SHORT_SHA="${GITHUB_SHA::7}"
+          echo "name=Alexgram-${BRANCH_SAFE}-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+
       # Upload APK split per ABI sebagai artifact agar ukuran unduhan lebih kecil dan file lebih terpisah
       - name: Upload Split APK Artifact
         uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: Alexgram-APK-Split
+          name: ${{ steps.artifact_name.outputs.name }}
           path: |
             TMessagesProj/build/outputs/apk/**/*.apk
             TMessagesProj/build/outputs/apk/*/*/*.apk

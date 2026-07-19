@@ -60,9 +60,14 @@ alias = alias ?: System.getenv('ALIAS_NAME') ?: "key0"
 pwd = pwd ?: System.getenv('ALIAS_PASS') ?: "123456"
 
 def nativeTarget = System.getenv('NATIVE_TARGET') ?: ''
+def enableAbiSplitsRaw = (System.getenv('ENABLE_ABI_SPLITS') ?: 'false').trim()
+def enableAbiSplits = enableAbiSplitsRaw.equalsIgnoreCase('true') || enableAbiSplitsRaw == '1' || enableAbiSplitsRaw.equalsIgnoreCase('yes')
 def abiList = !nativeTarget.isBlank()
     ? nativeTarget.split(',').collect { it.trim() }.findAll { !it.isEmpty() }
-    : ['armeabi-v7a', 'arm64-v8a', 'x86_64']
+    : ['arm64-v8a', 'x86_64']
+if (abiList.isEmpty()) {
+    abiList = ['arm64-v8a']
+}
 
 if (nativeTarget == 'SKIP') {
     tasks.configureEach { task ->
@@ -103,16 +108,29 @@ android {
 
     splits {
         abi {
-            enable = true
+            enable = enableAbiSplits
             reset()
             universalApk = false
-            abiList.each { abi ->
-                include abi
+            if (enableAbiSplits) {
+                abiList.each { abi ->
+                    include abi
+                }
             }
         }
     }
 
     defaultConfig {
+        ndk {
+            if (abiList.contains('armeabi-v7a')) {
+                abiFilters 'armeabi-v7a'
+            }
+            if (abiList.contains('arm64-v8a')) {
+                abiFilters 'arm64-v8a'
+            }
+            if (abiList.contains('x86_64')) {
+                abiFilters 'x86_64'
+            }
+        }
         versionName verName
         versionCode verCode
 
