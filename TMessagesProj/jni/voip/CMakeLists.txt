@@ -143,7 +143,8 @@ add_library(openh264 STATIC
         third_party/openh264/src/codec/processing/src/vaacalc/vaacalcfuncs.cpp
         third_party/openh264/src/codec/processing/src/vaacalc/vaacalculation.cpp)
 target_compile_options(openh264 PUBLIC
-        -Wall -finline-functions -fno-strict-aliasing -O3 -frtti -Wno-unknown-pragmas -funroll-loops -fexceptions -fno-math-errno)
+        -Wall -finline-functions -fno-strict-aliasing -O3 -frtti -Wno-unknown-pragmas -funroll-loops -fexceptions -fno-math-errno
+        -Wno-unused-but-set-variable -Wno-unused-variable -Wno-logical-op-parentheses -Wno-format -Wno-vla-cxx-extension -Wno-unqualified-std-cast-call -Wno-macro-redefined -Wno-pessimizing-move -Wno-potentially-evaluated-expression -Wno-char-subscripts)
 set_target_properties(openh264 PROPERTIES
         ANDROID_ARM_MODE arm)
 target_compile_definitions(openh264 PRIVATE

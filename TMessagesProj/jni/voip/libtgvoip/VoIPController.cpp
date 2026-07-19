@@ -419,7 +419,7 @@ void VoIPController::SetNetworkType(int type){
 		if(peerVersion<6){
 			SendPacketReliably(PKT_NETWORK_CHANGED, s.GetBuffer(), s.GetLength(), 1, 20);
 		}else{
-			Buffer buf(move(s));
+			Buffer buf(std::move(s));
 			SendExtra(buf, EXTRA_TYPE_NETWORK_CHANGED);
 		}
 		needReInitUdpProxy=true;
@@ -971,7 +971,7 @@ void VoIPController::SendStreamFlags(Stream& stream){
 		flags|=STREAM_FLAG_EXTRA_EC;
 	s.WriteInt32(flags);
 	LOGV("My stream state: id %u flags %u", (unsigned int)stream.id, (unsigned int)flags);
-	Buffer buf(move(s));
+	Buffer buf(std::move(s));
 	SendExtra(buf, EXTRA_TYPE_STREAM_FLAGS);
 }
 

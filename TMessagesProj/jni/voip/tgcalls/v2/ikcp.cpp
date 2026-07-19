@@ -38,6 +38,8 @@ const IUINT32 IKCP_WND_SND = 32;
 const IUINT32 IKCP_WND_RCV = 128;       // must >= max fragment size
 const IUINT32 IKCP_MTU_DEF = 1400;
 const IUINT32 IKCP_ACK_FAST	= 3;
+// IKCP_ACK_FAST may be unused in some builds; mark to avoid -Wunused-const-variable
+static const IUINT32 IKCP_ACK_FAST_UNUSED __attribute__((unused)) = IKCP_ACK_FAST;
 const IUINT32 IKCP_INTERVAL	= 100;
 const IUINT32 IKCP_OVERHEAD = 24;
 const IUINT32 IKCP_DEADLINK = 20;
