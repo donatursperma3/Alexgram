@@ -60,6 +60,9 @@ alias = alias ?: System.getenv('ALIAS_NAME') ?: "key0"
 pwd = pwd ?: System.getenv('ALIAS_PASS') ?: "123456"
 
 def nativeTarget = System.getenv('NATIVE_TARGET') ?: ''
+def abiList = !nativeTarget.isBlank()
+    ? nativeTarget.split(',').collect { it.trim() }.findAll { !it.isEmpty() }
+    : ['armeabi-v7a', 'arm64-v8a', 'x86_64']
 
 if (nativeTarget == 'SKIP') {
     tasks.configureEach { task ->
@@ -103,23 +106,15 @@ android {
             enable = true
             reset()
             universalApk = false
-            if (!nativeTarget.isBlank()) {
-                nativeTarget.split(',').collect { it.trim() }.each { abi ->
-                    include abi
-                }
-            } else {
-                include 'armeabi-v7a', 'arm64-v8a', 'x86_64'
+            abiList.each { abi ->
+                include abi
             }
         }
     }
 
     defaultConfig {
         ndk {
-            if (!nativeTarget.isBlank()) {
-                abiFilters.addAll(nativeTarget.split(',').collect { it.trim() })
-            } else {
-                abiFilters "arm64-v8a", "x86_64"
-            }
+            abiFilters.addAll(abiList)
         }
         versionName verName
         versionCode verCode
