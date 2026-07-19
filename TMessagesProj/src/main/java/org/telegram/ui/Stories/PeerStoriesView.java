@@ -8537,9 +8537,9 @@ public class PeerStoriesView extends SizeNotifierFrameLayout implements Notifica
         try {
             ChatActivity.fileRefClipboard.clear();
             if (storyItem.media.document instanceof TLRPC.TL_document) {
-                ChatActivity.fileRefClipboard.add(new ChatActivity.FileRefClipboardItem((TLRPC.TL_document) storyItem.media.document));
+                ChatActivity.fileRefClipboard.add(new ChatActivity.FileRefClipboardItem((TLRPC.TL_document) storyItem.media.document, storyItem));
             } else if (storyItem.media.photo instanceof TLRPC.TL_photo) {
-                ChatActivity.fileRefClipboard.add(new ChatActivity.FileRefClipboardItem((TLRPC.TL_photo) storyItem.media.photo));
+                ChatActivity.fileRefClipboard.add(new ChatActivity.FileRefClipboardItem((TLRPC.TL_photo) storyItem.media.photo, storyItem));
             }
 
             if (ChatActivity.fileRefClipboard.isEmpty()) {

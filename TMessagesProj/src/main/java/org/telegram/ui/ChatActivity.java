@@ -1140,15 +1140,18 @@ public class ChatActivity extends BaseFragment implements
 	public static class FileRefClipboardItem {
 		public final TLRPC.TL_document document;
 		public final TLRPC.TL_photo photo;
+		public final Object parentObject;
 
-		public FileRefClipboardItem(TLRPC.TL_document document) {
+		public FileRefClipboardItem(TLRPC.TL_document document, Object parentObject) {
 			this.document = document;
 			this.photo = null;
+			this.parentObject = parentObject;
 		}
 
-		public FileRefClipboardItem(TLRPC.TL_photo photo) {
+		public FileRefClipboardItem(TLRPC.TL_photo photo, Object parentObject) {
 			this.document = null;
 			this.photo = photo;
+			this.parentObject = parentObject;
 		}
 	}
 
@@ -39040,11 +39043,11 @@ public class ChatActivity extends BaseFragment implements
 			MessageObject msg = msgs.get(i);
 			TLRPC.Document doc = msg.getDocument();
 			if (doc instanceof TLRPC.TL_document) {
-				fileRefClipboard.add(new FileRefClipboardItem((TLRPC.TL_document) doc));
+				fileRefClipboard.add(new FileRefClipboardItem((TLRPC.TL_document) doc, msg));
 				continue;
 			}
 			if (msg.messageOwner != null && msg.messageOwner.media != null && msg.messageOwner.media.photo instanceof TLRPC.TL_photo) {
-				fileRefClipboard.add(new FileRefClipboardItem((TLRPC.TL_photo) msg.messageOwner.media.photo));
+				fileRefClipboard.add(new FileRefClipboardItem((TLRPC.TL_photo) msg.messageOwner.media.photo, msg));
 				continue;
 			}
 		}

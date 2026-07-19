@@ -29596,23 +29596,28 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         if (currentMessageObject.isSponsored()) {
             return false;
         }
+        boolean isUserDialog = DialogObject.isUserDialog(currentMessageObject.getDialogId());
+        boolean isChatDialog = DialogObject.isChatDialog(currentMessageObject.getDialogId());
+
         if (currentMessageObject.isOutOwner()) {
-            if (DialogObject.isChatDialog(currentMessageObject.getDialogId()) && !tw.nekomimi.nekogram.NekoConfig.showOutgoingAvatarInGroupChat.Bool()) {
-                return false;
+            if (isChatDialog) {
+                return tw.nekomimi.nekogram.NekoConfig.showOutgoingAvatarInGroupChat.Bool() && currentMessageObject.needDrawAvatar();
             }
-            if (DialogObject.isUserDialog(currentMessageObject.getDialogId()) && !tw.nekomimi.nekogram.NekoConfig.showOutgoingAvatarInPersonalChat.Bool()) {
-                return false;
+            if (isUserDialog) {
+                return tw.nekomimi.nekogram.NekoConfig.showOutgoingAvatarInPersonalChat.Bool() && currentMessageObject.needDrawAvatar();
             }
-        } else if (DialogObject.isUserDialog(currentMessageObject.getDialogId()) && !tw.nekomimi.nekogram.NekoConfig.showIncomingAvatarInPersonalChat.Bool()) {
+            return currentMessageObject.needDrawAvatar();
+        }
+
+        if (isUserDialog && !tw.nekomimi.nekogram.NekoConfig.showIncomingAvatarInPersonalChat.Bool()) {
             return false;
         }
+
         return (
-            isChat && !isSavedPreviewChat && (!isThreadPost || isForum) && (
-                currentMessageObject != null && !currentMessageObject.isOutOwner() && currentMessageObject.needDrawAvatar()
-            ) ||
-            currentMessageObject != null && currentMessageObject.getDialogId() == UserObject.VERIFY ||
-            currentMessageObject != null && currentMessageObject.forceAvatar ||
-            currentMessageObject != null && currentMessageObject.messageOwner.guestchat_via_from != null
+            (isChat || isUserDialog) && !isSavedPreviewChat && (!isThreadPost || isForum) && currentMessageObject.needDrawAvatar() ||
+            currentMessageObject.getDialogId() == UserObject.VERIFY ||
+            currentMessageObject.forceAvatar ||
+            currentMessageObject.messageOwner.guestchat_via_from != null
         );
     }
 

@@ -14833,12 +14833,12 @@ public class ChatActivityEnterView extends FrameLayout implements
             for (org.telegram.ui.ChatActivity.FileRefClipboardItem item : org.telegram.ui.ChatActivity.fileRefClipboard) {
                 if (item.document != null) {
                     SendMessagesHelper.SendMessageParams params = SendMessagesHelper.SendMessageParams.of(
-                        item.document, null, null, dialog_id, replyingMessageObject, getThreadMessage(), null, null, null, null, true, 0, 0, 0, null, null, false
+                        item.document, null, null, dialog_id, replyingMessageObject, getThreadMessage(), null, null, null, null, true, 0, 0, 0, item.parentObject, null, false
                     );
                     SendMessagesHelper.getInstance(currentAccount).sendMessage(params);
                 } else if (item.photo != null) {
                     SendMessagesHelper.SendMessageParams params = SendMessagesHelper.SendMessageParams.of(
-                        item.photo, null, dialog_id, replyingMessageObject, getThreadMessage(), null, null, null, null, true, 0, 0, 0, null, false
+                        item.photo, null, dialog_id, replyingMessageObject, getThreadMessage(), null, null, null, null, true, 0, 0, 0, item.parentObject, false, false
                     );
                     SendMessagesHelper.getInstance(currentAccount).sendMessage(params);
                 }
