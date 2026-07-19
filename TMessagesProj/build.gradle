@@ -28,10 +28,24 @@ Properties properties
 def base64 = System.getenv('LOCAL_PROPERTIES')
 if (base64 != null && !base64.isBlank()) {
     properties = new Properties()
-    properties.load(new ByteArrayInputStream(Base64.decoder.decode(base64)))
+    try {
+        properties.load(new ByteArrayInputStream(Base64.decoder.decode(base64)))
+        println "✅ LOCAL_PROPERTIES loaded from GitHub secret"
+    } catch (IllegalArgumentException e) {
+        println "❌ Failed to decode LOCAL_PROPERTIES secret as Base64: ${e.message}"
+        if (project.rootProject.file('local.properties').exists()) {
+            println "⚠️ Falling back to local.properties file"
+            properties.load(project.rootProject.file('local.properties').newDataInputStream())
+        } else {
+            println "❌ local.properties file not found; LOCAL_PROPERTIES could not be loaded"
+        }
+    }
 } else if (project.rootProject.file('local.properties').exists()) {
     properties = new Properties()
     properties.load(project.rootProject.file('local.properties').newDataInputStream())
+    println "✅ Loaded local.properties from repo root"
+} else {
+    println "⚠️ No LOCAL_PROPERTIES secret and no local.properties file found"
 }
 
 if (properties != null) {
