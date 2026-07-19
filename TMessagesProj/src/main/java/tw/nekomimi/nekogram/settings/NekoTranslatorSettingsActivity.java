@@ -1117,10 +1117,9 @@ public class NekoTranslatorSettingsActivity extends BaseNekoXSettingsActivity {
                         cell.setText(item.text, divider);
                         cell.setIcon(item.type == MODEL_ITEM_TYPE_ERROR ? R.drawable.msg_retry : 0);
                     }
-                }
-                    case TextInfoPrivacyCell cell -> cell.setText(item.text);
-                    default -> {
-                    }
+                } else if (holder.itemView instanceof TextInfoPrivacyCell) {
+                    TextInfoPrivacyCell cell = (TextInfoPrivacyCell) holder.itemView;
+                    cell.setText(item.text);
                 }
             }
         };
