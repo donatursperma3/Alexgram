@@ -2123,6 +2123,14 @@ public class PeerStoriesView extends SizeNotifierFrameLayout implements Notifica
                                 }
                             });
                         }
+                        if (NekoConfig.showCopyFileRef.Bool() && canCopyStoryFileRef(currentStory.storyItem)) {
+                            ActionBarMenuItem.addItem(popupLayout, R.drawable.msg_copy, getString("CopyFileRef", R.string.CopyFileRef), false, resourcesProvider).setOnClickListener(v -> {
+                                copyStoryFileReferences();
+                                if (popupMenu != null) {
+                                    popupMenu.dismiss();
+                                }
+                            });
+                        }
                         if (NaConfig.INSTANCE.getMediaViewerMenuItemCopyPhoto().Bool() && !currentStory.isLive && !currentStory.isVideo()) {
                             ActionBarMenuItem.addItem(popupLayout, R.drawable.msg_copy_photo, getString(R.string.CopyPhoto), false, resourcesProvider).setOnClickListener(v -> {
                                 copyPhotoToClipboard();
@@ -8498,6 +8506,57 @@ public class PeerStoriesView extends SizeNotifierFrameLayout implements Notifica
     public StoriesController getStoriesController() {
         return MessagesController.getInstance(currentAccount)
                 .getStoriesController();
+    }
+
+    private boolean canCopyStoryFileRef(TL_stories.StoryItem storyItem) {
+        if (storyItem == null || storyItem.media == null) {
+            return false;
+        }
+        if (storyItem.media.document instanceof TLRPC.TL_document) {
+            return true;
+        }
+        if (storyItem.media.photo instanceof TLRPC.TL_photo) {
+            return true;
+        }
+        return false;
+    }
+
+    private void copyStoryFileReferences() {
+        if (currentStory == null) {
+            return;
+        }
+
+        TL_stories.StoryItem storyItem = currentStory.storyItem;
+        if (!canCopyStoryFileRef(storyItem)) {
+            BulletinFactory.of(storyContainer, resourcesProvider)
+                    .createErrorBulletin(getString(R.string.CopyFileRefFailed))
+                    .show();
+            return;
+        }
+
+        try {
+            ChatActivity.fileRefClipboard.clear();
+            if (storyItem.media.document instanceof TLRPC.TL_document) {
+                ChatActivity.fileRefClipboard.add(new ChatActivity.FileRefClipboardItem((TLRPC.TL_document) storyItem.media.document));
+            } else if (storyItem.media.photo instanceof TLRPC.TL_photo) {
+                ChatActivity.fileRefClipboard.add(new ChatActivity.FileRefClipboardItem((TLRPC.TL_photo) storyItem.media.photo));
+            }
+
+            if (ChatActivity.fileRefClipboard.isEmpty()) {
+                BulletinFactory.of(storyContainer, resourcesProvider)
+                        .createErrorBulletin(getString(R.string.CopyFileRefFailed))
+                        .show();
+            } else {
+                BulletinFactory.of(storyContainer, resourcesProvider)
+                        .createSimpleBulletin(R.raw.info, LocaleController.formatString("CopyFileRefDone", R.string.CopyFileRefDone, ChatActivity.fileRefClipboard.size()))
+                        .show();
+            }
+        } catch (Throwable throwable) {
+            FileLog.e(throwable);
+            BulletinFactory.of(storyContainer, resourcesProvider)
+                    .createErrorBulletin(getString(R.string.CopyFileRefFailed))
+                    .show();
+        }
     }
 
     private void copyPhotoToClipboard() {
