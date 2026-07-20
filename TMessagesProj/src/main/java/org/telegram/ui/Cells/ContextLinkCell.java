@@ -874,11 +874,11 @@ public class ContextLinkCell extends FrameLayout implements DownloadController.F
         }
 
         if (gifMediaSizeLayout == null) {
-            int textWidth = (int) Math.ceil(Theme.chat_timeTextPaint.measureText(gifMediaSizeText));
+            int textWidth = (int) Math.ceil(Theme.chat_timePaint.measureText(gifMediaSizeText));
             if (textWidth <= 0) {
                 return;
             }
-            gifMediaSizeLayout = new StaticLayout(gifMediaSizeText, Theme.chat_timeTextPaint, textWidth, Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
+            gifMediaSizeLayout = new StaticLayout(gifMediaSizeText, Theme.chat_timePaint, textWidth, Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
         }
 
         float left = linkImageView.getImageX() + AndroidUtilities.dp(5);
@@ -894,10 +894,10 @@ public class ContextLinkCell extends FrameLayout implements DownloadController.F
 
         canvas.save();
         canvas.translate(left + AndroidUtilities.dp(6), top + (height - gifMediaSizeLayout.getHeight()) / 2f);
-        int oldTextAlpha = Theme.chat_timeTextPaint.getAlpha();
-        Theme.chat_timeTextPaint.setAlpha(oldTextAlpha);
+        int oldTextAlpha = Theme.chat_timePaint.getAlpha();
+        Theme.chat_timePaint.setAlpha(oldTextAlpha);
         gifMediaSizeLayout.draw(canvas);
-        Theme.chat_timeTextPaint.setAlpha(oldTextAlpha);
+        Theme.chat_timePaint.setAlpha(oldTextAlpha);
         canvas.restore();
     }
 
