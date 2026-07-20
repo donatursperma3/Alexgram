@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.16)
 
+if (CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
+    message(STATUS "Skipping CMake warning noise for standalone configure")
+endif()
+
 set(CMAKE_CXX_FLAGS "-std=c++14 -DANDROID -g -Wno-non-virtual-dtor -Wno-reorder -Wno-pessimizing-move -Wno-deprecated-declarations -Wno-logical-op-parentheses")
 set(CMAKE_C_FLAGS "-w -std=c11 -DANDROID -D_LARGEFILE_SOURCE=1 -g -Wno-error=implicit-function-declaration -Wno-logical-op-parentheses")
 set(CMAKE_ASM_FLAGS "${CFLAGS} -x assembler-with-cpp")

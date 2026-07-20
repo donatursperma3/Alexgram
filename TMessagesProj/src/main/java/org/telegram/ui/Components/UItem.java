@@ -52,6 +52,7 @@ public class UItem extends AdapterWithDiffUtils.Item {
     public int flags;
 
     public int intValue;
+    public int customIntValue;
     public float floatValue;
     public long longValue;
     public Utilities.Callback<Integer> intCallback;

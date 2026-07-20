@@ -46779,16 +46779,11 @@ public class ChatActivity extends BaseFragment implements
 		if (item == null) {
 			return;
 		}
-		item.setOnClickListener(v -> {
-			if (item.getVisibility() == View.VISIBLE && item.isEnabled()) {
-				if (item.hasSubMenu()) {
-					item.toggleSubMenu();
-				}
-			}
-		});
-		// Ensure the item is properly clickable and enabled
+		// Keep the standard Telegram action-bar listener flow intact so submenu items
+		// are opened through the default ActionBarMenu handling instead of a custom override.
 		item.setEnabled(true);
 		item.setClickable(true);
+		item.setFocusable(true);
 	}
 
 	private void nkbtn_onclick_actionbar(int id) {

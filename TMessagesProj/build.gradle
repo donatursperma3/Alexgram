@@ -89,11 +89,10 @@ android {
     kotlin {
         compilerOptions {
             jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
-            // Opt in to apply some annotations to both the value parameter and the backing field
+            // Opt in to apply some annotations to both the value parameter and the backing field.
+            // Keep this minimal to avoid noisy compiler warnings on CI.
             freeCompilerArgs.set([
-                '-Xannotation-default-target=param-property',
-                '-Xlint:-deprecation',
-                '-Xlint:-unchecked'
+                '-Xannotation-default-target=param-property'
             ])
         }
     }
@@ -148,7 +147,7 @@ android {
 
         externalNativeBuild {
             cmake {
-                arguments '-DANDROID_STL=c++_static', '-DANDROID_PLATFORM=android-27', '-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON'
+                arguments '-DANDROID_STL=c++_static', '-DANDROID_PLATFORM=android-27', '-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON', '-DCMAKE_POLICY_VERSION_MINIMUM=3.10', '-DCMAKE_WARN_DEPRECATED=OFF', '-Wno-dev'
                 System.getenv('PATH').split(File.pathSeparator).any { path ->
                     var file = Paths.get("${path}${File.separator}ccache${if (OperatingSystem.current().windows) ".exe" else ""}").toFile()
                     if (file.exists()) {
