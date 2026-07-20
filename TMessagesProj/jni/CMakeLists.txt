@@ -1,7 +1,7 @@
-cmake_minimum_required(VERSION 3.10.2)
+cmake_minimum_required(VERSION 3.16)
 
-set(CMAKE_CXX_FLAGS "-std=c++14 -DANDROID -g -Wno-non-virtual-dtor -Wno-reorder -Wno-pessimizing-move -Wno-deprecated-declarations")
-set(CMAKE_C_FLAGS "-w -std=c11 -DANDROID -D_LARGEFILE_SOURCE=1 -g -Wno-error=implicit-function-declaration")
+set(CMAKE_CXX_FLAGS "-std=c++14 -DANDROID -g -Wno-non-virtual-dtor -Wno-reorder -Wno-pessimizing-move -Wno-deprecated-declarations -Wno-logical-op-parentheses")
+set(CMAKE_C_FLAGS "-w -std=c11 -DANDROID -D_LARGEFILE_SOURCE=1 -g -Wno-error=implicit-function-declaration -Wno-logical-op-parentheses")
 set(CMAKE_ASM_FLAGS "${CFLAGS} -x assembler-with-cpp")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ffunction-sections -fdata-sections -fvisibility=hidden -flto=full")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ffunction-sections -fdata-sections -fvisibility=hidden -fvisibility-inlines-hidden -flto=full")
@@ -206,7 +206,7 @@ add_library(tgnet STATIC
         tgnet/Handshake.cpp
         tgnet/Config.cpp)
 target_compile_options(tgnet PUBLIC
-        -Wall -frtti -finline-functions -ffast-math -Oz)
+        -Wall -frtti -finline-functions -ffast-math -Oz -Wno-logical-op-parentheses)
 set_target_properties(tgnet PROPERTIES
         ANDROID_ARM_MODE arm)
 target_compile_definitions(tgnet PUBLIC

@@ -720,6 +720,12 @@ object NaConfig {
             ConfigItem.configTypeBool,
             false
         )
+    val showLastSeenOnAccountRows =
+        addConfig(
+            "ShowLastSeenOnAccountRows",
+            ConfigItem.configTypeBool,
+            false
+        )
     val messageSavingSaveMedia =
         addConfig(
             "MessageSavingSaveMedia",

@@ -21,6 +21,7 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.radolyn.ayugram.utils.LastSeenHelper;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ContactsController;
 import org.telegram.messenger.LocaleController;
@@ -34,12 +35,15 @@ import org.telegram.ui.Components.AvatarDrawable;
 import org.telegram.ui.Components.BackupImageView;
 import org.telegram.ui.Components.EmojiTextView;
 import org.telegram.ui.Components.LayoutHelper;
+import xyz.nextalone.nagram.NaConfig;
 
 public class AccountSelectCell extends FrameLayout {
 
     private SimpleTextView textView;
     private TextView infoTextView;
     private BackupImageView imageView;
+    private boolean hasInfo;
+    private boolean showSecondaryText;
     private ImageView checkImageView;
     private AvatarDrawable avatarDrawable;
 
@@ -47,6 +51,7 @@ public class AccountSelectCell extends FrameLayout {
 
     public AccountSelectCell(Context context, boolean hasInfo) {
         super(context);
+        this.hasInfo = hasInfo;
 
         setMinimumWidth(dp(196));
         avatarDrawable = new AvatarDrawable();
@@ -79,8 +84,20 @@ public class AccountSelectCell extends FrameLayout {
             infoTextView.setEllipsize(TextUtils.TruncateAt.END);
             addView(infoTextView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.TOP, 61, 27, 8, 0));
         } else {
-            addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.LEFT | Gravity.TOP, 61, 0, 52, 0));
+            addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.TOP, 61, 7, 52, 0));
             textView.setTextColor(Theme.getColor(Theme.key_actionBarDefaultSubmenuItem));
+
+            infoTextView = new EmojiTextView(context);
+            infoTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText2));
+            infoTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
+            infoTextView.setLines(1);
+            infoTextView.setMaxLines(1);
+            infoTextView.setSingleLine(true);
+            infoTextView.setMaxWidth(dp(320));
+            infoTextView.setGravity(Gravity.LEFT | Gravity.TOP);
+            infoTextView.setEllipsize(TextUtils.TruncateAt.END);
+            infoTextView.setVisibility(GONE);
+            addView(infoTextView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.TOP, 61, 30, 52, 0));
 
             checkImageView = new ImageView(context);
             checkImageView.setImageResource(R.drawable.account_check);
@@ -99,12 +116,13 @@ public class AccountSelectCell extends FrameLayout {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        int height = showSecondaryText ? dp(64) : dp(56);
         if (checkImageView != null || infoTextView != null && getLayoutParams().width != LayoutHelper.WRAP_CONTENT) {
-            super.onMeasure(MeasureSpec.makeMeasureSpec(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(dp(56), MeasureSpec.EXACTLY));
+            super.onMeasure(MeasureSpec.makeMeasureSpec(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY));
         } else if (MeasureSpec.getMode(widthMeasureSpec) == MeasureSpec.AT_MOST) {
-            super.onMeasure(MeasureSpec.makeMeasureSpec(width(), MeasureSpec.AT_MOST), MeasureSpec.makeMeasureSpec(dp(56), MeasureSpec.EXACTLY));
+            super.onMeasure(MeasureSpec.makeMeasureSpec(width(), MeasureSpec.AT_MOST), MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY));
         } else {
-            super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(dp(56), MeasureSpec.EXACTLY));
+            super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY));
         }
     }
 
@@ -141,6 +159,19 @@ public class AccountSelectCell extends FrameLayout {
         imageView.setRoundRadius(org.telegram.messenger.AvatarCornerHelper.getAvatarRoundRadius(36.0f));
         imageView.setForUserOrChat(user, avatarDrawable);
         checkImageView.setVisibility(check && account == UserConfig.selectedAccount ? VISIBLE : INVISIBLE);
+        if (!hasInfo) {
+            showSecondaryText = false;
+            infoTextView.setVisibility(GONE);
+            if (NaConfig.INSTANCE.getShowLastSeenOnAccountRows().Bool()) {
+                String lastSeenText = LastSeenHelper.getFormattedLastSeenOrDefault(user, null, "");
+                if (lastSeenText != null && !lastSeenText.isEmpty()) {
+                    infoTextView.setText(lastSeenText);
+                    infoTextView.setVisibility(VISIBLE);
+                    showSecondaryText = true;
+                }
+            }
+            requestLayout();
+        }
     }
 
     public int getAccountNumber() {

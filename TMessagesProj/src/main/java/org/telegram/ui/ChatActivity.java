@@ -46780,10 +46780,15 @@ public class ChatActivity extends BaseFragment implements
 			return;
 		}
 		item.setOnClickListener(v -> {
-			if (item.getVisibility() == View.VISIBLE) {
-				item.toggleSubMenu();
+			if (item.getVisibility() == View.VISIBLE && item.isEnabled()) {
+				if (item.hasSubMenu()) {
+					item.toggleSubMenu();
+				}
 			}
 		});
+		// Ensure the item is properly clickable and enabled
+		item.setEnabled(true);
+		item.setClickable(true);
 	}
 
 	private void nkbtn_onclick_actionbar(int id) {

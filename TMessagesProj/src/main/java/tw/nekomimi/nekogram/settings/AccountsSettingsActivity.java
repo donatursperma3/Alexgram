@@ -17,6 +17,7 @@ import tw.nekomimi.nekogram.config.cell.ConfigCellDivider;
 import tw.nekomimi.nekogram.config.cell.ConfigCellHeader;
 import tw.nekomimi.nekogram.config.cell.ConfigCellNumberPicker;
 import tw.nekomimi.nekogram.config.cell.ConfigCellText;
+import tw.nekomimi.nekogram.config.cell.ConfigCellTextCheck;
 import tw.nekomimi.nekogram.helpers.HiddenAccountsController;
 import tw.nekomimi.nekogram.ui.HiddenAccountsPasscodeActivity;
 import xyz.nextalone.nagram.NaConfig;
@@ -40,6 +41,15 @@ public class AccountsSettingsActivity extends BaseNekoXSettingsActivity {
     private final AbstractConfigCell maxActiveAccountsRow = cellGroup.appendCell(
             new ConfigCellNumberPicker("MaxActiveAccounts",
                     NaConfig.INSTANCE.getMaxActiveAccounts(), 1, 100));
+
+    private final AbstractConfigCell headerRows = cellGroup.appendCell(
+            new ConfigCellHeader(getString(R.string.AccountRowsHeader)));
+
+    private final AbstractConfigCell showLastSeenOnAccountRowsRow = cellGroup.appendCell(
+            new ConfigCellTextCheck(
+                    NaConfig.INSTANCE.getShowLastSeenOnAccountRows(),
+                    getString(R.string.ShowLastSeenOnAccountRowsDesc),
+                    getString(R.string.ShowLastSeenOnAccountRows)));
 
     private final AbstractConfigCell dividerLimits = cellGroup.appendCell(new ConfigCellDivider());
 

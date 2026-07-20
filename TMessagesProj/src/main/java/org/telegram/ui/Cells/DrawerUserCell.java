@@ -23,6 +23,7 @@ import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ContactsController;
 import org.telegram.messenger.DialogObject;
 import org.telegram.messenger.Emoji;
+import com.radolyn.ayugram.utils.LastSeenHelper;
 import org.telegram.messenger.ImageLocation;
 import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.MessagesStorage;
@@ -43,10 +44,12 @@ import org.telegram.ui.Components.EmojiTextView;
 import org.telegram.ui.Components.GroupCreateCheckBox;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.Premium.PremiumGradient;
+import xyz.nextalone.nagram.NaConfig;
 
 public class DrawerUserCell extends FrameLayout implements NotificationCenter.NotificationCenterDelegate {
 
     private final SimpleTextView textView;
+    private final SimpleTextView subtitleTextView;
     private final BackupImageView imageView;
     private final AvatarDrawable avatarDrawable;
     private final GroupCreateCheckBox checkBox;
@@ -74,9 +77,18 @@ public class DrawerUserCell extends FrameLayout implements NotificationCenter.No
         textView.setTextSize(15);
         textView.setTypeface(AndroidUtilities.bold());
         textView.setMaxLines(1);
-        textView.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
+        textView.setGravity(Gravity.LEFT | Gravity.TOP);
         textView.setEllipsizeByGradient(24);
-        addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.CENTER_VERTICAL, 86, 0, 14, 0));
+        addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.TOP, 86, 4, 14, 0));
+
+        subtitleTextView = new SimpleTextView(context);
+        subtitleTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText2));
+        subtitleTextView.setTextSize(12);
+        subtitleTextView.setMaxLines(1);
+        subtitleTextView.setGravity(Gravity.LEFT | Gravity.TOP);
+        subtitleTextView.setEllipsizeByGradient(24);
+        subtitleTextView.setVisibility(GONE);
+        addView(subtitleTextView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.TOP, 86, 31, 14, 0));
 
         botVerification = new AnimatedEmojiDrawable.SwapAnimatedEmojiDrawable(textView, dp(18));
         status = new AnimatedEmojiDrawable.SwapAnimatedEmojiDrawable(textView, dp(20));
@@ -94,7 +106,7 @@ public class DrawerUserCell extends FrameLayout implements NotificationCenter.No
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        super.onMeasure(MeasureSpec.makeMeasureSpec(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(dp(48), MeasureSpec.EXACTLY));
+        super.onMeasure(MeasureSpec.makeMeasureSpec(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(dp(60), MeasureSpec.EXACTLY));
     }
 
     @Override
@@ -156,6 +168,14 @@ public class DrawerUserCell extends FrameLayout implements NotificationCenter.No
             text = Emoji.replaceEmoji(text, textView.getPaint().getFontMetricsInt(), false);
         } catch (Exception ignore) {}
         textView.setText(text);
+        subtitleTextView.setVisibility(GONE);
+        if (NaConfig.INSTANCE.getShowLastSeenOnAccountRows().Bool()) {
+            String lastSeenText = LastSeenHelper.getFormattedLastSeenOrDefault(user, null, "");
+            if (lastSeenText != null && !lastSeenText.isEmpty()) {
+                subtitleTextView.setText(lastSeenText);
+                subtitleTextView.setVisibility(VISIBLE);
+            }
+        }
         final Long emojiStatusId = UserObject.getEmojiStatusDocumentId(user);
         if (emojiStatusId != null) {
             textView.setDrawablePadding(dp(4));

@@ -313,6 +313,9 @@
     <string name="DeviceAccount">Device</string>
     <string name="ApiKeyNotSet">API Key is not configured.</string>
     <string name="SaveLocalLastSeen">Save Last Seen Date</string>
+    <string name="AccountRowsHeader">Account Rows</string>
+    <string name="ShowLastSeenOnAccountRows">Show Last Seen on Account Rows</string>
+    <string name="ShowLastSeenOnAccountRowsDesc">Show the saved last-seen line under account entries in the drawer and account picker.</string>
     <string name="CopyVideoFrame">Copy Frame</string>
     <string name="SetLocalName">Set Local Name</string>
     <string name="DeleteChatForBothSides">Use \"Also delete for\" by Default</string>
