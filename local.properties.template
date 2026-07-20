@@ -1,5 +1,6 @@
 # Android SDK path (ubah sesuai lokasi SDK Anda)
-sdk.dir=C:\\Android\\Sdk
+# Jika SDK Android dipasang di lokasi lain, ubah path ini sesuai instalasi Anda.
+sdk.dir=C:\Users\HP\AppData\Local\Android\Sdk
 
 # Telegram API credentials
 TELEGRAM_APP_ID=1234567
