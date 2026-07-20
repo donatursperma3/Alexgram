@@ -51,6 +51,11 @@ public class AccountsSettingsActivity extends BaseNekoXSettingsActivity {
                     getString(R.string.ShowLastSeenOnAccountRowsDesc),
                     getString(R.string.ShowLastSeenOnAccountRows)));
 
+    private final AbstractConfigCell showAccountNumbersRow = cellGroup.appendCell(
+            new ConfigCellTextCheck(NaConfig.INSTANCE.getShowAccountNumbers(), null, getString(R.string.ShowAccountNumbers)));
+    private final AbstractConfigCell autoCollapseAccountTabsRow = cellGroup.appendCell(
+            new ConfigCellTextCheck(NaConfig.INSTANCE.getAutoCollapseAccountTabs(), null, getString(R.string.AutoCollapseAccountTabs)));
+
     private final AbstractConfigCell dividerLimits = cellGroup.appendCell(new ConfigCellDivider());
 
     // Startup Performance section

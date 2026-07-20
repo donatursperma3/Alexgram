@@ -9393,7 +9393,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                         x = layoutWidth - backgroundWidth + dp(6);
                     }
                 } else {
-                    boolean shouldUseAvatarOffset = (isChat || currentMessageObject.isRepostPreview) && isAvatarVisible && !isPlayingRound;
+                    boolean isUserDialog = DialogObject.isUserDialog(currentMessageObject.getDialogId());
+                    boolean shouldUseAvatarOffset = (isChat || isUserDialog || currentMessageObject.isRepostPreview) && isAvatarVisible && !isPlayingRound;
                     // [Alexgram: Avatar Overlap Fix] - Don't apply avatar offset for stickers
                     if (currentMessageObject.isAnyKindOfSticker()) {
                         shouldUseAvatarOffset = false;
@@ -14031,6 +14032,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             forcedLayout = false;
         }
         lastSize = currentSize;
+        boolean isUserDialog = DialogObject.isUserDialog(currentMessageObject.getDialogId());
 
         if (currentMessageObject.type == MessageObject.TYPE_TEXT || currentMessageObject.type == MessageObject.TYPE_ARTICLE) {
             textY = dp(10) + namesOffset;
@@ -14056,10 +14058,11 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     x = layoutWidth - backgroundWidth + dp(6);
                 }
             } else {
+                boolean isUserDialog = DialogObject.isUserDialog(currentMessageObject.getDialogId());
                 x = dp(15);
                 if (isSideMenuLeftMargin()) {
                     x += dp(ChatActivity.SIDE_MENU_WIDTH);
-                } else if ((isChat || currentMessageObject.isRepostPreview) && isAvatarVisible && !isPlayingRound) {
+                } else if ((isChat || isUserDialog || currentMessageObject.isRepostPreview) && isAvatarVisible && !isPlayingRound) {
                     // [Alexgram: Avatar Overlap Fix] - Don't apply avatar offset for stickers
                     if (!currentMessageObject.isAnyKindOfSticker()) {
                         x += dp(48);
@@ -14130,7 +14133,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                         x = dp(15);
                         if (isSideMenuLeftMargin()) {
                             x += dp(ChatActivity.SIDE_MENU_WIDTH);
-                        } else if ((isChat || currentMessageObject != null && (currentMessageObject.forceAvatar || currentMessageObject.messageOwner.guestchat_via_from != null) || currentMessageObject.getDialogId() == UserObject.VERIFY) && isAvatarVisible && (!isPlayingRound || currentMessageObject.isVoiceTranscriptionOpen())) {
+                        } else if ((isChat || isUserDialog || currentMessageObject != null && (currentMessageObject.forceAvatar || currentMessageObject.messageOwner.guestchat_via_from != null) || currentMessageObject.getDialogId() == UserObject.VERIFY) && isAvatarVisible && (!isPlayingRound || currentMessageObject.isVoiceTranscriptionOpen())) {
                             // [Alexgram: Avatar Overlap Fix] - Don't apply avatar offset for stickers
                             if (!currentMessageObject.isAnyKindOfSticker()) {
                                 x += dp(48);
@@ -14248,7 +14251,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     x = dp(15);
                     if (isSideMenuLeftMargin()) {
                         x += dp(ChatActivity.SIDE_MENU_WIDTH);
-                    } else if ((isChat || currentMessageObject.isRepostPreview || currentMessageObject.messageOwner.guestchat_via_from != null) && isAvatarVisible && !isPlayingRound) {
+                    } else if ((isChat || isUserDialog || currentMessageObject.isRepostPreview || currentMessageObject.messageOwner.guestchat_via_from != null) && isAvatarVisible && !isPlayingRound) {
                         // [Alexgram: Avatar Overlap Fix] - Don't apply avatar offset for stickers
                         if (!currentMessageObject.isAnyKindOfSticker()) {
                             x += dp(48);

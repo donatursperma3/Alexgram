@@ -115,12 +115,6 @@ public class NekoChatSettingsActivity extends BaseNekoXSettingsActivity implemen
         add(new ConfigCellCheckBox(NaConfig.INSTANCE.getPremiumItemBoosts()));
     }}, null));
     ArrayList<ConfigCellCheckBox> premiumElementsRows = ((ConfigCellTextCheck2) premiumElementsToggleRow).getCheckBox();
-    // [Alexgram: Account Numbers Display] - Start
-    private final AbstractConfigCell showAccountNumbersRow = cellGroup.appendCell(new ConfigCellTextCheck(NaConfig.INSTANCE.getShowAccountNumbers(), null, getString(R.string.ShowAccountNumbers)));
-    // [Alexgram: Account Numbers Display] - End
-    // [Alexgram: Auto-collapse Account Tabs] - Start
-    private final AbstractConfigCell autoCollapseAccountTabsRow = cellGroup.appendCell(new ConfigCellTextCheck(NaConfig.INSTANCE.getAutoCollapseAccountTabs(), null, getString(R.string.AutoCollapseAccountTabs)));
-    // [Alexgram: Auto-collapse Account Tabs] - End
     private final AbstractConfigCell unreadBadgeOnBackButton = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.unreadBadgeOnBackButton));
     private final AbstractConfigCell sendCommentAfterForwardRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.sendCommentAfterForward));
     private final AbstractConfigCell useChatAttachMediaMenuRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.useChatAttachMediaMenu, getString(R.string.UseChatAttachEnterMenuNotice)));

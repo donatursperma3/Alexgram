@@ -226,6 +226,12 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
     public static final int FILTER_PHOTOS_ONLY = 1;
     public static final int FILTER_VIDEOS_ONLY = 2;
 
+    private static final int FILES_FILTER_ALL = 0;
+    private static final int FILES_FILTER_DOWNLOADED = 1;
+    private static final int FILES_FILTER_NOT_DOWNLOADED = 2;
+
+    private int filesFilterState = FILES_FILTER_ALL;
+
     public static final int VIEW_TYPE_MEDIA_ACTIVITY = 0;
     public static final int VIEW_TYPE_PROFILE_ACTIVITY = 1;
 
@@ -1412,6 +1418,35 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         public int requestIndex;
 
         public int filterType = FILTER_PHOTOS_AND_VIDEOS;
+            private void applyFilesFilter() {
+                try {
+                    SharedMediaData data = sharedMediaData[TAB_FILES];
+                    if (data == null) return;
+                    if (filesFilterState == FILES_FILTER_ALL) {
+                        data.setListFrozen(false);
+                    } else {
+                        ArrayList<MessageObject> filtered = new ArrayList<>();
+                        for (MessageObject mo : data.messages) {
+                            try {
+                                boolean downloaded = mo != null && (mo.attachPathExists || mo.mediaExists);
+                                if (filesFilterState == FILES_FILTER_DOWNLOADED && downloaded) {
+                                    filtered.add(mo);
+                                } else if (filesFilterState == FILES_FILTER_NOT_DOWNLOADED && !downloaded) {
+                                    filtered.add(mo);
+                                }
+                            } catch (Exception ignore) {
+                            }
+                        }
+                        data.setListFrozen(true);
+                        data.frozenMessages.clear();
+                        data.frozenMessages.addAll(filtered);
+                        data.frozenStartOffset = 0;
+                        data.frozenEndLoadingStubs = 0;
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
         public boolean isFrozen;
         public ArrayList<MessageObject> frozenMessages = new ArrayList<>();
         public int frozenStartOffset;
@@ -1922,6 +1957,43 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
 
                         return;
                     }
+                }
+
+                if (tab == TAB_FILES) {
+                    ItemOptions o = ItemOptions.makeOptions(profileActivity, photoVideoOptionsItem);
+                    final ActionBarMenuSubItem showAll = o.addChecked();
+                    final ActionBarMenuSubItem showDownloaded = o.addChecked();
+                    final ActionBarMenuSubItem showNotDownloaded = o.addChecked();
+
+                    showAll.setText("Show all");
+                    showDownloaded.setText("Show downloaded");
+                    showNotDownloaded.setText("Show not downloaded");
+
+                    showAll.setChecked(filesFilterState == FILES_FILTER_ALL);
+                    showDownloaded.setChecked(filesFilterState == FILES_FILTER_DOWNLOADED);
+                    showNotDownloaded.setChecked(filesFilterState == FILES_FILTER_NOT_DOWNLOADED);
+
+                    showAll.setOnClickListener(v -> {
+                        filesFilterState = FILES_FILTER_ALL;
+                        applyFilesFilter();
+                        if (documentsAdapter != null) documentsAdapter.notifyDataSetChanged();
+                        o.dismiss();
+                    });
+                    showDownloaded.setOnClickListener(v -> {
+                        filesFilterState = FILES_FILTER_DOWNLOADED;
+                        applyFilesFilter();
+                        if (documentsAdapter != null) documentsAdapter.notifyDataSetChanged();
+                        o.dismiss();
+                    });
+                    showNotDownloaded.setOnClickListener(v -> {
+                        filesFilterState = FILES_FILTER_NOT_DOWNLOADED;
+                        applyFilesFilter();
+                        if (documentsAdapter != null) documentsAdapter.notifyDataSetChanged();
+                        o.dismiss();
+                    });
+
+                    o.setOnTopOfScrim().setDimAlpha(0).show();
+                    return;
                 }
 
                 if (tab == TAB_GIFTS) {
@@ -8478,13 +8550,16 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
 
         @Override
         public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
-            ArrayList<MessageObject> messageObjects = sharedMediaData[currentType].messages;
+            ArrayList<MessageObject> messageObjects = sharedMediaData[currentType].getMessages();
+            int startOffset = sharedMediaData[currentType].getStartOffset();
             switch (holder.getItemViewType()) {
                 case VIEW_TYPE_DOCUMENT: {
                     if (!(holder.itemView instanceof SharedDocumentCell)) return;
                     SharedDocumentCell sharedDocumentCell = (SharedDocumentCell) holder.itemView;
-                    MessageObject messageObject = messageObjects.get(position - sharedMediaData[currentType].startOffset);
-                    sharedDocumentCell.setDocument(messageObject, position != messageObjects.size() - 1);
+                    int index = position - startOffset;
+                    if (index < 0 || index >= messageObjects.size()) return;
+                    MessageObject messageObject = messageObjects.get(index);
+                    sharedDocumentCell.setDocument(messageObject, index != messageObjects.size() - 1);
                     if (isActionModeShowed) {
                         sharedDocumentCell.setChecked(selectedFiles[messageObject.getDialogId() == dialog_id ? 0 : 1].indexOfKey(messageObject.getId()) >= 0, !scrolling);
                     } else {
@@ -8495,8 +8570,10 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                 case VIEW_TYPE_AUDIO: {
                     if (!(holder.itemView instanceof SharedAudioCell)) return;
                     SharedAudioCell sharedAudioCell = (SharedAudioCell) holder.itemView;
-                    MessageObject messageObject = messageObjects.get(position - sharedMediaData[currentType].startOffset);
-                    sharedAudioCell.setMessageObject(messageObject, position != messageObjects.size() - 1);
+                    int index = position - startOffset;
+                    if (index < 0 || index >= messageObjects.size()) return;
+                    MessageObject messageObject = messageObjects.get(index);
+                    sharedAudioCell.setMessageObject(messageObject, index != messageObjects.size() - 1);
                     if (isActionModeShowed) {
                         sharedAudioCell.setChecked(selectedFiles[messageObject.getDialogId() == dialog_id ? 0 : 1].indexOfKey(messageObject.getId()) >= 0, !scrolling);
                     } else {
@@ -8513,7 +8590,9 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
             if (sharedMediaData[currentType].sections.size() == 0 && !sharedMediaData[currentType].loading) {
                 return VIEW_TYPE_DOCUMENT_EMPTY;
             }
-            if (position >= sharedMediaData[currentType].startOffset && position < sharedMediaData[currentType].startOffset + sharedMediaData[currentType].messages.size()) {
+            int startOffset = sharedMediaData[currentType].getStartOffset();
+            int msgSize = sharedMediaData[currentType].getMessages().size();
+            if (position >= startOffset && position < startOffset + msgSize) {
                 if (currentType == 2 || currentType == 4) {
                     return VIEW_TYPE_AUDIO;
                 } else {
@@ -8557,6 +8636,16 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
             if (mediaPage != null) {
                 showFastScrollHint(mediaPage, null, false);
             }
+        }
+
+        @Override
+        public void notifyDataSetChanged() {
+            try {
+                applyFilesFilter();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            super.notifyDataSetChanged();
         }
 
         @Override
