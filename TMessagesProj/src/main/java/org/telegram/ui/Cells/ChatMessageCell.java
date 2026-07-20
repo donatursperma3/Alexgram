@@ -20715,6 +20715,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 currentBackgroundShadowDrawable = currentBackgroundDrawable.getShadowDrawable();
             }
             backgroundDrawableLeft = layoutWidth - backgroundWidth - (isAvatarVisible ? dp(48) : 0) - (!mediaBackground ? 0 : dp(9));
+            if (currentMessageObject.isAnyKindOfSticker() && isAvatarVisible) {
+                // Shift outgoing stickers slightly left so the right-side avatar stays visible.
+                backgroundDrawableLeft -= dp(6);
+            }
             backgroundDrawableRight = backgroundWidth - (mediaBackground ? 0 : dp(3));
             if (currentMessagesGroup != null && !currentMessagesGroup.isDocuments) {
                 if (!currentPosition.edge) {
@@ -20801,7 +20805,12 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 shouldApplyAvatarOffset = false;
             }
             boolean needAvatarOffset = shouldApplyAvatarOffset;
-            backgroundDrawableLeft = dp(isSideMenuEnabled ? ChatActivity.SIDE_MENU_WIDTH : (needAvatarOffset ? 48 : 0)) + dp(!mediaBackground ? 3 : 9);
+            int avatarOffset = needAvatarOffset ? 48 : 0;
+            if (currentMessageObject.isOutOwner() && currentMessageObject.isAnyKindOfSticker() && isAvatarVisible) {
+                // Shift outgoing sticker bubble a little more left so the right-side avatar remains visible.
+                avatarOffset += 6;
+            }
+            backgroundDrawableLeft = dp(isSideMenuEnabled ? ChatActivity.SIDE_MENU_WIDTH : avatarOffset) + dp(!mediaBackground ? 3 : 9);
             backgroundDrawableRight = backgroundWidth - (mediaBackground ? 0 : dp(3));
             if (currentMessagesGroup != null && !currentMessagesGroup.isDocuments) {
                 if (!currentPosition.edge) {
@@ -22204,6 +22213,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         MessageObject messageObject = getMessageObject();
         if (messageObject != null && messageObject.isOutOwner()) {
             int avatarMargin = isAvatarVisible ? dp(48) : 0;
+            if (messageObject.isAnyKindOfSticker() && isAvatarVisible) {
+                avatarMargin += 6;
+            }
             if (isRoundVideo) {
                 return layoutWidth - backgroundWidth - avatarMargin - (int) ((1f - getVideoTranscriptionProgress()) * dp(9));
             }

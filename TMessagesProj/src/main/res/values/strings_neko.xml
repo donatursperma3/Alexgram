@@ -225,6 +225,16 @@
     <string name="ShareMessages">Share</string>
     <string name="DisableVibration">Disable Vibration</string>
     <string name="SendCommentAfterForward">Send Comment After Forwarding</string>
+    <string name="BulkForwardAutoDelay">Auto delay for bulk forward</string>
+    <string name="BulkForwardDelayPreset">Delay per message</string>
+    <string name="BulkForwardDelayPreset01s">0.1s</string>
+    <string name="BulkForwardDelayPreset015s">0.15s</string>
+    <string name="BulkForwardDelayPreset025s">0.25s</string>
+    <string name="BulkForwardDelayPreset05s">0.5s</string>
+    <string name="BulkForwardDelayPreset1s">1s</string>
+    <string name="BulkForwardDelayPresetManual">Manual</string>
+    <string name="BulkForwardDelayManual">Manual delay (seconds)</string>
+    <string name="BulkForwardDelayManualHint">Example: 0.25</string>
     <string name="ImportLogin">QR Login</string>
     <string name="UserRestrictionsSendGames">Send Games</string>
     <string name="UserRestrictionsSendInline">Send via Inline Bots</string>

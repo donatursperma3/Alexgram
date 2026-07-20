@@ -2447,6 +2447,99 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         return sendMessage(messages, peer, forwardFromMyName, hideCaption, notify, scheduleDate, 0, replyToTopMsg, video_timestamp, payStars, 0, null);
     }
 
+    private boolean shouldApplyBulkForwardDelay(ArrayList<MessageObject> messages, boolean forwardFromMyName) {
+        if (messages == null || messages.size() <= 1) {
+            return false;
+        }
+        if (forwardFromMyName) {
+            return true;
+        }
+        for (int i = 0; i < messages.size(); i++) {
+            MessageObject messageObject = messages.get(i);
+            if (messageObject == null || messageObject.messageOwner == null) {
+                continue;
+            }
+            if (messageObject.isForwarded() || messageObject.messageOwner.fwd_msg_id != 0 || messageObject.messageOwner.fwd_from != null) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private float getConfiguredBulkForwardDelaySeconds() {
+        if (!NekoConfig.bulkForwardAutoDelay.Bool()) {
+            return 0f;
+        }
+        try {
+            int preset = NekoConfig.bulkForwardDelayPreset.Int();
+            if (preset == NekoConfig.BULK_FORWARD_DELAY_PRESET_01S) {
+                return 0.1f;
+            }
+            if (preset == NekoConfig.BULK_FORWARD_DELAY_PRESET_015S) {
+                return 0.15f;
+            }
+            if (preset == NekoConfig.BULK_FORWARD_DELAY_PRESET_025S) {
+                return 0.25f;
+            }
+            if (preset == NekoConfig.BULK_FORWARD_DELAY_PRESET_05S) {
+                return 0.5f;
+            }
+            if (preset == NekoConfig.BULK_FORWARD_DELAY_PRESET_1S) {
+                return 1.0f;
+            }
+            if (preset == NekoConfig.BULK_FORWARD_DELAY_PRESET_MANUAL) {
+                String rawValue = NekoConfig.bulkForwardDelayManualSeconds.String();
+                if (TextUtils.isEmpty(rawValue)) {
+                    return 0f;
+                }
+                String normalized = rawValue.trim().replace(',', '.');
+                float parsed = Float.parseFloat(normalized);
+                return parsed > 0f ? parsed : 0f;
+            }
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+        return 0f;
+    }
+
+    private void scheduleBulkForwardWithDelay(
+            ArrayList<MessageObject> messages,
+            final long peer,
+            final boolean forwardFromMyName,
+            final boolean hideCaption,
+            final boolean notify,
+            final int scheduleDate,
+            final int scheduleRepeatPeriod,
+            final MessageObject replyToTopMsg,
+            final int videoTimestamp,
+            final long payStars,
+            final long monoForumPeerId,
+            final MessageSuggestionParams suggestionParams,
+            final int index,
+            final long delayMs
+    ) {
+        if (messages == null || messages.isEmpty() || index >= messages.size()) {
+            return;
+        }
+        final ArrayList<MessageObject> singleMessage = new ArrayList<>(1);
+        singleMessage.add(messages.get(index));
+        final Runnable sendStep = () -> {
+            try {
+                sendMessage(singleMessage, peer, forwardFromMyName, hideCaption, notify, scheduleDate, scheduleRepeatPeriod, replyToTopMsg, videoTimestamp, payStars, monoForumPeerId, suggestionParams);
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
+            if (index + 1 < messages.size()) {
+                AndroidUtilities.runOnUIThread(() -> scheduleBulkForwardWithDelay(messages, peer, forwardFromMyName, hideCaption, notify, scheduleDate, scheduleRepeatPeriod, replyToTopMsg, videoTimestamp, payStars, monoForumPeerId, suggestionParams, index + 1, delayMs), delayMs);
+            }
+        };
+        if (index == 0) {
+            sendStep.run();
+        } else {
+            AndroidUtilities.runOnUIThread(sendStep, delayMs);
+        }
+    }
+
     private int getCopyForwardableCount(ArrayList<MessageObject> messages) {
         int count = 0;
         for (int a = 0; a < messages.size(); a++) {
@@ -2493,6 +2586,19 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         }
         int sendResult = 0;
         long myId = getUserConfig().getClientUserId();
+        if (shouldApplyBulkForwardDelay(messages, forwardFromMyName)) {
+            try {
+                float delaySeconds = getConfiguredBulkForwardDelaySeconds();
+                if (delaySeconds > 0f) {
+                    long delayMs = Math.max(0L, (long) (delaySeconds * 1000f));
+                    FileLog.d("Bulk forward delay enabled: count=" + messages.size() + " delayMs=" + delayMs);
+                    scheduleBulkForwardWithDelay(messages, peer, forwardFromMyName, hideCaption, notify, scheduleDate, scheduleRepeatPeriod, replyToTopMsg, video_timestamp, payStars, monoForumPeerId, suggestionParams, 0, delayMs);
+                    return 0;
+                }
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
+        }
         boolean forceCopySend = NaConfig.INSTANCE.getAllowForwardingRestriction().Bool();
         if (forceCopySend) {
             forceCopySend = false;

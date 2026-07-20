@@ -112,7 +112,7 @@ public class DrawerUserCell extends FrameLayout implements NotificationCenter.No
     @Override
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
-        textView.setTextColor(Theme.getColor(Theme.key_chats_menuItemText));
+        applyTextColors();
         status.attach();
         botVerification.attach();
         for (int i = 0; i < UserConfig.MAX_ACCOUNT_COUNT; i++){
@@ -168,6 +168,7 @@ public class DrawerUserCell extends FrameLayout implements NotificationCenter.No
             text = Emoji.replaceEmoji(text, textView.getPaint().getFontMetricsInt(), false);
         } catch (Exception ignore) {}
         textView.setText(text);
+        applyTextColors();
         subtitleTextView.setVisibility(GONE);
         if (NaConfig.INSTANCE.getShowLastSeenOnAccountRows().Bool()) {
             String lastSeenText = LastSeenHelper.getFormattedLastSeenOrDefault(user, null, "");
@@ -209,6 +210,14 @@ public class DrawerUserCell extends FrameLayout implements NotificationCenter.No
 
     public int getAccountNumber() {
         return accountNumber;
+    }
+
+    private void applyTextColors() {
+        int mainTextColor = Theme.getColor(Theme.key_chats_menuItemText);
+        textView.setTextColor(mainTextColor);
+        subtitleTextView.setTextColor(Theme.isCurrentThemeDark()
+                ? Theme.getColor(Theme.key_windowBackgroundWhiteGrayText2)
+                : Theme.multAlpha(mainTextColor, 0.78f));
     }
 
     @Override

@@ -117,6 +117,43 @@ public class NekoChatSettingsActivity extends BaseNekoXSettingsActivity implemen
     ArrayList<ConfigCellCheckBox> premiumElementsRows = ((ConfigCellTextCheck2) premiumElementsToggleRow).getCheckBox();
     private final AbstractConfigCell unreadBadgeOnBackButton = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.unreadBadgeOnBackButton));
     private final AbstractConfigCell sendCommentAfterForwardRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.sendCommentAfterForward));
+    private final AbstractConfigCell bulkForwardAutoDelayRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.bulkForwardAutoDelay));
+    private final AbstractConfigCell bulkForwardDelayPresetRow = cellGroup.appendCell(new ConfigCellSelectBox("BulkForwardDelayPreset", NekoConfig.bulkForwardDelayPreset, new String[]{
+            getString(R.string.BulkForwardDelayPreset01s),
+            getString(R.string.BulkForwardDelayPreset015s),
+            getString(R.string.BulkForwardDelayPreset025s),
+            getString(R.string.BulkForwardDelayPreset05s),
+            getString(R.string.BulkForwardDelayPreset1s),
+            getString(R.string.BulkForwardDelayPresetManual),
+    }, null));
+    private final AbstractConfigCell bulkForwardDelayManualRow = cellGroup.appendCell(new ConfigCellTextInput("BulkForwardDelayManual", NekoConfig.bulkForwardDelayManualSeconds, getString(R.string.BulkForwardDelayManualHint), null, input -> {
+        String normalized = input == null ? "" : input.trim();
+        if (normalized.isEmpty()) {
+            return "0.1";
+        }
+        normalized = normalized.replace(',', '.');
+        try {
+            float parsed = Float.parseFloat(normalized);
+            if (parsed <= 0f) {
+                return "0.1";
+            }
+            return String.valueOf(parsed);
+        } catch (Exception e) {
+            FileLog.e(e);
+            return "0.1";
+        }
+    }, (rawInput, newValue) -> {
+        try {
+            String normalized = rawInput == null ? "" : rawInput.trim().replace(',', '.');
+            if (normalized.isEmpty()) {
+                return false;
+            }
+            Float.parseFloat(normalized);
+            return false;
+        } catch (Exception e) {
+            return true;
+        }
+    }));
     private final AbstractConfigCell useChatAttachMediaMenuRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.useChatAttachMediaMenu, getString(R.string.UseChatAttachEnterMenuNotice)));
     // [Alexgram: Templates Settings Row] - Start
     private final AbstractConfigCell templatesPanelTypeRow = cellGroup.appendCell(new ConfigCellCustom("TemplatesPanelType", CellGroup.ITEM_TYPE_TEXT_SETTINGS_CELL, true));
@@ -590,12 +627,26 @@ public class NekoChatSettingsActivity extends BaseNekoXSettingsActivity implemen
                         listAdapter.notifyItemRemoved(index);
                     }
                 }
+            } else if (key.equals(NekoConfig.bulkForwardAutoDelay.getKey())) {
+                updateBulkForwardDelayRows();
+            } else if (key.equals(NekoConfig.bulkForwardDelayPreset.getKey())) {
+                updateBulkForwardDelayRows();
             } else if (key.equals("PremiumElements")) {
                 addRowsToMap(cellGroup);
             }
         };
 
+        updateBulkForwardDelayRows();
+
         return superView;
+    }
+
+    private void updateBulkForwardDelayRows() {
+        boolean enabled = NekoConfig.bulkForwardAutoDelay.Bool();
+        boolean useManual = NekoConfig.bulkForwardDelayPreset.Int() == NekoConfig.BULK_FORWARD_DELAY_PRESET_MANUAL;
+        if (bulkForwardDelayManualRow instanceof ConfigCellTextInput) {
+            ((ConfigCellTextInput) bulkForwardDelayManualRow).setEnabled(enabled && useManual);
+        }
     }
 
     @Override

@@ -1966,9 +1966,9 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                     final ActionBarMenuSubItem showDownloaded = o.addChecked();
                     final ActionBarMenuSubItem showNotDownloaded = o.addChecked();
 
-                    showAll.setText("Show all");
-                    showDownloaded.setText("Show downloaded");
-                    showNotDownloaded.setText("Show not downloaded");
+                    showAll.setText(getString(R.string.ShowAllFiles));
+                    showDownloaded.setText(getString(R.string.ShowDownloadedFiles));
+                    showNotDownloaded.setText(getString(R.string.ShowNotDownloadedFiles));
 
                     showAll.setChecked(filesFilterState == FILES_FILTER_ALL);
                     showDownloaded.setChecked(filesFilterState == FILES_FILTER_DOWNLOADED);
@@ -8468,25 +8468,28 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
             if (sharedMediaData[currentType].loadingAfterFastScroll) {
                 return sharedMediaData[currentType].getTotalCount();
             }
-            if (sharedMediaData[currentType].messages.size() == 0 && !sharedMediaData[currentType].loading) {
+            int msgSize = sharedMediaData[currentType].getMessages().size();
+            if (msgSize == 0 && !sharedMediaData[currentType].loading) {
                 return 1;
             }
-            if (sharedMediaData[currentType].messages.size() == 0 && (!sharedMediaData[currentType].endReached[0] || !sharedMediaData[currentType].endReached[1]) && sharedMediaData[currentType].startReached) {
+            if (msgSize == 0 && (!sharedMediaData[currentType].endReached[0] || !sharedMediaData[currentType].endReached[1]) && sharedMediaData[currentType].startReached) {
                 return 0;
             }
-            if (sharedMediaData[currentType].getTotalCount() == 0) {
-                int count = sharedMediaData[currentType].getStartOffset() + sharedMediaData[currentType].getMessages().size();
-                if (count != 0 && (!sharedMediaData[currentType].endReached[0] || !sharedMediaData[currentType].endReached[1])) {
-                    if (sharedMediaData[currentType].getEndLoadingStubs() != 0) {
-                        count += sharedMediaData[currentType].getEndLoadingStubs();
-                    } else {
-                        count++;
-                    }
+            int count = sharedMediaData[currentType].getStartOffset() + msgSize;
+            if (count != 0 && (!sharedMediaData[currentType].endReached[0] || !sharedMediaData[currentType].endReached[1])) {
+                if (sharedMediaData[currentType].getEndLoadingStubs() != 0) {
+                    count += sharedMediaData[currentType].getEndLoadingStubs();
+                } else {
+                    count++;
                 }
-                return count;
-            } else {
-                return Math.max(sharedMediaData[currentType].getTotalCount(), sharedMediaData[currentType].getStartOffset() + sharedMediaData[currentType].getMessages().size());
             }
+            if (currentType == TAB_FILES && filesFilterState != FILES_FILTER_ALL) {
+                return count;
+            }
+            if (sharedMediaData[currentType].getTotalCount() == 0) {
+                return count;
+            }
+            return Math.max(sharedMediaData[currentType].getTotalCount(), count);
         }
 
         @Override
@@ -8671,6 +8674,9 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
 
         @Override
         public int getTotalItemsCount() {
+            if (currentType == TAB_FILES && filesFilterState != FILES_FILTER_ALL) {
+                return sharedMediaData[currentType].getMessages().size();
+            }
             return sharedMediaData[currentType].getTotalCount();
         }
     }

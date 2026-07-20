@@ -44,6 +44,13 @@ public class NekoConfig {
     public static final int MARKDOWN_PARSER_TELEGRAM = 0;
     public static final int MARKDOWN_PARSER_NEKO = 1;
 
+    public static final int BULK_FORWARD_DELAY_PRESET_01S = 0;
+    public static final int BULK_FORWARD_DELAY_PRESET_015S = 1;
+    public static final int BULK_FORWARD_DELAY_PRESET_025S = 2;
+    public static final int BULK_FORWARD_DELAY_PRESET_05S = 3;
+    public static final int BULK_FORWARD_DELAY_PRESET_1S = 4;
+    public static final int BULK_FORWARD_DELAY_PRESET_MANUAL = 5;
+
     public static final int DRAWER_BACKGROUND_DEFAULT = 0;
     public static final int DRAWER_BACKGROUND_AVATAR = 1;
     public static final int DRAWER_BACKGROUND_BIG_AVATAR = 2;
@@ -155,6 +162,9 @@ public class NekoConfig {
     public static ConfigItem useChatAttachMediaMenu = addConfig("UseChatAttachEnterMenu", configTypeBool, true);
     public static ConfigItem disableLinkPreviewByDefault = addConfig("DisableLinkPreviewByDefault", configTypeBool, false);
     public static ConfigItem sendCommentAfterForward = addConfig("SendCommentAfterForward", configTypeBool, true);
+    public static ConfigItem bulkForwardAutoDelay = addConfig("BulkForwardAutoDelay", configTypeBool, false);
+    public static ConfigItem bulkForwardDelayPreset = addConfig("BulkForwardDelayPreset", configTypeInt, BULK_FORWARD_DELAY_PRESET_01S);
+    public static ConfigItem bulkForwardDelayManualSeconds = addConfig("BulkForwardDelayManualSeconds", configTypeString, "0.1");
     public static ConfigItem disableTrending = addConfig("DisableTrending", configTypeBool, true);
     public static ConfigItem dontSendGreetingSticker = addConfig("DontSendGreetingSticker", configTypeBool, true);
     public static ConfigItem hideTimeForSticker = addConfig("HideTimeForSticker", configTypeBool, false);

@@ -183,7 +183,7 @@ protected:
 class LottieParserImpl : protected LookaheadParserHandler {
 public:
     LottieParserImpl(char *str, const char *dir_path, std::map<int32_t, int32_t> *colorReplacement, rlottie::FitzModifier fitzModifier)
-        : LookaheadParserHandler(str), mDirPath(dir_path), colorMap(colorReplacement), mFitzModifier(fitzModifier)
+        : LookaheadParserHandler(str), mDirPath(dir_path), mFitzModifier(fitzModifier), colorMap(colorReplacement)
     {
     }
 
