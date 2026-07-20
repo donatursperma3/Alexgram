@@ -4,7 +4,9 @@ package tw.nekomimi.nekogram.config.cell;
 import android.content.Context;
 import android.view.Gravity;
 import android.view.View;
+import android.widget.CheckBox;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -21,6 +23,8 @@ import tw.nekomimi.nekogram.config.CellGroup;
 import tw.nekomimi.nekogram.config.ConfigItem;
 
 public class ConfigCellNumberPicker extends AbstractConfigCell implements WithBindConfig, WithKey, WithOnClick {
+    private static final int UNLIMITED_VALUE = -1;
+
     private final ConfigItem bindConfig;
     private final int min;
     private final int max;
@@ -62,7 +66,7 @@ public class ConfigCellNumberPicker extends AbstractConfigCell implements WithBi
     @Override
     public void onBindViewHolder(RecyclerView.ViewHolder holder) {
         TextSettingsCell cell = (TextSettingsCell) holder.itemView;
-        cell.setTextAndValue(title, String.valueOf(bindConfig.Int()), false, cellGroup.needSetDivider(this), true);
+        cell.setTextAndValue(title, formatValue(bindConfig.Int()), false, cellGroup.needSetDivider(this), true);
     }
 
     @Override
@@ -76,20 +80,37 @@ public class ConfigCellNumberPicker extends AbstractConfigCell implements WithBi
         linearLayout.setOrientation(LinearLayout.VERTICAL);
         linearLayout.setGravity(Gravity.CENTER);
 
+        CheckBox unlimitedCheckBox = new CheckBox(context);
+        unlimitedCheckBox.setText(LocaleController.getString(R.string.NoLimit));
+        unlimitedCheckBox.setChecked(bindConfig.Int() == UNLIMITED_VALUE);
+
         NumberPicker picker = new NumberPicker(context);
         picker.setMinValue(min);
         picker.setMaxValue(max);
-        picker.setValue(bindConfig.Int());
+        picker.setValue(bindConfig.Int() > 0 ? bindConfig.Int() : min);
+        picker.setEnabled(!unlimitedCheckBox.isChecked());
 
+        TextView hintView = new TextView(context);
+        hintView.setGravity(Gravity.CENTER);
+        hintView.setText(LocaleController.getString(R.string.NoLimit));
+        hintView.setVisibility(unlimitedCheckBox.isChecked() ? View.GONE : View.VISIBLE);
+
+        unlimitedCheckBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            picker.setEnabled(!isChecked);
+            hintView.setVisibility(isChecked ? View.GONE : View.VISIBLE);
+        });
+
+        linearLayout.addView(unlimitedCheckBox, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER, 0, 10, 0, 6));
         linearLayout.addView(picker, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER, 0, 10, 0, 10));
+        linearLayout.addView(hintView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER, 0, 0, 0, 10));
 
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setTitle(title);
         builder.setView(linearLayout);
         builder.setPositiveButton(LocaleController.getString(R.string.OK), (dialogInterface, i) -> {
-            int newVal = picker.getValue();
+            int newVal = unlimitedCheckBox.isChecked() ? UNLIMITED_VALUE : picker.getValue();
             int activeCount = org.telegram.messenger.UserConfig.getActivatedAccountsCount();
-            if ("MaxActiveAccounts".equals(getKey()) && newVal < activeCount) {
+            if ("MaxActiveAccounts".equals(getKey()) && newVal > 0 && newVal < activeCount) {
                 AlertDialog.Builder warningBuilder = new AlertDialog.Builder(context);
                 warningBuilder.setTitle(LocaleController.getString("Warning", R.string.Warning));
                 warningBuilder.setMessage(LocaleController.formatString("MaxActiveAccountsWarning", R.string.MaxActiveAccountsWarning, activeCount, newVal));
@@ -112,6 +133,10 @@ public class ConfigCellNumberPicker extends AbstractConfigCell implements WithBi
             cellGroup.listAdapter.notifyItemChanged(cellGroup.rows.indexOf(this));
         }
         cellGroup.runCallback(bindConfig.getKey(), newVal);
+    }
+
+    private String formatValue(int value) {
+        return value == UNLIMITED_VALUE ? LocaleController.getString(R.string.NoLimit) : String.valueOf(value);
     }
 }
 // [Alexgram: Max Active Accounts] - End

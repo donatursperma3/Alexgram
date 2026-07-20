@@ -29,6 +29,7 @@ public class UserConfig extends BaseController {
     // [Alexgram: Max Active Accounts] - Start
     public final static int MAX_ACCOUNT_DEFAULT_COUNT = 10;
     public final static int MAX_ACCOUNT_COUNT = 100;
+    public final static int ACCOUNT_LIMIT_UNLIMITED = -1;
     // [Alexgram: Max Active Accounts] - End
 
     private final Object sync = new Object();
@@ -126,11 +127,40 @@ public class UserConfig extends BaseController {
     }
 
     // [Alexgram: Accounts Settings] - Start
+    public static int normalizeAccountLimit(int value, int fallback, int hardCap) {
+        if (value == ACCOUNT_LIMIT_UNLIMITED) {
+            return hardCap;
+        }
+        if (value < 1) {
+            return fallback;
+        }
+        return Math.min(value, hardCap);
+    }
+
     public static int getMaxAccountCount() {
         try {
-            return xyz.nextalone.nagram.NaConfig.INSTANCE.getMaxAccountCount().Int();
+            return normalizeAccountLimit(xyz.nextalone.nagram.NaConfig.INSTANCE.getMaxAccountCount().Int(), MAX_ACCOUNT_COUNT, MAX_ACCOUNT_COUNT);
         } catch (Exception e) {
-            return 10;
+            FileLog.e(e);
+            return MAX_ACCOUNT_COUNT;
+        }
+    }
+
+    public static int getMaxActiveAccounts() {
+        try {
+            return normalizeAccountLimit(xyz.nextalone.nagram.NaConfig.INSTANCE.getMaxActiveAccounts().Int(), MAX_ACCOUNT_DEFAULT_COUNT, MAX_ACCOUNT_COUNT);
+        } catch (Exception e) {
+            FileLog.e(e);
+            return MAX_ACCOUNT_DEFAULT_COUNT;
+        }
+    }
+
+    public static int getStartupActiveAccounts() {
+        try {
+            return normalizeAccountLimit(xyz.nextalone.nagram.NaConfig.INSTANCE.getStartupActiveAccounts().Int(), 3, MAX_ACCOUNT_COUNT);
+        } catch (Exception e) {
+            FileLog.e(e);
+            return 3;
         }
     }
     // [Alexgram: Accounts Settings] - End

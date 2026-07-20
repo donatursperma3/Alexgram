@@ -49,19 +49,72 @@ public class ConfigItem {
     }
 
     public int Int() {
-        return (int) value;
+        try {
+            if (value instanceof Integer) {
+                return (Integer) value;
+            }
+            if (value instanceof Number) {
+                return ((Number) value).intValue();
+            }
+            if (value instanceof String) {
+                return Integer.parseInt((String) value);
+            }
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+        if (defaultValue instanceof Number) {
+            return ((Number) defaultValue).intValue();
+        }
+        return 0;
     }
 
     public Long Long() {
-        return (Long) value;
+        try {
+            if (value instanceof Long) {
+                return (Long) value;
+            }
+            if (value instanceof Number) {
+                return ((Number) value).longValue();
+            }
+            if (value instanceof String) {
+                return Long.parseLong((String) value);
+            }
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+        if (defaultValue instanceof Number) {
+            return ((Number) defaultValue).longValue();
+        }
+        return 0L;
     }
 
     public Float Float() {
-        return (Float) value;
+        try {
+            if (value instanceof Float) {
+                return (Float) value;
+            }
+            if (value instanceof Number) {
+                return ((Number) value).floatValue();
+            }
+            if (value instanceof String) {
+                return Float.parseFloat((String) value);
+            }
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+        if (defaultValue instanceof Number) {
+            return ((Number) defaultValue).floatValue();
+        }
+        return 0f;
     }
 
     public String String() {
-        return value.toString();
+        try {
+            return value == null ? "" : value.toString();
+        } catch (Exception e) {
+            FileLog.e(e);
+            return "";
+        }
     }
 
     public HashSet<Integer> SetInt() {

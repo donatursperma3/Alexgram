@@ -6,7 +6,9 @@ import androidx.core.content.edit
 import org.telegram.messenger.AndroidUtilities
 import org.telegram.messenger.ApplicationLoader
 import org.telegram.messenger.BuildVars
+import org.telegram.messenger.FileLog
 import org.telegram.messenger.NotificationCenter
+import org.telegram.messenger.UserConfig
 import tw.nekomimi.nekogram.NekoConfig
 import tw.nekomimi.nekogram.config.ConfigItem
 import tw.nekomimi.nekogram.config.ConfigItemKeyLinked
@@ -1837,6 +1839,9 @@ object NaConfig {
         if (ApplicationLoader.applicationContext == null) {
             return
         }
+        normalizeAccountLimitConfig(maxAccountCount, UserConfig.MAX_ACCOUNT_COUNT)
+        normalizeAccountLimitConfig(maxActiveAccounts, UserConfig.MAX_ACCOUNT_DEFAULT_COUNT)
+        normalizeAccountLimitConfig(startupActiveAccounts, 3)
         if (!translatorModeWithOriginalMigrated.Bool()) {
             if (getPreferences().contains(translatorMode.key)) {
                 translatorMode.setConfigInt(
@@ -1882,6 +1887,23 @@ object NaConfig {
         }
         if (NekoConfig.customSavePath.String() == "Nagram" || NekoConfig.customSavePath.String() == "NagramX") {
             NekoConfig.customSavePath.setConfigString("Alexgram")
+        }
+    }
+
+    private fun normalizeAccountLimitConfig(configItem: ConfigItem, fallback: Int) {
+        try {
+            val rawValue = configItem.Int()
+            val normalizedValue = when {
+                rawValue == -1 -> -1
+                rawValue < 1 -> fallback
+                else -> rawValue.coerceAtMost(UserConfig.MAX_ACCOUNT_COUNT)
+            }
+            if (normalizedValue != rawValue) {
+                configItem.setConfigInt(normalizedValue)
+            }
+        } catch (e: Exception) {
+            FileLog.e(e)
+            configItem.setConfigInt(fallback)
         }
     }
 

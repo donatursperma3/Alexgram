@@ -287,7 +287,7 @@ public class ApplicationLoader extends Application {
         // Phase 2: Only eagerly initialize the first N activated accounts.
         // N = StartupActiveAccounts setting (default 3). Remaining accounts lazy-load on demand
         // when the user taps on them, avoiding 97 useless ConnectionsManager threads at startup.
-        int startupLimit = xyz.nextalone.nagram.NaConfig.INSTANCE.getStartupActiveAccounts().Int();
+        int startupLimit = UserConfig.getStartupActiveAccounts();
         int startupInitialized = 0;
         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
             if (!UserConfig.getInstance(a).isClientActivated()) continue;
