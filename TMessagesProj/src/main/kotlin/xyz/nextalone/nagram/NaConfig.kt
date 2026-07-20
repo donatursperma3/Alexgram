@@ -726,6 +726,22 @@ object NaConfig {
             ConfigItem.configTypeBool,
             false
         )
+    // [Alexgram: Account Number Display] - Start
+    val showAccountNumbers =
+        addConfig(
+            "ShowAccountNumbers",
+            ConfigItem.configTypeBool,
+            false
+        )
+    // [Alexgram: Account Number Display] - End
+    // [Alexgram: Auto-collapse Account Tabs] - Start
+    val autoCollapseAccountTabs =
+        addConfig(
+            "AutoCollapseAccountTabs",
+            ConfigItem.configTypeBool,
+            false
+        )
+    // [Alexgram: Auto-collapse Account Tabs] - End
     val messageSavingSaveMedia =
         addConfig(
             "MessageSavingSaveMedia",

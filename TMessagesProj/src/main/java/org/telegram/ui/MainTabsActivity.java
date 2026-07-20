@@ -647,7 +647,10 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         if (accountNumbers.size() > 0) {
             if (o.getItemsCount() > 0) o.addGap();
             final ArrayList<View> accountViews = new ArrayList<>();
-            final boolean expanded = org.telegram.messenger.MessagesController.getGlobalMainSettings().getBoolean("settingsAccountsShown", true);
+            // [Alexgram: Auto-collapse Account Tabs] - Start
+            boolean autoCollapse = NaConfig.INSTANCE.getAutoCollapseAccountTabs().Bool();
+            final boolean expanded = org.telegram.messenger.MessagesController.getGlobalMainSettings().getBoolean("settingsAccountsShown", !autoCollapse);
+            // [Alexgram: Auto-collapse Account Tabs] - End
             
             if (accountNumbers.size() > 1) {
                 o.getLinearLayout().setLayoutTransition(new LayoutTransition());

@@ -754,14 +754,18 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                 boolean settingsAccountsShown = MessagesController.getGlobalMainSettings().getBoolean("settingsAccountsShown", true);
                 if (settingsAccountsShown || accountNumbers.size() <= 1) {
                     for (int i = 0; i < accountNumbers.size(); ++i) {
-                        items.add(AccountCell.Factory.of(i + 2000, accountNumbers.get(i)));
+                        // [Alexgram: Account Numbers] - Pass position for account number display
+                        items.add(AccountCell.Factory.of(i + 2000, accountNumbers.get(i), i));
                     }
                 } else {
                     int activeAccount = UserConfig.selectedAccount;
                     if (accountNumbers.contains(activeAccount)) {
-                        items.add(AccountCell.Factory.of(accountNumbers.indexOf(activeAccount) + 2000, activeAccount));
+                        // [Alexgram: Account Numbers] - Pass position for account number display
+                        int position = accountNumbers.indexOf(activeAccount);
+                        items.add(AccountCell.Factory.of(position + 2000, activeAccount, position));
                     } else {
-                        items.add(AccountCell.Factory.of(2000, accountNumbers.get(0)));
+                        // [Alexgram: Account Numbers] - Pass position for account number display
+                        items.add(AccountCell.Factory.of(2000, accountNumbers.get(0), 0));
                     }
                 }
                 adapter.reorderSectionEnd();
@@ -1211,6 +1215,9 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         private AvatarDrawable avatarDrawable;
         private BackupImageView avatarView;
         private SimpleTextView textView;
+        // [Alexgram: Account Numbers] - Start
+        private SimpleTextView ordinalNumberView;
+        // [Alexgram: Account Numbers] - End
         private TextView counterView;
         private ImageView arrowView;
         private ImageView reorderView;
@@ -1233,6 +1240,14 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             textView.setTextSize(15);
             textView.setTypeface(AndroidUtilities.bold());
             textView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, resourcesProvider));
+
+            // [Alexgram: Account Numbers] - Start
+            ordinalNumberView = new SimpleTextView(context);
+            ordinalNumberView.setTextSize(13);
+            ordinalNumberView.setTypeface(AndroidUtilities.bold());
+            ordinalNumberView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText, resourcesProvider));
+            ordinalNumberView.setGravity(Gravity.CENTER);
+            // [Alexgram: Account Numbers] - End
 
             botDrawable = new AnimatedEmojiDrawable.SwapAnimatedEmojiDrawable(textView, dp(24), AnimatedEmojiDrawable.CACHE_TYPE_EMOJI_STATUS);
             emojiStatusDrawable = new AnimatedEmojiDrawable.SwapAnimatedEmojiDrawable(textView, dp(24), AnimatedEmojiDrawable.CACHE_TYPE_EMOJI_STATUS);
@@ -1275,6 +1290,9 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                 addView(reorderView, LayoutHelper.createLinear(48, 48, 0, Gravity.CENTER_VERTICAL | Gravity.LEFT, 0, 0, 0, 0));
                 addView(arrowView, LayoutHelper.createLinear(24, 24, 0, Gravity.CENTER_VERTICAL | Gravity.LEFT, 12, 0, 0, 0));
                 addView(counterView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, 20, 0, Gravity.CENTER_VERTICAL, 0, 0, 0, 0));
+                // [Alexgram: Account Numbers] - Start
+                addView(ordinalNumberView, LayoutHelper.createLinear(20, LayoutHelper.WRAP_CONTENT, 0, Gravity.CENTER_VERTICAL, 8, 0, 8, 0));
+                // [Alexgram: Account Numbers] - End
                 addView(textView, LayoutHelper.createLinear(0, LayoutHelper.MATCH_PARENT, 1f, Gravity.FILL, 18, 0, 0, 0));
                 addView(avatarView, LayoutHelper.createLinear(28, 28, Gravity.CENTER_VERTICAL | Gravity.RIGHT, 18, 0, 18, 0));
 
@@ -1282,6 +1300,9 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                 textView.setGravity(Gravity.CENTER_VERTICAL | Gravity.LEFT);
 
                 addView(avatarView, LayoutHelper.createLinear(28, 28, Gravity.CENTER_VERTICAL | Gravity.LEFT, 18, 0, 18, 0));
+                // [Alexgram: Account Numbers] - Start
+                addView(ordinalNumberView, LayoutHelper.createLinear(20, LayoutHelper.WRAP_CONTENT, 0, Gravity.CENTER_VERTICAL, 8, 0, 8, 0));
+                // [Alexgram: Account Numbers] - End
                 addView(textView, LayoutHelper.createLinear(0, LayoutHelper.MATCH_PARENT, 1f, Gravity.FILL, 0, 0, 18, 0));
                 addView(counterView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, 20, 0, Gravity.CENTER_VERTICAL, 0, 0, 0, 0));
                 addView(arrowView, LayoutHelper.createLinear(24, 24, 0, Gravity.CENTER_VERTICAL | Gravity.RIGHT, 0, 0, 12, 0));
@@ -1303,42 +1324,66 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         }
 
         public void set(int account, int activeAccount) {
-            final TLRPC.User user = UserConfig.getInstance(account).getCurrentUser();
-
-            avatarDrawable.setInfo(account, user);
-            avatarView.getImageReceiver().setCurrentAccount(account);
-            avatarView.setForUserOrChat(user, avatarDrawable);
-            textView.setText(UserObject.getUserName(user));
-
-            botDrawable.setCurrentAccount(account);
-            emojiStatusDrawable.setCurrentAccount(account);
-
-            botDrawable.setColor(Theme.getColor(Theme.key_profile_verifiedBackground, resourcesProvider));
-            if (user != null && user.bot_verification_icon != 0) {
-                botDrawable.set(user.bot_verification_icon, false);
-            } else {
-                botDrawable.set((Drawable) null, false);
-            }
-            final Long emojiStatusId = UserObject.getEmojiStatusDocumentId(user);
-            emojiStatusDrawable.setColor(Theme.getColor(Theme.key_profile_verifiedBackground, resourcesProvider));
-            if (emojiStatusId != null) {
-                emojiStatusDrawable.set(emojiStatusId, false);
-            } else if (user != null && user.premium) {
-                emojiStatusDrawable.set(getContext().getResources().getDrawable(R.drawable.msg_premium_liststar).mutate(), false);
-            } else {
-                emojiStatusDrawable.set((Drawable) null, false);
-            }
-            textView.setLeftDrawable(!botDrawable.isEmpty() ? botDrawable : null);
-            textView.setRightDrawable(!emojiStatusDrawable.isEmpty() ? emojiStatusDrawable : null);
-
-            int counter = MessagesStorage.getInstance(account).getMainUnreadCount();
-            counterView.setVisibility(counter > 0 ? View.VISIBLE : View.GONE);
-            counterView.setText(LocaleController.formatNumber(counter, ','));
-
-            boolean selected = account == activeAccount;
-            checkView.setVisibility(selected ? View.VISIBLE : View.GONE);
-            arrowView.setVisibility(selected ? View.GONE : View.VISIBLE);
+            set(account, activeAccount, -1);
         }
+
+        // [Alexgram: Account Numbers] - Start
+        public void set(int account, int activeAccount, int position) {
+            try {
+                final TLRPC.User user = UserConfig.getInstance(account).getCurrentUser();
+                if (user == null) {
+                    FileLog.w("AccountCell.set(): User is null for account " + account);
+                    return;
+                }
+
+                avatarDrawable.setInfo(account, user);
+                avatarView.getImageReceiver().setCurrentAccount(account);
+                avatarView.setForUserOrChat(user, avatarDrawable);
+                textView.setText(UserObject.getUserName(user));
+
+                botDrawable.setCurrentAccount(account);
+                emojiStatusDrawable.setCurrentAccount(account);
+
+                botDrawable.setColor(Theme.getColor(Theme.key_profile_verifiedBackground, resourcesProvider));
+                if (user.bot_verification_icon != 0) {
+                    botDrawable.set(user.bot_verification_icon, false);
+                } else {
+                    botDrawable.set((Drawable) null, false);
+                }
+                final Long emojiStatusId = UserObject.getEmojiStatusDocumentId(user);
+                emojiStatusDrawable.setColor(Theme.getColor(Theme.key_profile_verifiedBackground, resourcesProvider));
+                if (emojiStatusId != null) {
+                    emojiStatusDrawable.set(emojiStatusId, false);
+                } else if (user.premium) {
+                    emojiStatusDrawable.set(getContext().getResources().getDrawable(R.drawable.msg_premium_liststar).mutate(), false);
+                } else {
+                    emojiStatusDrawable.set((Drawable) null, false);
+                }
+                textView.setLeftDrawable(!botDrawable.isEmpty() ? botDrawable : null);
+                textView.setRightDrawable(!emojiStatusDrawable.isEmpty() ? emojiStatusDrawable : null);
+
+                int counter = MessagesStorage.getInstance(account).getMainUnreadCount();
+                counterView.setVisibility(counter > 0 ? View.VISIBLE : View.GONE);
+                counterView.setText(LocaleController.formatNumber(counter, ','));
+
+                // [Alexgram: Account Numbers] - Display ordinal number
+                if (position >= 0 && NaConfig.INSTANCE.getShowAccountNumbers().Bool()) {
+                    ordinalNumberView.setVisibility(View.VISIBLE);
+                    ordinalNumberView.setText(String.valueOf(position + 1));
+                    FileLog.d("AccountCell: Displaying account number " + (position + 1) + " for account " + account);
+                } else {
+                    ordinalNumberView.setVisibility(View.GONE);
+                }
+                // [Alexgram: Account Numbers] - End
+
+                boolean selected = account == activeAccount;
+                checkView.setVisibility(selected ? View.VISIBLE : View.GONE);
+                arrowView.setVisibility(selected ? View.GONE : View.VISIBLE);
+            } catch (Exception e) {
+                FileLog.e("AccountCell.set() exception", e);
+            }
+        }
+        // [Alexgram: Account Numbers] - End
 
         @Override
         protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
@@ -1358,15 +1403,30 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
 
             @Override
             public void bindView(View view, UItem item, boolean divider, UniversalAdapter adapter, UniversalRecyclerView listView) {
-                ((AccountCell) view).set(item.intValue, adapter.currentAccount);
+                // [Alexgram: Account Numbers] - Pass position for account number display
+                int position = item.customIntValue >= 0 ? item.customIntValue : -1;
+                ((AccountCell) view).set(item.intValue, adapter.currentAccount, position);
+                // [Alexgram: Account Numbers] - End
             }
 
             public static UItem of(int id, int account) {
                 final UItem item = UItem.ofFactory(AccountCell.Factory.class);
                 item.id = id;
                 item.intValue = account;
+                item.customIntValue = -1; // [Alexgram: Account Numbers] - Default position
                 return item;
             }
+
+            // [Alexgram: Account Numbers] - Start
+            public static UItem of(int id, int account, int position) {
+                final UItem item = UItem.ofFactory(AccountCell.Factory.class);
+                item.id = id;
+                item.intValue = account;
+                item.customIntValue = position; // Store position for account number display
+                FileLog.d("AccountCell.Factory.of(): Creating account cell with id=" + id + ", account=" + account + ", position=" + position);
+                return item;
+            }
+            // [Alexgram: Account Numbers] - End
 
             @Override
             public boolean equals(UItem a, UItem b) {
@@ -1382,16 +1442,32 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
 
     private void onAccountReorder(int id, ArrayList<UItem> items) {
         if (id == accountsReorderId) {
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < items.size(); i++) {
-                if (items.get(i).id >= 2000) {
-                    if (sb.length() > 0) sb.append(",");
-                    sb.append(items.get(i).intValue);
+            try {
+                StringBuilder sb = new StringBuilder();
+                // [Alexgram: Account Numbers] - Start - Auto-sync account numbers on reorder
+                int positionCounter = 0;
+                FileLog.d("onAccountReorder: Starting account reorder sync");
+                // [Alexgram: Account Numbers] - End
+                for (int i = 0; i < items.size(); i++) {
+                    if (items.get(i).id >= 2000) {
+                        if (sb.length() > 0) sb.append(",");
+                        sb.append(items.get(i).intValue);
+                        // [Alexgram: Account Numbers] - Start - Update position for account number display
+                        items.get(i).customIntValue = positionCounter;
+                        FileLog.d("onAccountReorder: Account " + items.get(i).intValue + " -> position " + positionCounter);
+                        positionCounter++;
+                        // [Alexgram: Account Numbers] - End
+                    }
                 }
+                NaConfig.INSTANCE.getAccountOrder().setConfigString(sb.toString());
+                NaConfig.INSTANCE.getPinAccountOrder().setConfigBool(true);
+                // [Alexgram: Account Numbers] - Start - Log final state
+                FileLog.d("onAccountReorder: Complete. Account order = " + sb.toString() + ", Total accounts = " + positionCounter);
+                // [Alexgram: Account Numbers] - End
+                org.telegram.messenger.BotWebViewVibrationEffect.APP_ERROR.vibrate();
+            } catch (Exception e) {
+                FileLog.e("onAccountReorder exception", e);
             }
-            NaConfig.INSTANCE.getAccountOrder().setConfigString(sb.toString());
-            NaConfig.INSTANCE.getPinAccountOrder().setConfigBool(true);
-            org.telegram.messenger.BotWebViewVibrationEffect.APP_ERROR.vibrate();
         }
     }
 

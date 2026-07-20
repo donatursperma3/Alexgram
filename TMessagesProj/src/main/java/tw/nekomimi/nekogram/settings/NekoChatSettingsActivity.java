@@ -115,6 +115,12 @@ public class NekoChatSettingsActivity extends BaseNekoXSettingsActivity implemen
         add(new ConfigCellCheckBox(NaConfig.INSTANCE.getPremiumItemBoosts()));
     }}, null));
     ArrayList<ConfigCellCheckBox> premiumElementsRows = ((ConfigCellTextCheck2) premiumElementsToggleRow).getCheckBox();
+    // [Alexgram: Account Numbers Display] - Start
+    private final AbstractConfigCell showAccountNumbersRow = cellGroup.appendCell(new ConfigCellTextCheck(NaConfig.INSTANCE.getShowAccountNumbers(), null, getString(R.string.ShowAccountNumbers)));
+    // [Alexgram: Account Numbers Display] - End
+    // [Alexgram: Auto-collapse Account Tabs] - Start
+    private final AbstractConfigCell autoCollapseAccountTabsRow = cellGroup.appendCell(new ConfigCellTextCheck(NaConfig.INSTANCE.getAutoCollapseAccountTabs(), null, getString(R.string.AutoCollapseAccountTabs)));
+    // [Alexgram: Auto-collapse Account Tabs] - End
     private final AbstractConfigCell unreadBadgeOnBackButton = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.unreadBadgeOnBackButton));
     private final AbstractConfigCell sendCommentAfterForwardRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.sendCommentAfterForward));
     private final AbstractConfigCell useChatAttachMediaMenuRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.useChatAttachMediaMenu, getString(R.string.UseChatAttachEnterMenuNotice)));
@@ -179,9 +185,10 @@ public class NekoChatSettingsActivity extends BaseNekoXSettingsActivity implemen
     private final AbstractConfigCell disablePreviewVideoSoundShortcutRow = cellGroup.appendCell(new ConfigCellTextCheck(NaConfig.INSTANCE.getDisablePreviewVideoSoundShortcut(), getString(R.string.DisablePreviewVideoSoundShortcutNotice)));
     private final AbstractConfigCell dontAutoPlayNextVoiceRow = cellGroup.appendCell(new ConfigCellTextCheck(NaConfig.INSTANCE.getDontAutoPlayNextVoice()));
     private final AbstractConfigCell showSpoilersDirectlyRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.showSpoilersDirectly));
-    private final AbstractConfigCell showSharedMediaPhotoSizeRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.showSharedMediaPhotoSize));
-    private final AbstractConfigCell showSharedMediaVideoSizeRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.showSharedMediaVideoSize));
-    private final AbstractConfigCell showSharedMediaGifSizeRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.showSharedMediaGifSize));
+    // [Alexgram: Fix] - Add explicit string labels for shared media size settings
+    private final AbstractConfigCell showSharedMediaPhotoSizeRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.showSharedMediaPhotoSize, null, getString(R.string.ShowSharedMediaPhotoSize)));
+    private final AbstractConfigCell showSharedMediaVideoSizeRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.showSharedMediaVideoSize, null, getString(R.string.ShowSharedMediaVideoSize)));
+    private final AbstractConfigCell showSharedMediaGifSizeRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.showSharedMediaGifSize, null, getString(R.string.ShowSharedMediaGifSize)));
     private final AbstractConfigCell dividerMedia = cellGroup.appendCell(new ConfigCellDivider());
 
     // Stickers

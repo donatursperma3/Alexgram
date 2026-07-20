@@ -34,13 +34,15 @@ public class SettingsSearchResultCell extends FrameLayout {
     private final FrameLayout iconBackground;
 
     private boolean isDark;
+    private int textColor;
+    private int subTextColor;
 
     public SettingsSearchResultCell(Context context) {
         super(context);
         
         isDark = Theme.getActiveTheme().isDark();
-        int textColor = isDark ? Color.WHITE : 0xFF1A1A2E;
-        int subTextColor = isDark ? 0xAAFFFFFF : 0xAA5C6B7F;
+        textColor = Theme.getColor(Theme.key_windowBackgroundWhiteBlackText);
+        subTextColor = Theme.getColor(Theme.key_windowBackgroundWhiteGrayText2);
 
         setPadding(dp(16), dp(8), dp(16), dp(8));
         
@@ -103,6 +105,8 @@ public class SettingsSearchResultCell extends FrameLayout {
         titleView.setText(item.title);
         subtitleView.setText(item.subtitle);
         categoryView.setText(item.category.toUpperCase());
+        titleView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+        subtitleView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText2));
         iconView.setImageResource(item.iconRes);
         divider.setVisibility(last ? GONE : VISIBLE);
         deleteButton.setVisibility(GONE);

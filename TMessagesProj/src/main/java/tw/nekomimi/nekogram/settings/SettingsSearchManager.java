@@ -135,7 +135,7 @@ public class SettingsSearchManager {
             title = String.valueOf(c.getTitle());
             key = c.getKey();
         } else if (cell instanceof ConfigCellTextInput c) {
-            title = c.getKey();
+            title = c.getTitle();
             key = c.getKey();
         } else if (cell instanceof ConfigCellTextDetail c) {
             title = String.valueOf(c.getTitle());
@@ -165,24 +165,44 @@ public class SettingsSearchManager {
     }
 
     private void add(List<SearchItem> target, String title, String subtitle, String key, Class<? extends BaseFragment> fragmentClass, String category, int iconRes) {
+        if (title == null || title.trim().isEmpty() || key == null || key.trim().isEmpty()) {
+            return;
+        }
         target.add(new SearchItem(title, subtitle, key, fragmentClass, category, iconRes));
     }
 
     public List<SearchItem> search(String query) {
         List<SearchItem> results = new ArrayList<>();
         if (query == null || query.isEmpty()) return results;
-        
-        String lowerQuery = query.toLowerCase(Locale.ROOT);
+
+        String lowerQuery = query.toLowerCase(Locale.ROOT).trim();
         synchronized (index) {
             for (SearchItem item : index) {
-                if (item.title.toLowerCase(Locale.ROOT).contains(lowerQuery) || 
-                    (item.subtitle != null && item.subtitle.toLowerCase(Locale.ROOT).contains(lowerQuery)) ||
-                    item.category.toLowerCase(Locale.ROOT).contains(lowerQuery)) {
+                if (matchesQuery(item, lowerQuery)) {
                     results.add(item);
                 }
             }
         }
         return results;
+    }
+
+    private boolean matchesQuery(SearchItem item, String lowerQuery) {
+        if (item == null) return false;
+        String[] tokens = lowerQuery.split("\\s+");
+        if (tokens.length == 0) return false;
+
+        String title = item.title == null ? "" : item.title.toLowerCase(Locale.ROOT);
+        String subtitle = item.subtitle == null ? "" : item.subtitle.toLowerCase(Locale.ROOT);
+        String category = item.category == null ? "" : item.category.toLowerCase(Locale.ROOT);
+        String key = item.key == null ? "" : item.key.toLowerCase(Locale.ROOT);
+
+        for (String token : tokens) {
+            if (token.isEmpty()) continue;
+            if (title.contains(token) || subtitle.contains(token) || category.contains(token) || key.contains(token)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public SearchItem getItem(String key) {
