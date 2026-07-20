@@ -2064,7 +2064,8 @@ void ConnectionsManager::sendRequest(TLObject *object, onCompleteFunc onComplete
         request->rawRequest = object;
         request->rpcRequest = wrapInLayer(object, getDatacenterWithId(datacenterId), request);
         if (LOGS_ENABLED) {
-            const char *wrappedTypeName = typeid(*(request->rpcRequest.get())).name();
+            auto rpcReqPtr = request->rpcRequest.get();
+            const char *wrappedTypeName = rpcReqPtr ? typeid(*rpcReqPtr).name() : "(null)";
             DEBUG_D("send request wrapped %p - %s", request->rpcRequest.get(), wrappedTypeName);
         }
         auto cancelledIterator = tokensToBeCancelled.find(request->requestToken);
@@ -2323,7 +2324,7 @@ void ConnectionsManager::failNotRunningRequest(int32_t token) {
                 }
                 requestsQueue.erase(iter);
                 removeRequestFromGuid(token);
-                return true;
+                break;
             }
         }
     });
@@ -3176,14 +3177,16 @@ void ConnectionsManager::processRequestQueue(uint32_t connectionTypes, uint32_t 
                         request->msg_id = lastSentMessageRpcId;
                         if (message->outgoingBody != nullptr) {
                             if (LOGS_ENABLED) {
-                                const char *outgoingBodyTypeName = typeid(*message->outgoingBody).name();
+                                auto outgoingBodyPtr = message->outgoingBody;
+                                const char *outgoingBodyTypeName = outgoingBodyPtr ? typeid(*outgoingBodyPtr).name() : "(null)";
                                 DEBUG_D("wrap outgoingBody(%p, %s) to TL_invokeAfterMsg, token = %d, after 0x%" PRIx64, message->outgoingBody, outgoingBodyTypeName, networkMessage->requestId, request->msg_id);
                             }
                             request->outgoingQuery = message->outgoingBody;
                             message->outgoingBody = nullptr;
                         } else {
                             if (LOGS_ENABLED) {
-                                const char *bodyTypeName = typeid(*(message->body.get())).name();
+                                auto bodyPtr = message->body.get();
+                                const char *bodyTypeName = bodyPtr ? typeid(*bodyPtr).name() : "(null)";
                                 DEBUG_D("wrap body(%p, %s) to TL_invokeAfterMsg, token = %d, after 0x%" PRIx64, message->body.get(), bodyTypeName, networkMessage->requestId, request->msg_id);
                             }
                             request->query = std::move(message->body);
@@ -3413,7 +3416,7 @@ std::string base64UrlDecode(std::string base64) {
         size_t left = std::min(base64.size() - i, static_cast<size_t>(4));
         int c = 0;
         for (size_t t = 0; t < left; t++) {
-            auto value = url_char_to_value[base64.c_str()[i++]];
+            auto value = url_char_to_value[(unsigned char)base64.c_str()[i++]];
             if (value == 64) {
                 return "";
             }

@@ -14,7 +14,7 @@
 #include "ConnectionsManager.h"
 #include "BuffersStorage.h"
 
-static int buffersCount = 0;
+
 
 NativeByteBuffer::NativeByteBuffer(uint32_t size) {
 #ifdef ANDROID

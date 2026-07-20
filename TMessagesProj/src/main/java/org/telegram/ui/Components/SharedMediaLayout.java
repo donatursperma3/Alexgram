@@ -252,6 +252,36 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         return mediaPages[0].listView.getFastScroll().dispatchTouchEvent(ev);
     }
 
+    private void applyFilesFilter() {
+        try {
+            SharedMediaData data = sharedMediaData[TAB_FILES];
+            if (data == null) return;
+            if (filesFilterState == FILES_FILTER_ALL) {
+                data.setListFrozen(false);
+            } else {
+                ArrayList<MessageObject> filtered = new ArrayList<>();
+                for (MessageObject mo : data.messages) {
+                    try {
+                        boolean downloaded = mo != null && (mo.attachPathExists || mo.mediaExists);
+                        if (filesFilterState == FILES_FILTER_DOWNLOADED && downloaded) {
+                            filtered.add(mo);
+                        } else if (filesFilterState == FILES_FILTER_NOT_DOWNLOADED && !downloaded) {
+                            filtered.add(mo);
+                        }
+                    } catch (Exception ignore) {
+                    }
+                }
+                data.setListFrozen(true);
+                data.frozenMessages.clear();
+                data.frozenMessages.addAll(filtered);
+                data.frozenStartOffset = 0;
+                data.frozenEndLoadingStubs = 0;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     boolean isInPinchToZoomTouchMode;
     boolean maybePinchToZoomTouchMode;
     boolean maybePinchToZoomTouchMode2;
@@ -1418,35 +1448,6 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         public int requestIndex;
 
         public int filterType = FILTER_PHOTOS_AND_VIDEOS;
-            private void applyFilesFilter() {
-                try {
-                    SharedMediaData data = sharedMediaData[TAB_FILES];
-                    if (data == null) return;
-                    if (filesFilterState == FILES_FILTER_ALL) {
-                        data.setListFrozen(false);
-                    } else {
-                        ArrayList<MessageObject> filtered = new ArrayList<>();
-                        for (MessageObject mo : data.messages) {
-                            try {
-                                boolean downloaded = mo != null && (mo.attachPathExists || mo.mediaExists);
-                                if (filesFilterState == FILES_FILTER_DOWNLOADED && downloaded) {
-                                    filtered.add(mo);
-                                } else if (filesFilterState == FILES_FILTER_NOT_DOWNLOADED && !downloaded) {
-                                    filtered.add(mo);
-                                }
-                            } catch (Exception ignore) {
-                            }
-                        }
-                        data.setListFrozen(true);
-                        data.frozenMessages.clear();
-                        data.frozenMessages.addAll(filtered);
-                        data.frozenStartOffset = 0;
-                        data.frozenEndLoadingStubs = 0;
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
         public boolean isFrozen;
         public ArrayList<MessageObject> frozenMessages = new ArrayList<>();
         public int frozenStartOffset;

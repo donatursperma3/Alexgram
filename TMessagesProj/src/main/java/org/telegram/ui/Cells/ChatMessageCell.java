@@ -14058,7 +14058,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     x = layoutWidth - backgroundWidth + dp(6);
                 }
             } else {
-                boolean isUserDialog = DialogObject.isUserDialog(currentMessageObject.getDialogId());
+                isUserDialog = DialogObject.isUserDialog(currentMessageObject.getDialogId());
                 x = dp(15);
                 if (isSideMenuLeftMargin()) {
                     x += dp(ChatActivity.SIDE_MENU_WIDTH);
