@@ -18,4 +18,7 @@ Tools/features_backup.json
 build_output.txt
 Tools/cmake-3.31.6-windows-x86_64/
 google-services.json
-.kiro*
+
+# Local Kiro folder used for private/runtime data — never commit
+/.kiro/
+.kiro/
