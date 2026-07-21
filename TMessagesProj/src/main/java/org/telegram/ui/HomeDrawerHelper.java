@@ -813,7 +813,11 @@ public class HomeDrawerHelper {
             activity.drawerLayoutContainer.closeDrawer(false);
         } else if (id == DrawerLayoutAdapter.nkbtnFileManager) {
             try {
-                activity.startActivity(new android.content.Intent(activity, FileManagerActivity.class));
+                Bundle args = new Bundle();
+                args.putLong("dialog_id", UserConfig.getInstance(activity.currentAccount).getClientUserId());
+                args.putInt("type", MediaActivity.TYPE_MEDIA);
+                args.putInt("start_from", SharedMediaLayout.TAB_PHOTOVIDEO);
+                activity.presentFragment(new MediaActivity(args, null));
             } catch (Exception e) {
                 FileLog.e("FileManager", e);
             }
