@@ -46779,8 +46779,23 @@ public class ChatActivity extends BaseFragment implements
 		if (item == null) {
 			return;
 		}
-		// Keep the standard Telegram action-bar listener flow intact so submenu items
-		// are opened through the default ActionBarMenu handling instead of a custom override.
+		// Explicitly wire the kebab-menu click to toggle its submenu.
+		// We cannot rely on the default ActionBarMenu listener here because:
+		//   1. headerItem uses a custom ComposeDrawable icon (otherIcon), which is
+		//      not a standard icon resource path expected by the default flow.
+		//   2. sub items are added via lazilyAddSubItem AFTER this binding, so the
+		//      default hasSubMenu() check can misbehave on the very first clicks.
+		//   3. ChatAvatarContainer also references the same item as
+		//      avatarOptionsMenuItem and expects toggleSubMenu() to be the single
+		//      source of truth for opening the popup.
+		item.setOnClickListener(v -> {
+			if (item.getVisibility() == View.VISIBLE && item.isEnabled()) {
+				if (item.hasSubMenu()) {
+					item.toggleSubMenu();
+				}
+			}
+		});
+		// Ensure the item is properly clickable and enabled
 		item.setEnabled(true);
 		item.setClickable(true);
 		item.setFocusable(true);
