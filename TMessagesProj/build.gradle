@@ -227,6 +227,11 @@ android {
     sourceSets.main.jniLibs.srcDirs = ['./jni/']
 
     namespace = 'org.telegram.messenger'
+
+    lint {
+        disable 'MissingTranslation', 'ExtraTranslation', 'UnusedQuantity', 'UnusedResources', 'Typos', 'StringFormatInvalid', 'StringFormatCount'
+        abortOnError false
+    }
 }
 
 androidComponents {

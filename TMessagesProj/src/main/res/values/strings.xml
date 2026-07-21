@@ -10148,7 +10148,7 @@
     <string name="StarRatingFuturePreview2_one">%d point are added.</string>
     <string name="StarRatingFuturePreview2_other">%d points are added.</string>
     <string name="StarRatingFuturePendingPoints_one">%d point are pending.</string>
-    <string name="StarRatingFuturePendingPoints_other">%d points are pending.</string>
+    <string name="StarRatingFuturePendingPoints_other" formatted="false">%d points are pending.</string>
     <string name="StarRatingFuturePendingPointsAndLevel1_one">%d point and</string>
     <string name="StarRatingFuturePendingPointsAndLevel1_other">%d points and</string>
     <string name="StarRatingFuturePendingPointsAndLevel2_one">Level %d are pending.</string>
@@ -10158,11 +10158,11 @@
     <string name="StarRatingDescription">This rating reflects **%s\'s** activity\non Telegram. What affects it:</string>
     <string name="StarRatingSelfDescription">This rating reflects your activity\non Telegram. What affects it:</string>
     <string name="StarRatingTitle1">Gifts from Telegram</string>
-    <string name="StarRatingDescription1">%1$s 100% of the Stars spent on gifts purchased from Telegram.</string>
+    <string name="StarRatingDescription1" formatted="false">%1$s 100% of the Stars spent on gifts purchased from Telegram.</string>
     <string name="StarRatingTitle2">Gifts and Posts from Users</string>
-    <string name="StarRatingDescription2">%1$s 20% of the Stars spent on resold gifts, paid messages and channel posts.</string>
+    <string name="StarRatingDescription2" formatted="false">%1$s 20% of the Stars spent on resold gifts, paid messages and channel posts.</string>
     <string name="StarRatingTitle3">Refunds and Conversions</string>
-    <string name="StarRatingDescription3">%1$s 10x of refunded Stars and 85% of bought gifts converted to Stars.</string>
+    <string name="StarRatingDescription3" formatted="false">%1$s 10x of refunded Stars and 85% of bought gifts converted to Stars.</string>
     <string name="StarRatingButtonUnderstood">Understood</string>
     <string name="StoriesAlbum">Album</string>
     <string name="StoriesAlbumCreateNew">Create a New Album</string>

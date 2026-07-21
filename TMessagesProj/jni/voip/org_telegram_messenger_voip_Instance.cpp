@@ -318,7 +318,7 @@ DataSaving parseDataSaving(JNIEnv *env, jint dataSaving) {
             throwNewJavaIllegalArgumentException(env, "DATA_SAVING_ROAMING is not supported");
             return DataSaving::Never;
         default:
-            throwNewJavaIllegalArgumentException(env, "Unknown data saving constant: " + dataSaving);
+            throwNewJavaIllegalArgumentException(env, std::string("Unknown data saving constant: ").append(std::to_string(dataSaving)).c_str());
             return DataSaving::Never;
     }
 }

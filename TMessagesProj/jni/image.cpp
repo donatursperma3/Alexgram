@@ -968,7 +968,7 @@ JNIEXPORT void Java_org_telegram_messenger_Utilities_drawDitheredGradient(JNIEnv
         offset = y * info.stride;
         for (x = 0; x < info.width; x++) {
             // triangular probability density function dither noise
-            noise = (rand() - rand()) / 255.F / RAND_MAX;
+            noise = (rand() - rand()) / 255.F / (float) RAND_MAX;
 
             // alpha channel
             bitmapPixelsComponents[offset + x * 4 + 3] = 255;
@@ -1013,10 +1013,14 @@ JNIEXPORT void Java_org_telegram_messenger_Utilities_drawDitheredGradient(JNIEnv
     delete[] pixelsComponentsF;
 
     if ((reason = AndroidBitmap_unlockPixels(env, bitmap)) != ANDROID_BITMAP_RESULT_SUCCESS) {
-        env->ThrowNew(jclass_RuntimeException, "AndroidBitmap_unlockPixels failed with a reason: " + reason);
+        char message[128];
+        snprintf(message, sizeof(message), "AndroidBitmap_unlockPixels failed with a reason: %d", reason);
+        env->ThrowNew(jclass_RuntimeException, message);
         return;
     }
 }
+
+} // Tutup extern "C"
 
 //JNIEXPORT jint Java_org_telegram_messenger_Utilities_saveProgressiveJpeg(JNIEnv *env, jclass clazz, jobject bitmap, jint width, jint height, jint stride, jint quality, jstring path) {
 //    if (!bitmap || !path || !width || !height || !stride || stride != width * 4) {
@@ -1122,7 +1126,7 @@ JNIEXPORT void Java_org_telegram_messenger_Utilities_drawDitheredGradient(JNIEnv
 //    return outSize;*/
 //}
 
-std::vector<std::pair<float, float>> gatherPositions(std::vector<std::pair<float, float>> list, int phase) {
+static std::vector<std::pair<float, float>> gatherPositions(std::vector<std::pair<float, float>> list, int phase) {
     std::vector<std::pair<float, float>> result(4);
     for (int i = 0; i < 4; i++) {
         int pos = phase + i * 2;
@@ -1138,6 +1142,7 @@ std::vector<std::pair<float, float>> gatherPositions(std::vector<std::pair<float
 thread_local static float *pixelCache = nullptr;
 thread_local static int pixelCacheSize = 0;
 
+extern "C" {
 JNIEXPORT void Java_org_telegram_messenger_Utilities_generateGradient(JNIEnv *env, jclass clazz, jobject bitmap, jboolean unpin, jint phase, jfloat progress, jint width, jint height, jint stride, jintArray colors) {
     if (!bitmap) {
         return;
@@ -1753,7 +1758,6 @@ Java_org_telegram_messenger_Utilities_nLibyuvARGBSaleBitmap(
 }
 
 
-extern "C"
 JNIEXPORT jint JNICALL
 Java_org_telegram_messenger_Utilities_averageBitmapColor(
         JNIEnv* env,
@@ -1852,4 +1856,4 @@ Java_org_telegram_messenger_Utilities_averageBitmapColor(
     );
 }
 
-}
+} // Tutup extern "C" yang dibuka di baris 1145

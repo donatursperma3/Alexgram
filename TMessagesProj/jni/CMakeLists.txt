@@ -4,7 +4,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
     message(STATUS "Skipping CMake warning noise for standalone configure")
 endif()
 
-set(CMAKE_CXX_FLAGS "-std=c++14 -DANDROID -g -Wno-non-virtual-dtor -Wno-reorder -Wno-pessimizing-move -Wno-deprecated-declarations -Wno-logical-op-parentheses")
+set(CMAKE_CXX_FLAGS "-std=c++14 -DANDROID -g -Wno-non-virtual-dtor -Wno-reorder -Wno-reorder-ctor -Wno-pessimizing-move -Wno-deprecated-declarations -Wno-logical-op-parentheses")
 set(CMAKE_C_FLAGS "-w -std=c11 -DANDROID -D_LARGEFILE_SOURCE=1 -g -Wno-error=implicit-function-declaration -Wno-logical-op-parentheses")
 set(CMAKE_ASM_FLAGS "${CFLAGS} -x assembler-with-cpp")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ffunction-sections -fdata-sections -fvisibility=hidden -flto=full")
@@ -254,7 +254,7 @@ add_library(rlottie STATIC
         rlottie/src/vector/vrect.cpp
         rlottie/src/vector/vrle.cpp)
 target_compile_options(rlottie PUBLIC
-        -Wall -fno-rtti -finline-functions -ffast-math -Oz -fno-unwind-tables -fno-asynchronous-unwind-tables -Wnon-virtual-dtor -Woverloaded-virtual -Wno-unused-parameter -fvisibility=hidden)
+        -Wall -fno-rtti -finline-functions -ffast-math -Oz -fno-unwind-tables -fno-asynchronous-unwind-tables -Wnon-virtual-dtor -Woverloaded-virtual -Wno-unused-parameter -Wno-reorder-ctor -fvisibility=hidden)
 set_target_properties(rlottie PROPERTIES
         ANDROID_ARM_MODE arm)
 target_compile_definitions(rlottie PUBLIC
