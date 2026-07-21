@@ -22,3 +22,4 @@ google-services.json
 # Local Kiro folder used for private/runtime data — never commit
 /.kiro/
 .kiro/
+gradle_help*
