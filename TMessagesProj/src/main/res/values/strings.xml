@@ -1936,9 +1936,22 @@
     <string name="AddContactByPhone">Add %1$s</string>
     <string name="PhoneNumberSearch">Phone number</string>
     <string name="NoContactsYet2Invite">Invite Friends ></string>
-
-    <string name="NoContactsYet3">Add Contacts</string>
-    <string name="NoContactsYet3Sub">You have no contacts on Telegram yet. How about adding them?</string>
+    <string name="NoContactsYet">No contacts yet</string>
+    <string name="NoContactsYetLine1">Invite your friends to Telegram</string>
+    <string name="NoContactsYetLine2">Find people nearby to chat with</string>
+    <string name="NoContactsYetLine3">Start a conversation today</string>
+    <string name="PillChatTitle">Pill Chat</string>
+    <string name="PillChatTitleDescription">Easily switch between chats</string>
+    <string name="ShareTelegram">Share Telegram...</string>
+    <string name="AddManyMembersAlertNamesText_two">2 names</string>
+    <string name="AddManyMembersAlertNamesText_few">%1$d names</string>
+    <string name="AddManyMembersAlertTitle_two">Add 2 members</string>
+    <string name="AddManyMembersAlertTitle_few">Add %1$d members</string>
+    <string name="AddManyMembersAlertTitle_many">Add %1$d members</string>
+    <string name="Languages_zero">%1$d languages</string>
+    <string name="Languages_two">%1$d languages</string>
+    <string name="Languages_few">%1$d languages</string>
+    <string name="Languages_many">%1$d languages</string>
 
     <string name="NewContactAlertTitle">New contact</string>
     <string name="NewContactAlertMessage">Phone number **%1$s** is not in your contacts list. Do you want to add it?</string>

@@ -207,7 +207,7 @@ android {
             minifyEnabled = true
             shrinkResources = true
             multiDexEnabled = true
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            proguardFiles = [getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro']
             matchingFallbacks = ['release', 'staging', 'debug']
             signingConfig = signingConfigs.release
         }
@@ -218,7 +218,7 @@ android {
             minifyEnabled = true
             shrinkResources = true
             multiDexEnabled = true
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            proguardFiles = [getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro']
             matchingFallbacks = ['release', 'staging', 'debug']
             signingConfig = signingConfigs.release
         }
@@ -230,7 +230,7 @@ android {
 
     lint {
         disable 'MissingTranslation', 'ExtraTranslation', 'UnusedQuantity', 'UnusedResources', 'Typos', 'StringFormatInvalid', 'StringFormatCount'
-        abortOnError false
+        abortOnError = false
     }
 }
 
@@ -379,13 +379,15 @@ def getPythonPath() {
 chaquopy {
     defaultConfig {
         if (nativeTarget.contains("armeabi-v7a")) {
-            version "3.11"
+            version = "3.11"
         } else {
-            version "3.13"
+            version = "3.13"
         }
-        buildPython getPythonPath()
+        // Let Chaquopy discover Python on PATH by default.
+        // If your build machine needs an explicit Python path, uncomment the line below.
+        // buildPython(getPythonPath().toString())
         pyc {
-            src false
+            src = false
         }
         pip {
             install "requests"

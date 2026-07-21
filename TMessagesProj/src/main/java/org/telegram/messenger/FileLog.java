@@ -570,6 +570,27 @@ public class FileLog {
         return true;
     }
 
+    public static void d(final String tag, final String message) {
+        if (!BuildVars.LOGS_ENABLED) {
+            return;
+        }
+        ensureInitied();
+//        Log.d(tag, message);
+        if (getInstance().streamWriter != null) {
+            getInstance().logQueue.postRunnable(() -> {
+                try {
+                    getInstance().streamWriter.write(getInstance().dateFormat.format(System.currentTimeMillis()) + " D/" + tag + ": " + message + "\n");
+                    getInstance().streamWriter.flush();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    if (AndroidUtilities.isENOSPC(e)) {
+                        LaunchActivity.checkFreeDiscSpaceStatic(1);
+                    }
+                }
+            });
+        }
+    }
+
     public static void d(final String message) {
         if (!BuildVars.LOGS_ENABLED) {
             return;
