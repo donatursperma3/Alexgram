@@ -76,7 +76,8 @@ jobs:
           packages: "build-tools;36.0.0 ndk;27.2.12479018 platforms;android-36"
       - name: Configure Android SDK Path
         run: |
-          echo "sdk.dir=${ANDROID_HOME}" > local.properties
+          export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/opt/android-sdk}}"
+          echo "sdk.dir=${ANDROID_SDK_ROOT}" > local.properties
       - name: Modify Gradle JVM Args
         run: |
           MEMORY_KB=$(awk '/MemTotal/ {print $2}' /proc/meminfo)

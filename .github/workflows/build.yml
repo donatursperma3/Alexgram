@@ -53,7 +53,7 @@ jobs:
 
       - name: Configure Android SDK Path
         run: |
-          export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME}}"
+          export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/opt/android-sdk}}"
           mkdir -p "$ANDROID_SDK_ROOT"
           echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
@@ -69,7 +69,7 @@ jobs:
 
       - name: Prepare LOCAL_PROPERTIES (optional)
         run: |
-          export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME}}"
+          export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/opt/android-sdk}}"
           if [ ! -z "${LOCAL_PROPERTIES}" ]; then
             echo "Writing local.properties from LOCAL_PROPERTIES secret"
             echo "${LOCAL_PROPERTIES}" | base64 --decode > local.properties
