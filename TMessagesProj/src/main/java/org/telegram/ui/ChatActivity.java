@@ -46799,6 +46799,7 @@ public class ChatActivity extends BaseFragment implements
 		item.setEnabled(true);
 		item.setClickable(true);
 		item.setFocusable(true);
+		item.setOverrideMenuClick(true);
 	}
 
 	private void nkbtn_onclick_actionbar(int id) {

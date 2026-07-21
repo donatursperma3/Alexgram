@@ -2472,6 +2472,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         }
         try {
             int preset = NekoConfig.bulkForwardDelayPreset.Int();
+            FileLog.d("BulkForwardDelay: preset=" + preset);
             if (preset == NekoConfig.BULK_FORWARD_DELAY_PRESET_01S) {
                 return 0.1f;
             }
@@ -2489,11 +2490,14 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
             }
             if (preset == NekoConfig.BULK_FORWARD_DELAY_PRESET_MANUAL) {
                 String rawValue = NekoConfig.bulkForwardDelayManualSeconds.String();
+                FileLog.d("BulkForwardDelay: manual rawValue=" + rawValue);
                 if (TextUtils.isEmpty(rawValue)) {
                     return 0f;
                 }
                 String normalized = rawValue.trim().replace(',', '.');
+                FileLog.d("BulkForwardDelay: manual normalized=" + normalized);
                 float parsed = Float.parseFloat(normalized);
+                FileLog.d("BulkForwardDelay: manual parsed=" + parsed);
                 return parsed > 0f ? parsed : 0f;
             }
         } catch (Exception e) {
@@ -2518,19 +2522,40 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
             final int index,
             final long delayMs
     ) {
+        FileLog.d("BulkForwardDelay: scheduleBulkForwardWithDelay index=" + index + ", delayMs=" + delayMs + ", total messages=" + messages.size());
         if (messages == null || messages.isEmpty() || index >= messages.size()) {
             return;
         }
-        final ArrayList<MessageObject> singleMessage = new ArrayList<>(1);
-        singleMessage.add(messages.get(index));
+        final ArrayList<MessageObject> batch = new ArrayList<>();
+        int nextIndex = index;
+        // Add current message
+        batch.add(messages.get(nextIndex));
+        long groupId = messages.get(nextIndex).messageOwner.grouped_id;
+        nextIndex++;
+        // Add all consecutive messages with the same grouped_id
+        if (groupId != 0) {
+            while (nextIndex < messages.size()) {
+                MessageObject nextMsg = messages.get(nextIndex);
+                if (nextMsg.messageOwner.grouped_id == groupId) {
+                    batch.add(nextMsg);
+                    nextIndex++;
+                } else {
+                    break;
+                }
+            }
+        }
+        FileLog.d("BulkForwardDelay: Batch size=" + batch.size() + ", nextIndex=" + nextIndex);
+        final int finalNextIndex = nextIndex;
         final Runnable sendStep = () -> {
+            FileLog.d("BulkForwardDelay: Sending batch, index=" + index);
             try {
-                sendMessage(singleMessage, peer, forwardFromMyName, hideCaption, notify, scheduleDate, scheduleRepeatPeriod, replyToTopMsg, videoTimestamp, payStars, monoForumPeerId, suggestionParams);
+                sendMessage(batch, peer, forwardFromMyName, hideCaption, notify, scheduleDate, scheduleRepeatPeriod, replyToTopMsg, videoTimestamp, payStars, monoForumPeerId, suggestionParams);
             } catch (Exception e) {
                 FileLog.e(e);
             }
-            if (index + 1 < messages.size()) {
-                AndroidUtilities.runOnUIThread(() -> scheduleBulkForwardWithDelay(messages, peer, forwardFromMyName, hideCaption, notify, scheduleDate, scheduleRepeatPeriod, replyToTopMsg, videoTimestamp, payStars, monoForumPeerId, suggestionParams, index + 1, delayMs), delayMs);
+            if (finalNextIndex < messages.size()) {
+                FileLog.d("BulkForwardDelay: Scheduling next batch in " + delayMs + "ms, index=" + finalNextIndex);
+                AndroidUtilities.runOnUIThread(() -> scheduleBulkForwardWithDelay(messages, peer, forwardFromMyName, hideCaption, notify, scheduleDate, scheduleRepeatPeriod, replyToTopMsg, videoTimestamp, payStars, monoForumPeerId, suggestionParams, finalNextIndex, delayMs), delayMs);
             }
         };
         if (index == 0) {

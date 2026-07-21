@@ -58,6 +58,7 @@ import org.telegram.messenger.UserObject;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.ActionBarMenuSubItem;
 import org.telegram.ui.ActionBar.BaseFragment;
+import org.telegram.ui.ActionBar.SimpleTextView;
 import org.telegram.ui.ChatActivity;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.ActionBar.ThemeDescription;
