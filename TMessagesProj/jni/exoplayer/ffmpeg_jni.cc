@@ -18,6 +18,13 @@
 #include <stdlib.h>
 
 extern "C" {
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#pragma clang diagnostic ignored "-Wnull-arithmetic"
+#pragma clang diagnostic ignored "-Wundefined-internal"
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+#endif
 #ifdef __cplusplus
 #define __STDC_CONSTANT_MACROS
 #ifdef _STDINT_H
@@ -30,6 +37,9 @@ extern "C" {
 #include <libavutil/error.h>
 #include <libavutil/opt.h>
 #include <libswresample/swresample.h>
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 }
 
 #define LOG_TAG "ffmpeg_jni"
@@ -147,8 +157,7 @@ AUDIO_DECODER_FUNC(jint, ffmpegDecode, jlong context, jobject inputData,
   }
   uint8_t *inputBuffer = (uint8_t *)env->GetDirectBufferAddress(inputData);
   uint8_t *outputBuffer = (uint8_t *)env->GetDirectBufferAddress(outputData);
-  AVPacket packet;
-  av_init_packet(&packet);
+  AVPacket packet = {0};
   packet.data = inputBuffer;
   packet.size = inputSize;
   return decodePacket((AVCodecContext *)context, &packet, outputBuffer,

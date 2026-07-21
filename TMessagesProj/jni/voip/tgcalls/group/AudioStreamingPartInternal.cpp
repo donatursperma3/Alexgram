@@ -4,9 +4,19 @@
 #include "rtc_base/third_party/base64/base64.h"
 
 extern "C" {
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#pragma clang diagnostic ignored "-Wnull-arithmetic"
+#pragma clang diagnostic ignored "-Wundefined-internal"
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+#endif
 #include <libavutil/timestamp.h>
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 }
 
 #include <string>

@@ -1,9 +1,19 @@
 #include "DarwinFFMpeg.h"
 
 extern "C" {
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#pragma clang diagnostic ignored "-Wnull-arithmetic"
+#pragma clang diagnostic ignored "-Wundefined-internal"
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+#endif
 #include <libavutil/frame.h>
 #include <libavutil/pixfmt.h>
 #include <libavcodec/avcodec.h>
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 }
 
 #import "ExtractCVPixelBuffer.h"
