@@ -7029,11 +7029,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             isThreadPost = isThreadChat && messageObject.messageOwner.fwd_from != null && messageObject.messageOwner.fwd_from.channel_post != 0 && messageObject.messageOwner.reply_to == null;
             isAvatarVisible = needDrawAvatar() && (currentPosition == null || currentPosition.edge);
             boolean drawAvatar = needDrawAvatar();
-            // [Alexgram: Avatar Overlap Fix] - Don't show avatar for stickers unless forced
-            if (messageObject.isAnyKindOfSticker() && !messageObject.forceAvatar && messageObject.customAvatarDrawable == null && messageObject.messageOwner.guestchat_via_from == null) {
-                isAvatarVisible = false;
-                drawAvatar = false;
-            } else if (messageObject.customAvatarDrawable != null || messageObject.forceAvatar || messageObject.messageOwner.guestchat_via_from != null) {
+            // Forced avatars, custom avatars and guest-chat avatars must always be drawn
+            // regardless of message type (sticker, etc.) or the edge position.
+            if (messageObject.customAvatarDrawable != null || messageObject.forceAvatar || messageObject.messageOwner.guestchat_via_from != null) {
                 isAvatarVisible = true;
                 drawAvatar = true;
             }
@@ -9394,12 +9392,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     }
                 } else {
                     boolean isUserDialog = DialogObject.isUserDialog(currentMessageObject.getDialogId());
-                    boolean shouldUseAvatarOffset = (isChat || isUserDialog || currentMessageObject.isRepostPreview) && isAvatarVisible && !isPlayingRound;
-                    // [Alexgram: Avatar Overlap Fix] - Don't apply avatar offset for stickers
-                    if (currentMessageObject.isAnyKindOfSticker()) {
-                        shouldUseAvatarOffset = false;
-                    }
-                    if (shouldUseAvatarOffset) {
+                    if ((isChat || isUserDialog || currentMessageObject.isRepostPreview) && isAvatarVisible && !isPlayingRound) {
                         x = dp(63);
                     } else {
                         x = dp(15);
@@ -14063,10 +14056,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 if (isSideMenuLeftMargin()) {
                     x += dp(ChatActivity.SIDE_MENU_WIDTH);
                 } else if ((isChat || isUserDialog || currentMessageObject.isRepostPreview) && isAvatarVisible && !isPlayingRound) {
-                    // [Alexgram: Avatar Overlap Fix] - Don't apply avatar offset for stickers
-                    if (!currentMessageObject.isAnyKindOfSticker()) {
-                        x += dp(48);
-                    }
+                    x += dp(48);
                 }
             }
             x -= dp(2);
@@ -14134,10 +14124,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                         if (isSideMenuLeftMargin()) {
                             x += dp(ChatActivity.SIDE_MENU_WIDTH);
                         } else if ((isChat || isUserDialog || currentMessageObject != null && (currentMessageObject.forceAvatar || currentMessageObject.messageOwner.guestchat_via_from != null) || currentMessageObject.getDialogId() == UserObject.VERIFY) && isAvatarVisible && (!isPlayingRound || currentMessageObject.isVoiceTranscriptionOpen())) {
-                            // [Alexgram: Avatar Overlap Fix] - Don't apply avatar offset for stickers
-                            if (!currentMessageObject.isAnyKindOfSticker()) {
-                                x += dp(48);
-                            }
+                            x += dp(48);
                         }
                         if (currentPosition != null && !currentPosition.edge) {
                             x -= dp(10);
@@ -14252,10 +14239,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     if (isSideMenuLeftMargin()) {
                         x += dp(ChatActivity.SIDE_MENU_WIDTH);
                     } else if ((isChat || isUserDialog || currentMessageObject.isRepostPreview || currentMessageObject.messageOwner.guestchat_via_from != null) && isAvatarVisible && !isPlayingRound) {
-                        // [Alexgram: Avatar Overlap Fix] - Don't apply avatar offset for stickers
-                        if (!currentMessageObject.isAnyKindOfSticker()) {
-                            x += dp(48);
-                        }
+                        x += dp(48);
                     }
                     if (currentPosition != null && !currentPosition.edge) {
                         x -= dp(10);
@@ -20714,7 +20698,13 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             } else {
                 currentBackgroundShadowDrawable = currentBackgroundDrawable.getShadowDrawable();
             }
-            backgroundDrawableLeft = layoutWidth - backgroundWidth - (isAvatarVisible ? dp(48) : 0) - (!mediaBackground ? 0 : dp(9));
+            // For outgoing messages, the avatar sits on the right edge. The bubble must be shifted
+            // left so the bubble right edge aligns with the avatar left edge (no overlap).
+            // - Regular messages: avatar is dp(42) wide and starts at (layoutWidth - dp(48)),
+            //   so the bubble must be shifted dp(48) to end at (layoutWidth - dp(48)).
+            // - Repost previews: avatar is dp(36) wide and starts at (layoutWidth - dp(51)),
+            //   so the bubble must be shifted dp(51) instead of dp(48) to avoid a dp(3) overlap.
+            backgroundDrawableLeft = layoutWidth - backgroundWidth - (isAvatarVisible ? dp(currentMessageObject.isRepostPreview ? 51 : 48) : 0) - (!mediaBackground ? 0 : dp(9));
             if (currentMessageObject.isAnyKindOfSticker() && isAvatarVisible) {
                 // Shift outgoing stickers slightly left so the right-side avatar stays visible.
                 backgroundDrawableLeft -= dp(6);
@@ -20799,12 +20789,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             }
 
             boolean isUserDialog = DialogObject.isUserDialog(currentMessageObject.getDialogId());
-            // [Alexgram: Avatar Overlap Fix] - Don't apply avatar offset for stickers or when avatar is not visible
-            boolean shouldApplyAvatarOffset = (isChat || isUserDialog || currentMessageObject.isRepostPreview || currentMessageObject.forceAvatar || currentMessageObject.messageOwner.guestchat_via_from != null || currentMessageObject.getDialogId() == UserObject.VERIFY) && isAvatarVisible;
-            if (currentMessageObject.isAnyKindOfSticker() && !currentMessageObject.forceAvatar) {
-                shouldApplyAvatarOffset = false;
-            }
-            boolean needAvatarOffset = shouldApplyAvatarOffset;
+            // Apply the avatar offset for any incoming message where an avatar is rendered.
+            // This includes stickers in group chats: the avatar is now visible (see isAvatarVisible
+            // setup above) so the bubble MUST be offset to avoid the avatar overlapping the content.
+            boolean needAvatarOffset = (isChat || isUserDialog || currentMessageObject.isRepostPreview || currentMessageObject.forceAvatar || currentMessageObject.messageOwner.guestchat_via_from != null || currentMessageObject.getDialogId() == UserObject.VERIFY) && isAvatarVisible;
             int avatarOffset = needAvatarOffset ? 48 : 0;
             if (currentMessageObject.isOutOwner() && currentMessageObject.isAnyKindOfSticker() && isAvatarVisible) {
                 // Shift outgoing sticker bubble a little more left so the right-side avatar remains visible.

@@ -649,7 +649,8 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
             final ArrayList<View> accountViews = new ArrayList<>();
             // [Alexgram: Auto-collapse Account Tabs] - Start
             boolean autoCollapse = NaConfig.INSTANCE.getAutoCollapseAccountTabs().Bool();
-            final boolean expanded = org.telegram.messenger.MessagesController.getGlobalMainSettings().getBoolean("settingsAccountsShown", !autoCollapse);
+            boolean expanded = !autoCollapse; // Always collapse when auto-collapse enabled, every time
+            org.telegram.messenger.MessagesController.getGlobalMainSettings().edit().putBoolean("settingsAccountsShown", expanded).apply();
             // [Alexgram: Auto-collapse Account Tabs] - End
             
             if (accountNumbers.size() > 1) {
@@ -691,9 +692,10 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
                 o.addView(header, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
             }
             
-            for (int acc : accountNumbers) {
+            for (int i = 0; i < accountNumbers.size(); i++) {
+                int acc = accountNumbers.get(i);
                 final int account = acc;
-                final View btn = accountView(acc, currentAccount == acc);
+                final View btn = accountView(acc, currentAccount == acc, i);
                 btn.setOnClickListener(v -> {
                     if (currentAccount == account) return;
                     o.dismiss();
@@ -723,10 +725,25 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         return true;
     }
 
-    public LinearLayout accountView(int account, boolean selected) {
+    public LinearLayout accountView(int account, boolean selected, int position) {
         final LinearLayout btn = new LinearLayout(getContext());
         btn.setOrientation(LinearLayout.HORIZONTAL);
         btn.setBackground(Theme.createRadSelectorDrawable(getThemedColor(Theme.key_listSelector), 0, 0));
+
+        // [Alexgram: Account Numbers] - Start
+        final SimpleTextView ordinalNumberView = new SimpleTextView(getContext());
+        ordinalNumberView.setTextSize(13);
+        ordinalNumberView.setTypeface(AndroidUtilities.bold());
+        ordinalNumberView.setTextColor(getThemedColor(Theme.key_windowBackgroundWhiteGrayText));
+        ordinalNumberView.setGravity(Gravity.CENTER);
+        if (position >= 0 && NaConfig.INSTANCE.getShowAccountNumbers().Bool()) {
+            ordinalNumberView.setVisibility(View.VISIBLE);
+            ordinalNumberView.setText(String.valueOf(position + 1));
+        } else {
+            ordinalNumberView.setVisibility(View.GONE);
+        }
+        btn.addView(ordinalNumberView, LayoutHelper.createLinear(20, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL, 8, 0, 8, 0));
+        // [Alexgram: Account Numbers] - End
 
         final TLRPC.User user = UserConfig.getInstance(account).getCurrentUser();
 
@@ -746,7 +763,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
                 super.dispatchDraw(canvas);
             }
         };
-        btn.addView(avatarContainer, LayoutHelper.createLinear(34, 34, Gravity.CENTER_VERTICAL, 12, 0, 0, 0));
+        btn.addView(avatarContainer, LayoutHelper.createLinear(34, 34, Gravity.CENTER_VERTICAL, 0, 0, 0, 0));
 
         final BackupImageView avatarView = new BackupImageView(getContext());
         if (selected) {
