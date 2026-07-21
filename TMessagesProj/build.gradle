@@ -54,6 +54,27 @@ if (properties != null) {
     pwd = properties.getProperty('ALIAS_PASS')
 }
 
+// Normalize Android SDK path when the CI environment provides a valid SDK root.
+// This prevents stale Windows-local sdk.dir values in local.properties from breaking
+// Linux GitHub Actions runs with the "Invalid file path" configuration error.
+def envSdkDir = System.getenv('ANDROID_SDK_ROOT') ?: System.getenv('ANDROID_HOME')
+def localPropertiesFile = project.rootProject.file('local.properties')
+if (envSdkDir != null && !envSdkDir.trim().isEmpty() && localPropertiesFile.exists()) {
+    def currentSdkDir = properties?.getProperty('sdk.dir')
+    if (currentSdkDir == null || currentSdkDir.trim().isEmpty() || !new File(currentSdkDir).exists()) {
+        def lines = localPropertiesFile.readLines()
+        def sanitized = lines.findAll { !it.startsWith('sdk.dir=') }
+        sanitized << "sdk.dir=${envSdkDir}"
+        localPropertiesFile.withWriter('UTF-8') { writer ->
+            sanitized.each { writer.println(it) }
+        }
+        println "✅ Normalized sdk.dir in local.properties to ${envSdkDir}"
+        if (properties != null) {
+            properties.setProperty('sdk.dir', envSdkDir)
+        }
+    }
+}
+
 // Ensure defaults for build if not set
 keystorePwd = keystorePwd ?: System.getenv('KEYSTORE_PASS') ?: "123456"
 alias = alias ?: System.getenv('ALIAS_NAME') ?: "key0"
@@ -383,18 +404,6 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
 }
 
-def getPythonPath() {
-    def envPath = System.getenv("PYTHON_PATH")
-    if (envPath != null && !envPath.isEmpty()) {
-        return envPath
-    }
-    def localWinPath = "${System.getProperty('user.home')}/AppData/Local/Programs/Python/Python313/python.exe"
-    if (new File(localWinPath).exists()) {
-        return localWinPath
-    }
-    return System.getProperty("os.name").toLowerCase().contains("win") ? "python" : "python3"
-}
-
 chaquopy {
     defaultConfig {
         if (nativeTarget.contains("armeabi-v7a")) {
@@ -403,8 +412,6 @@ chaquopy {
             version = "3.13"
         }
         // Let Chaquopy discover Python on PATH by default.
-        // If your build machine needs an explicit Python path, uncomment the line below.
-        // buildPython(getPythonPath().toString())
         pyc {
             src = false
         }

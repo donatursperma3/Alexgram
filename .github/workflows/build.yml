@@ -55,7 +55,7 @@ jobs:
         run: |
           export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME}}"
           mkdir -p "$ANDROID_SDK_ROOT"
-          echo "sdk.dir=$ANDROID_SDK_ROOT" >> local.properties
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
 
       - name: Decode google-services.json (optional)
@@ -69,9 +69,12 @@ jobs:
 
       - name: Prepare LOCAL_PROPERTIES (optional)
         run: |
+          export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME}}"
           if [ ! -z "${LOCAL_PROPERTIES}" ]; then
             echo "Writing local.properties from LOCAL_PROPERTIES secret"
             echo "${LOCAL_PROPERTIES}" | base64 --decode > local.properties
+            sed -i '/^sdk.dir=/d' local.properties || true
+            echo "sdk.dir=$ANDROID_SDK_ROOT" >> local.properties
           else
             echo "No LOCAL_PROPERTIES secret provided; Gradle will fallback to project local.properties if present"
           fi
