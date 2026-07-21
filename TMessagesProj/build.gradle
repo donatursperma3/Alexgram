@@ -224,6 +224,25 @@ android {
         }
     }
 
+    sourceSets {
+        main {
+            java.srcDir "$buildDir/generated/ksp/main/java"
+            kotlin.srcDir "$buildDir/generated/ksp/main/kotlin"
+        }
+        debug {
+            java.srcDir "$buildDir/generated/ksp/debug/java"
+            kotlin.srcDir "$buildDir/generated/ksp/debug/kotlin"
+        }
+        release {
+            java.srcDir "$buildDir/generated/ksp/release/java"
+            kotlin.srcDir "$buildDir/generated/ksp/release/kotlin"
+        }
+        staging {
+            java.srcDir "$buildDir/generated/ksp/staging/java"
+            kotlin.srcDir "$buildDir/generated/ksp/staging/kotlin"
+        }
+    }
+
     sourceSets.main.jniLibs.srcDirs = ['./jni/']
 
     namespace = 'org.telegram.messenger'

@@ -57,7 +57,7 @@ public class ContactsEmptyView extends LinearLayout {
         titleTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 20);
         titleTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
         titleTextView.setGravity(Gravity.CENTER_HORIZONTAL);
-        titleTextView.setText(LocaleController.getString(R.string.NoContactsYet3));
+        titleTextView.setText(LocaleController.getString(R.string.NoContactsYet));
         titleTextView.setTypeface(AndroidUtilities.bold());
         addView(titleTextView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL | Gravity.TOP, 0, 15, 0, 7));
 
@@ -65,7 +65,7 @@ public class ContactsEmptyView extends LinearLayout {
         subtitleTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
         subtitleTextView.setTextColor(Theme.getColor(Theme.key_emptyListPlaceholder));
         subtitleTextView.setGravity(Gravity.CENTER_HORIZONTAL);
-        subtitleTextView.setText(LocaleController.getString(R.string.NoContactsYet3Sub));
+        subtitleTextView.setText(LocaleController.getString(R.string.NoContactsYetLine1));
         subtitleTextView.setMaxWidth(dp(260));
         subtitleTextView.setLineSpacing(AndroidUtilities.dp(2), 1);
         addView(subtitleTextView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL | Gravity.TOP, 0, 0, 0, 19));

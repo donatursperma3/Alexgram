@@ -248,14 +248,14 @@ class FreeProxyActivity : BaseNekoSettingsActivity(), NotificationCenterDelegate
                 when (position) {
                     rowMap["auto_connect"] -> {
                         val cell = holder.itemView as TextSettingsCell
-                        cell.setTextAndValue(LocaleController.getString("FreeProxyAuto", R.string.FreeProxyAuto), "", true)
+                        cell.setTextAndValue(LocaleController.getString(R.string.FreeProxyAuto), "", true)
                         cell.setTextColor(if (isDark) 0xFF33A1FF.toInt() else 0xFF007AFF.toInt())
                         modernizeCellManual(cell, position)
                     }
                     rowMap["header_proxies"] -> {
                         val cell = holder.itemView as HeaderCell
                         val count = meta?.totals?.all ?: filteredProxies.size
-                        cell.setText(LocaleController.formatString("FreeProxyCount", R.string.FreeProxyCount, count))
+                        cell.setText(LocaleController.formatString(R.string.FreeProxyCount, count))
                         modernizeCellManual(cell, position)
                     }
                     rowMap["country_chips"] -> {
@@ -463,7 +463,7 @@ class FreeProxyActivity : BaseNekoSettingsActivity(), NotificationCenterDelegate
         showDialog(dialog)
     }
 
-    override fun getActionBarTitle(): String = LocaleController.getString("FreeProxy", R.string.FreeProxy)
+    override fun getActionBarTitle(): String = LocaleController.getString(R.string.FreeProxy)
 
     override fun didReceivedNotification(id: Int, account: Int, vararg args: Any?) {
         if (id == NotificationCenter.proxyCheckDone) {
