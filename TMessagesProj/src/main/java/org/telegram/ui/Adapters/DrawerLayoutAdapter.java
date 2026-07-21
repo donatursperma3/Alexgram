@@ -57,6 +57,7 @@ public class DrawerLayoutAdapter extends RecyclerListView.SelectionAdapter imple
     public static int nkbtnBrowser = 1007;
     public static int nkbtnBookmarks = 1008;
     public static int nkbtnRecentChats = 1009;
+    public static int nkbtnFileManager = 1020;
     public static int nkbtnSessions = 1010;
     public DrawerLayoutAdapter(Context context, SideMenultItemAnimator animator, DrawerLayoutContainer drawerLayoutContainer) {
         mContext = context;
@@ -358,6 +359,8 @@ public class DrawerLayoutAdapter extends RecyclerListView.SelectionAdapter imple
         if (NaConfig.INSTANCE.getShowAddToBookmark().Bool()) {
             items.add(new Item(nkbtnBookmarks, LocaleController.getString(R.string.BookmarksManager), R.drawable.msg_fave));
         }
+        // Add File Manager item
+        items.add(new Item(nkbtnFileManager, LocaleController.getString(R.string.FileManager), R.drawable.msg_saved));
         if (NaConfig.INSTANCE.getDrawerItemSettings().Bool()) {
             items.add(new Item(8, LocaleController.getString(R.string.Settings), settingsIcon));
         }

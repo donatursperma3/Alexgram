@@ -398,6 +398,7 @@
     <string name="NoSuchGroups">No such groups</string>
     <string name="NoSuchGroupsInfo">You don\'t have groups that meet the requirements for this bot</string>
     <string name="NoSuchUsers">No such users</string>
+    <string name="FileManager">File Manager</string>
     <string name="NoSuchUsersInfo">No users found that meet the requirements for this bot</string>
     <string name="ImportMessages">Import Messages</string>
     <string name="ImportErrorTitle">Import Error</string>

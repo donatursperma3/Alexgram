@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <Spinner
+        android:id="@+id/fm_media_type_spinner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:prompt="Media type" />
+
+    <Spinner
+        android:id="@+id/fm_chat_type_spinner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:prompt="Chat type" />
+
+    <Spinner
+        android:id="@+id/fm_download_filter_spinner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:prompt="Download filter" />
+
+    <Button
+        android:id="@+id/fm_refresh_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Refresh" />
+
+    <Button
+        android:id="@+id/fm_gotomessage_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Go to message" />
+
+</LinearLayout>

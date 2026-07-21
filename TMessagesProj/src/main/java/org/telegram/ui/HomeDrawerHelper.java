@@ -811,6 +811,13 @@ public class HomeDrawerHelper {
         } else if (id == DrawerLayoutAdapter.nkbtnSessions) {
             activity.presentFragment(new SessionsActivity(SessionsActivity.TYPE_DEVICES));
             activity.drawerLayoutContainer.closeDrawer(false);
+        } else if (id == DrawerLayoutAdapter.nkbtnFileManager) {
+            try {
+                activity.startActivity(new android.content.Intent(activity, FileManagerActivity.class));
+            } catch (Exception e) {
+                FileLog.e("FileManager", e);
+            }
+            activity.drawerLayoutContainer.closeDrawer(false);
         } else if (id == DrawerLayoutAdapter.nkbtnRestartApp) {
             AppRestartHelper.triggerRebirth(ApplicationLoader.applicationContext, new Intent(ApplicationLoader.applicationContext, LaunchActivity.class));
         }

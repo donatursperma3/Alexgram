@@ -46790,6 +46790,7 @@ public class ChatActivity extends BaseFragment implements
 		//      source of truth for opening the popup.
 		item.setOnClickListener(v -> {
 			if (item.getVisibility() == View.VISIBLE && item.isEnabled()) {
+				FileLog.d("ChatActivity", "headerItem clicked tag=" + item.getTag());
 				if (item.hasSubMenu()) {
 					item.toggleSubMenu();
 				}
