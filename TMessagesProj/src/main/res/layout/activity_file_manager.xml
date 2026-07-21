@@ -9,30 +9,30 @@
         android:id="@+id/fm_media_type_spinner"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:prompt="Media type" />
+        android:prompt="@string/file_manager_media_type" />
 
     <Spinner
         android:id="@+id/fm_chat_type_spinner"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:prompt="Chat type" />
+        android:prompt="@string/file_manager_chat_type" />
 
     <Spinner
         android:id="@+id/fm_download_filter_spinner"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:prompt="Download filter" />
+        android:prompt="@string/file_manager_download_filter" />
 
     <Button
         android:id="@+id/fm_refresh_button"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Refresh" />
+        android:text="@string/Refresh" />
 
     <Button
         android:id="@+id/fm_gotomessage_button"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Go to message" />
+        android:text="@string/file_manager_goto_message" />
 
 </LinearLayout>

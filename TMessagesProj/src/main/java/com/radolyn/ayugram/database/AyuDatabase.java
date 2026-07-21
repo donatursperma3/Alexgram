@@ -25,7 +25,7 @@ import com.radolyn.ayugram.database.entities.LastSeenEntity;
         DeletedMessage.class,
         DeletedMessageReaction.class,
         LastSeenEntity.class
-}, version = 26)
+}, version = 26, exportSchema = false)
 public abstract class AyuDatabase extends RoomDatabase {
     public abstract EditedMessageDao editedMessageDao();
 

@@ -399,6 +399,10 @@
     <string name="NoSuchGroupsInfo">You don\'t have groups that meet the requirements for this bot</string>
     <string name="NoSuchUsers">No such users</string>
     <string name="FileManager">File Manager</string>
+    <string name="file_manager_media_type">Media type</string>
+    <string name="file_manager_chat_type">Chat type</string>
+    <string name="file_manager_download_filter">Download filter</string>
+    <string name="file_manager_goto_message">Go to message</string>
     <string name="NoSuchUsersInfo">No users found that meet the requirements for this bot</string>
     <string name="ImportMessages">Import Messages</string>
     <string name="ImportErrorTitle">Import Error</string>

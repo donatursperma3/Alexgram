@@ -138,7 +138,8 @@ class FreeProxyActivity : BaseNekoSettingsActivity(), NotificationCenterDelegate
         val menu = actionBar.createMenu()
         val searchItem = menu.addItem(1, R.drawable.ic_ab_search).setIsSearchField(true)
         searchItem.getSearchField()?.let { searchField ->
-            searchField.hint = LocaleController.getString("FreeProxySearchHint", R.string.FreeProxySearchHint)
+            // use resource-based overload to avoid deprecated Java API warning
+            searchField.hint = LocaleController.getString(R.string.FreeProxySearchHint)
             searchItem.setActionBarMenuItemSearchListener(object : ActionBarMenuItem.ActionBarMenuItemSearchListener() {
                 override fun onSearchExpand() {
                     isSearch = true
