@@ -106,65 +106,147 @@ public class FileManagerActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         try {
             setContentView(R.layout.activity_file_manager);
+
+            toolbar = findViewById(R.id.fm_toolbar);
+            if (toolbar != null) {
+                setSupportActionBar(toolbar);
+                if (getSupportActionBar() != null) {
+                    getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+                    getSupportActionBar().setDisplayShowHomeEnabled(true);
+                    getSupportActionBar().setTitle("File Manager");
+                }
+            }
+            summaryText = findViewById(R.id.fm_selection_summary);
+            selectionStatus = findViewById(R.id.fm_selection_status);
+            selectSingleButton = findViewById(R.id.fm_select_single_button);
+            selectRangeButton = findViewById(R.id.fm_select_range_button);
+            forwardButton = findViewById(R.id.fm_forward_button);
+            detailButton = findViewById(R.id.fm_detail_button);
+            unselectButton = findViewById(R.id.fm_unselect_button);
+
+            mediaChipContainer = findViewById(R.id.fm_media_chip_container);
+            buildMediaChips();
+            chatChips = new TextView[] {
+                    findViewById(R.id.fm_chat_chip_all),
+                    findViewById(R.id.fm_chat_chip_private),
+                    findViewById(R.id.fm_chat_chip_groups),
+                    findViewById(R.id.fm_chat_chip_channels)
+            };
+            statusChips = new TextView[] {
+                    findViewById(R.id.fm_status_chip_all),
+                    findViewById(R.id.fm_status_chip_downloaded),
+                    findViewById(R.id.fm_status_chip_pending)
+            };
+
+            for (int i = 0; i < mediaChips.length; i++) {
+                final int index = i;
+                mediaChips[i].setOnClickListener(v -> {
+                    selectedMediaType = index;
+                    updateMediaSelection();
+                });
+            }
+
+            for (int i = 0; i < chatChips.length; i++) {
+                final int index = i;
+                chatChips[i].setOnClickListener(v -> {
+                    selectedChatType = index;
+                    updateChatSelection();
+                });
+            }
+
+            for (int i = 0; i < statusChips.length; i++) {
+                final int index = i;
+                statusChips[i].setOnClickListener(v -> {
+                    selectedStatus = index;
+                    updateStatusSelection();
+                });
+            }
+
+            itemViews.addAll(Arrays.asList(
+                    findViewById(R.id.fm_item_0),
+                    findViewById(R.id.fm_item_1),
+                    findViewById(R.id.fm_item_2),
+                    findViewById(R.id.fm_item_3),
+                    findViewById(R.id.fm_item_4)
+            ));
+
+            for (int i = 0; i < itemViews.size(); i++) {
+                final int index = i;
+                itemViews.get(i).setOnClickListener(v -> toggleItemSelection(index));
+            }
+
+            selectSingleButton.setOnClickListener(v -> {
+                selectionMode = true;
+                rangeSelectionMode = false;
+                selectionAnchorIndex = 0;
+                selectedItems.clear();
+                selectedItems.add(0);
+                updateSelectionUi();
+            });
+
+            selectRangeButton.setOnClickListener(v -> {
+                selectionMode = true;
+                rangeSelectionMode = true;
+                selectionAnchorIndex = 0;
+                selectedItems.clear();
+                selectedItems.addAll(Arrays.asList(0, 1, 2));
+                updateSelectionUi();
+            });
+
+            forwardButton.setOnClickListener(v -> {
+                if (selectedItems.isEmpty()) {
+                    Toast.makeText(this, "Select at least one item to forward", Toast.LENGTH_SHORT).show();
+                } else {
+                    openForwardTargetSelector();
+                }
+            });
+
+            detailButton.setOnClickListener(v -> {
+                if (selectedItems.isEmpty()) {
+                    Toast.makeText(this, "Select an item to view details", Toast.LENGTH_SHORT).show();
+                } else {
+                    showDetailDialog();
+                }
+            });
+
+            unselectButton.setOnClickListener(v -> {
+                selectionMode = false;
+                rangeSelectionMode = false;
+                selectionAnchorIndex = -1;
+                selectedItems.clear();
+                updateSelectionUi();
+            });
+
+            Button refresh = findViewById(R.id.fm_refresh_button);
+            refresh.setOnClickListener(v -> {
+                try {
+                    openMediaScreen();
+                } catch (Exception ex) {
+                    Toast.makeText(FileManagerActivity.this, "Unable to open media view", Toast.LENGTH_SHORT).show();
+                }
+            });
+
+            Button goToMessage = findViewById(R.id.fm_gotomessage_button);
+            goToMessage.setOnClickListener(v -> {
+                try {
+                    promptAndOpenMessage();
+                } catch (Exception ex) {
+                    Toast.makeText(FileManagerActivity.this, "Action failed", Toast.LENGTH_SHORT).show();
+                }
+            });
+
+            updateMediaSelection();
+            updateChatSelection();
+            updateStatusSelection();
+            refreshItemLabels();
+            updateSelectionUi();
         } catch (Exception e) {
+            FileLog.e("FileManagerActivity", e);
             Toast.makeText(this, "Unable to open File Manager", Toast.LENGTH_SHORT).show();
             finish();
-            return;
         }
+    }
 
-        toolbar = findViewById(R.id.fm_toolbar);
-        if (toolbar != null) {
-            setSupportActionBar(toolbar);
-            if (getSupportActionBar() != null) {
-                getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-                getSupportActionBar().setDisplayShowHomeEnabled(true);
-                getSupportActionBar().setTitle("File Manager");
-            }
-        }
-        summaryText = findViewById(R.id.fm_selection_summary);
-        selectionStatus = findViewById(R.id.fm_selection_status);
-        selectSingleButton = findViewById(R.id.fm_select_single_button);
-        selectRangeButton = findViewById(R.id.fm_select_range_button);
-        forwardButton = findViewById(R.id.fm_forward_button);
-        detailButton = findViewById(R.id.fm_detail_button);
-        unselectButton = findViewById(R.id.fm_unselect_button);
-
-        mediaChipContainer = findViewById(R.id.fm_media_chip_container);
-        buildMediaChips();
-        chatChips = new TextView[] {
-                findViewById(R.id.fm_chat_chip_all),
-                findViewById(R.id.fm_chat_chip_private),
-                findViewById(R.id.fm_chat_chip_groups),
-                findViewById(R.id.fm_chat_chip_channels)
-        };
-        statusChips = new TextView[] {
-                findViewById(R.id.fm_status_chip_all),
-                findViewById(R.id.fm_status_chip_downloaded),
-                findViewById(R.id.fm_status_chip_pending)
-        };
-
-        for (int i = 0; i < mediaChips.length; i++) {
-            final int index = i;
-            mediaChips[i].setOnClickListener(v -> {
-                selectedMediaType = index;
-                updateMediaSelection();
-            });
-        }
-
-        for (int i = 0; i < chatChips.length; i++) {
-            final int index = i;
-            chatChips[i].setOnClickListener(v -> {
-                selectedChatType = index;
-                updateChatSelection();
-            });
-        }
-
-        for (int i = 0; i < statusChips.length; i++) {
-            final int index = i;
-            statusChips[i].setOnClickListener(v -> {
-                selectedStatus = index;
-                updateStatusSelection();
-            });
         }
 
         itemViews.addAll(Arrays.asList(

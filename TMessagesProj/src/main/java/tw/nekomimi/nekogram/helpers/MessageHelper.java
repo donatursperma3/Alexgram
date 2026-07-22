@@ -763,7 +763,7 @@ public class MessageHelper extends BaseController {
                 var latch = new CountDownLatch(1);
                 var peer = getMessagesController().getInputPeer(dialogId);
                 var fromId = MessagesController.getInputPeer(getUserConfig().getCurrentUser());
-                doSearchMessages(fragment, latch, messageIds, peer, replyMessageId, fromId, before, Integer.MAX_VALUE, 0, limit);
+                doSearchMessages(fragment, latch, messageIds, peer, replyMessageId, fromId, before, Integer.MAX_VALUE, 0, limit, newestFirst);
                 try {
                     latch.await();
                 } catch (Exception e) {
@@ -816,7 +816,7 @@ public class MessageHelper extends BaseController {
         void run(int count, Runnable deleteAction);
     }
 
-    private void doSearchMessages(BaseFragment fragment, CountDownLatch latch, ArrayList<Integer> messageIds, TLRPC.InputPeer peer, int replyMessageId, TLRPC.InputPeer fromId, int before, int offsetId, long hash, int limit) {
+    private void doSearchMessages(BaseFragment fragment, CountDownLatch latch, ArrayList<Integer> messageIds, TLRPC.InputPeer peer, int replyMessageId, TLRPC.InputPeer fromId, int before, int offsetId, long hash, int limit, boolean newestFirst) {
         var req = new TLRPC.TL_messages_search();
         req.peer = peer;
         req.limit = 100;
@@ -852,13 +852,17 @@ public class MessageHelper extends BaseController {
                         continue;
                     }
                     messageIds.add(message.id);
-                    if (limit > 0 && messageIds.size() >= limit) {
-                        // reached limit, stop searching
+                    if (!newestFirst && limit > 0 && messageIds.size() > limit) {
+                        // keep only the oldest messages when searching from newest to oldest
+                        messageIds.remove(0);
+                    }
+                    if (newestFirst && limit > 0 && messageIds.size() >= limit) {
+                        // for newest-first mode, we can stop once we have enough messages
                         latch.countDown();
                         return;
                     }
                 }
-                doSearchMessages(fragment, latch, messageIds, peer, replyMessageId, fromId, before, newOffsetId, calcMessagesHash(res.messages), limit);
+                doSearchMessages(fragment, latch, messageIds, peer, replyMessageId, fromId, before, newOffsetId, calcMessagesHash(res.messages), limit, newestFirst);
             } else {
                 if (error != null) {
                     AndroidUtilities.runOnUIThread(() -> AlertsCreator.showSimpleAlert(fragment, getString(R.string.ErrorOccurred) + "\n" + error.text));

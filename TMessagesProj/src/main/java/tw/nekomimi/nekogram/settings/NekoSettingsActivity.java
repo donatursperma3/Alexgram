@@ -566,7 +566,7 @@ public class NekoSettingsActivity extends BaseNekoSettingsActivity {
             logoContainer.addView(logoView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
             nameView = new TextView(context);
-            nameView.setText("Alexgram");
+            nameView.setText("Alexgram AX");
             nameView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 18);
             nameView.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
             nameView.setTextColor(isDark ? Color.WHITE : 0xFF1A1A2E);
@@ -825,7 +825,7 @@ public class NekoSettingsActivity extends BaseNekoSettingsActivity {
             addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER));
         }
         public void update() { 
-            textView.setText("Alexgram v" + BuildVars.BUILD_VERSION_STRING); 
+            textView.setText("Alexgram AX v" + BuildVars.BUILD_VERSION_STRING); 
             textView.setGravity(Gravity.CENTER);
         }
     }

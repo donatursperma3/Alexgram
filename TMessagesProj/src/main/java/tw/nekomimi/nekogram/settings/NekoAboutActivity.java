@@ -17,6 +17,8 @@ import tw.nekomimi.nekogram.DatacenterActivity;
 
 public class NekoAboutActivity extends BaseNekoSettingsActivity {
 
+    private int axChannelRow;
+    private int axSourceCodeRow;
     private int xChannelRow;
     private int desktopChannelRow;
     private int channelTipsRow;
@@ -27,6 +29,8 @@ public class NekoAboutActivity extends BaseNekoSettingsActivity {
     protected void updateRows() {
         super.updateRows();
 
+        axChannelRow = addRow();
+        axSourceCodeRow = addRow();
         xChannelRow = addRow();
         desktopChannelRow = addRow();
         channelTipsRow = addRow();
@@ -41,7 +45,11 @@ public class NekoAboutActivity extends BaseNekoSettingsActivity {
 
     @Override
     protected void onItemClick(View view, int position, float x, float y) {
-        if (position == xChannelRow) {
+        if (position == axChannelRow) {
+            MessagesController.getInstance(currentAccount).openByUserName("AlphaXProject", NekoAboutActivity.this, 1);
+        } else if (position == axSourceCodeRow) {
+            Browser.openUrl(getParentActivity(), "https://t.me/AlphaXProject");
+        } else if (position == xChannelRow) {
             MessagesController.getInstance(currentAccount).openByUserName("AlexgramApp", NekoAboutActivity.this, 1);
         } else if (position == desktopChannelRow) {
             MessagesController.getInstance(currentAccount).openByUserName("AlexgramDesktop", NekoAboutActivity.this, 1);
@@ -70,7 +78,11 @@ public class NekoAboutActivity extends BaseNekoSettingsActivity {
             super.onBindViewHolder(holder, position, partial);
             if (holder.getItemViewType() == TYPE_SETTINGS) {
                 TextSettingsCell textCell = (TextSettingsCell) holder.itemView;
-                if (position == xChannelRow) {
+                if (position == axChannelRow) {
+                    textCell.setTextAndValue("Alexgram AX Channel", "@AlphaXproject", true);
+                } else if (position == axSourceCodeRow) {
+                    textCell.setTextAndValue("Source Code", "https://t.me/AlphaXProject", true);
+                } else if (position == xChannelRow) {
                     textCell.setTextAndValue("Alexgram Channel", "@AlexgramApp", true);
                 } else if (position == desktopChannelRow) {
                     textCell.setTextAndValue("Alexgram Desktop", "@AlexgramDesktop", true);
