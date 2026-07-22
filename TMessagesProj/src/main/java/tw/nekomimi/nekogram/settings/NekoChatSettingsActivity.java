@@ -329,6 +329,29 @@ public class NekoChatSettingsActivity extends BaseNekoXSettingsActivity implemen
         }}));
     }));
 
+    private final AbstractConfigCell deleteOwnMessagesLimitRow = cellGroup.appendCell(new ConfigCellTextInput("DeleteOwnMessagesLimit", NekoConfig.deleteOwnMessagesLimit, "0 = unlimited", null, input -> {
+        String normalized = input == null ? "" : input.trim();
+        if (normalized.isEmpty()) {
+            return "0";
+        }
+        try {
+            int v = Integer.parseInt(normalized);
+            if (v <= 0) return "0";
+            return String.valueOf(v);
+        } catch (Exception e) {
+            FileLog.e(e);
+            return "0";
+        }
+    }, (rawInput, newValue) -> {
+        try {
+            if (rawInput == null || rawInput.trim().isEmpty()) return false;
+            Integer.parseInt(rawInput.trim());
+            return false;
+        } catch (Exception e) {
+            return true;
+        }
+    }));
+
     @SuppressLint("NotifyDataSetChanged")
     private final AbstractConfigCell textStyleRow = cellGroup.appendCell(new ConfigCellTextCheckIcon(null, "TextStyle", null, R.drawable.msg_photo_text_framed3, false, () -> {
         if (getParentActivity() == null) return;

@@ -68,6 +68,7 @@ import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.ColoredImageSpan;
 import org.telegram.ui.Components.Forum.ForumUtilities;
 import org.telegram.ui.Components.LayoutHelper;
+import org.telegram.ui.Components.EditTextBoldCursor;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -464,6 +465,21 @@ public class MessageHelper extends BaseController {
         };
         builder.setView(frameLayout);
 
+        // Limit input field (0 = unlimited)
+        EditTextBoldCursor limitInput = new EditTextBoldCursor(context);
+        limitInput.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+        limitInput.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+        limitInput.setHintTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteHintText));
+        limitInput.setBackground(null);
+        limitInput.setHint("0 = unlimited");
+        try {
+            int saved = NekoConfig.getPreferences().getInt("delete_own_limit", 0);
+            if (saved > 0) limitInput.setText(String.valueOf(saved));
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+        frameLayout.addView(limitInput, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, 24, 120, 24, 0));
+
         AvatarDrawable avatarDrawable = new AvatarDrawable();
         avatarDrawable.setTextSize(AndroidUtilities.dp(12));
         avatarDrawable.setInfo(chat);
@@ -515,10 +531,31 @@ public class MessageHelper extends BaseController {
 
         builder.setNeutralButton(getString(R.string.DeleteAllFromSelfBefore), (dialog, which) -> showBeforeDatePickerAlert(fragment, before1 -> createDeleteHistoryAlert(fragment, chat, forumTopic, mergeDialogId, before1, resourcesProvider)));
         builder.setPositiveButton(getString(R.string.DeleteAll), (dialogInterface, i) -> {
+            int limit = 0;
+            try {
+                String txt = limitInput.getText().toString().trim();
+                if (!txt.isEmpty()) {
+                    limit = Integer.parseInt(txt);
+                    if (limit < 0) limit = 0;
+                }
+                NekoConfig.getPreferences().edit().putInt("delete_own_limit", limit).apply();
+            } catch (Exception e) {
+                FileLog.e(e);
+                limit = 0;
+            }
+
             if (cell != null && cell.isChecked()) {
-                showDeleteHistoryBulletin(fragment, 0, false, () -> getMessagesController().deleteUserChannelHistory(chat, getUserConfig().getCurrentUser(), null, 0), resourcesProvider);
+                final int finalLimit = limit;
+                showDeleteHistoryBulletin(fragment, 0, false, () -> {
+                    if (finalLimit <= 0) {
+                        getMessagesController().deleteUserChannelHistory(chat, getUserConfig().getCurrentUser(), null, 0);
+                    } else {
+                        // delete with limit: use search-based deletion to respect limit
+                        deleteUserHistoryWithSearch(fragment, -chat.id, forumTopic != null ? forumTopic.id : 0, mergeDialogId, before == -1 ? getConnectionsManager().getCurrentTime() : before, finalLimit, (count, deleteAction) -> deleteAction.run());
+                    }
+                }, resourcesProvider);
             } else {
-                deleteUserHistoryWithSearch(fragment, -chat.id, forumTopic != null ? forumTopic.id : 0, mergeDialogId, before == -1 ? getConnectionsManager().getCurrentTime() : before, (count, deleteAction) -> showDeleteHistoryBulletin(fragment, count, true, deleteAction, resourcesProvider));
+                deleteUserHistoryWithSearch(fragment, -chat.id, forumTopic != null ? forumTopic.id : 0, mergeDialogId, before == -1 ? getConnectionsManager().getCurrentTime() : before, limit, (count, deleteAction) -> showDeleteHistoryBulletin(fragment, count, true, deleteAction, resourcesProvider));
             }
         });
         builder.setNegativeButton(getString(R.string.Cancel), null);
@@ -618,19 +655,23 @@ public class MessageHelper extends BaseController {
         Bulletin.make(fragment, buttonLayout, Bulletin.DURATION_PROLONG).show();
     }
 
-    private void deleteUserHistoryWithSearch(BaseFragment fragment, final long dialogId, int replyMessageId, final long mergeDialogId, int before, SearchMessagesResultCallback callback) {
+    private void deleteUserHistoryWithSearch(BaseFragment fragment, final long dialogId, int replyMessageId, final long mergeDialogId, int before, int limit, SearchMessagesResultCallback callback) {
         Utilities.globalQueue.postRunnable(() -> {
             ArrayList<Integer> messageIds = new ArrayList<>();
             var latch = new CountDownLatch(1);
             var peer = getMessagesController().getInputPeer(dialogId);
             var fromId = MessagesController.getInputPeer(getUserConfig().getCurrentUser());
-            doSearchMessages(fragment, latch, messageIds, peer, replyMessageId, fromId, before, Integer.MAX_VALUE, 0);
+            doSearchMessages(fragment, latch, messageIds, peer, replyMessageId, fromId, before, Integer.MAX_VALUE, 0, limit);
             try {
                 latch.await();
             } catch (Exception e) {
                 FileLog.e(e);
             }
             if (!messageIds.isEmpty()) {
+                if (limit > 0 && messageIds.size() > limit) {
+                    messageIds = new ArrayList<>(messageIds.subList(0, limit));
+                }
+
                 ArrayList<ArrayList<Integer>> lists = new ArrayList<>();
                 final int N = messageIds.size();
                 for (int i = 0; i < N; i += 100) {
@@ -647,7 +688,7 @@ public class MessageHelper extends BaseController {
                 AndroidUtilities.runOnUIThread(callback != null ? () -> callback.run(messageIds.size(), deleteAction) : deleteAction);
             }
             if (mergeDialogId != 0) {
-                deleteUserHistoryWithSearch(fragment, mergeDialogId, 0, 0, before, null);
+                deleteUserHistoryWithSearch(fragment, mergeDialogId, 0, 0, before, 0, null);
             }
         });
     }
@@ -656,7 +697,7 @@ public class MessageHelper extends BaseController {
         void run(int count, Runnable deleteAction);
     }
 
-    private void doSearchMessages(BaseFragment fragment, CountDownLatch latch, ArrayList<Integer> messageIds, TLRPC.InputPeer peer, int replyMessageId, TLRPC.InputPeer fromId, int before, int offsetId, long hash) {
+    private void doSearchMessages(BaseFragment fragment, CountDownLatch latch, ArrayList<Integer> messageIds, TLRPC.InputPeer peer, int replyMessageId, TLRPC.InputPeer fromId, int before, int offsetId, long hash, int limit) {
         var req = new TLRPC.TL_messages_search();
         req.peer = peer;
         req.limit = 100;
@@ -680,7 +721,7 @@ public class MessageHelper extends BaseController {
         }
         req.hash = hash;
         getConnectionsManager().sendRequest(req, (response, error) -> {
-            if (response instanceof TLRPC.messages_Messages res) {
+                if (response instanceof TLRPC.messages_Messages res) {
                 if (response instanceof TLRPC.TL_messages_messagesNotModified || res.messages.isEmpty()) {
                     latch.countDown();
                     return;
@@ -692,8 +733,13 @@ public class MessageHelper extends BaseController {
                         continue;
                     }
                     messageIds.add(message.id);
+                    if (limit > 0 && messageIds.size() >= limit) {
+                        // reached limit, stop searching
+                        latch.countDown();
+                        return;
+                    }
                 }
-                doSearchMessages(fragment, latch, messageIds, peer, replyMessageId, fromId, before, newOffsetId, calcMessagesHash(res.messages));
+                doSearchMessages(fragment, latch, messageIds, peer, replyMessageId, fromId, before, newOffsetId, calcMessagesHash(res.messages), limit);
             } else {
                 if (error != null) {
                     AndroidUtilities.runOnUIThread(() -> AlertsCreator.showSimpleAlert(fragment, getString(R.string.ErrorOccurred) + "\n" + error.text));

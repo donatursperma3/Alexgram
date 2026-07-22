@@ -2068,6 +2068,13 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
         } else if (id == DrawerLayoutAdapter.nkbtnRecentChats) {
             presentFragment(new ChatHistoryActivity());
             drawerLayoutContainer.closeDrawer(false);
+        } else if (id == DrawerLayoutAdapter.nkbtnFileManager) {
+            try {
+                startActivity(new Intent(this, FileManagerActivity.class));
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
+            drawerLayoutContainer.closeDrawer(false);
         } else if (id == DrawerLayoutAdapter.nkbtnSettings) {
             presentFragment(new NekoSettingsActivity());
             drawerLayoutContainer.closeDrawer(false);

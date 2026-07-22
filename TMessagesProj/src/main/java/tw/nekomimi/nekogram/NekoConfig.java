@@ -165,6 +165,7 @@ public class NekoConfig {
     public static ConfigItem bulkForwardAutoDelay = addConfig("BulkForwardAutoDelay", configTypeBool, false);
     public static ConfigItem bulkForwardDelayPreset = addConfig("BulkForwardDelayPreset", configTypeInt, BULK_FORWARD_DELAY_PRESET_01S);
     public static ConfigItem bulkForwardDelayManualSeconds = addConfig("BulkForwardDelayManualSeconds", configTypeString, "0.1");
+    public static ConfigItem deleteOwnMessagesLimit = addConfig("delete_own_limit", configTypeInt, 0);
     public static ConfigItem disableTrending = addConfig("DisableTrending", configTypeBool, true);
     public static ConfigItem dontSendGreetingSticker = addConfig("DontSendGreetingSticker", configTypeBool, true);
     public static ConfigItem hideTimeForSticker = addConfig("HideTimeForSticker", configTypeBool, false);
