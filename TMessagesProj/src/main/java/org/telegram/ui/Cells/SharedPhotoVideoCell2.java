@@ -981,10 +981,24 @@ public class SharedPhotoVideoCell2 extends FrameLayout {
             }
         }
 
-        if (size <= 0) {
-            return null;
+        boolean showProtected = NekoConfig.showProtectedContentInSharedMedia.Bool() && !messageObject.canForwardMessage();
+        String protectedLabel = null;
+        if (showProtected) {
+            protectedLabel = NekoConfig.protectedContentLabel.String();
+            if (TextUtils.isEmpty(protectedLabel)) {
+                protectedLabel = LocaleController.getString("ProtectedContent", R.string.ProtectedContent);
+            }
         }
-        return AndroidUtilities.formatFileSize(size);
+
+        if (size <= 0) {
+            return protectedLabel;
+        }
+
+        String sizeText = AndroidUtilities.formatFileSize(size);
+        if (protectedLabel != null) {
+            return sizeText + " • " + protectedLabel;
+        }
+        return sizeText;
     }
 
     private long getLargestPhotoSize(TLRPC.Photo photo, ArrayList<TLRPC.PhotoSize> fallbackSizes) {

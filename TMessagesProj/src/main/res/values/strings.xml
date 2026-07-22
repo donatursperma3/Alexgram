@@ -3226,6 +3226,11 @@
     <string name="ShowSharedMediaPhotoSize">Show photo size in shared media</string>
     <string name="ShowSharedMediaVideoSize">Show video size in shared media</string>
     <string name="ShowSharedMediaGifSize">Show GIF size in shared media</string>
+    <string name="ShowProtectedContentInSharedMedia">Show protected content indicator in shared media</string>
+    <string name="ShowProtectedContentInSharedMediaInfo">Display a protected badge when media cannot be forwarded.</string>
+    <string name="ShowProtectedContentLabel">Protected content label</string>
+    <string name="ShowProtectedContentLabelInfo">Set the text or emoji shown for protected/shared content.</string>
+    <string name="ProtectedContent">🔒 Protected</string>
     <!-- [Alexgram: Account Numbers Display] -->
     <string name="ShowAccountNumbers">Show account numbers in list</string>
     <!-- [Alexgram: Auto-collapse Account Tabs] -->

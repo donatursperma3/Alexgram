@@ -220,6 +220,8 @@ public class NekoChatSettingsActivity extends BaseNekoXSettingsActivity implemen
     private final AbstractConfigCell showSharedMediaPhotoSizeRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.showSharedMediaPhotoSize, null, getString(R.string.ShowSharedMediaPhotoSize)));
     private final AbstractConfigCell showSharedMediaVideoSizeRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.showSharedMediaVideoSize, null, getString(R.string.ShowSharedMediaVideoSize)));
     private final AbstractConfigCell showSharedMediaGifSizeRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.showSharedMediaGifSize, null, getString(R.string.ShowSharedMediaGifSize)));
+    private final AbstractConfigCell showProtectedContentInSharedMediaRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.showProtectedContentInSharedMedia, getString(R.string.ShowProtectedContentInSharedMediaInfo), getString(R.string.ShowProtectedContentInSharedMedia)));
+    private final AbstractConfigCell protectedContentLabelRow = cellGroup.appendCell(new ConfigCellTextInput(getString(R.string.ShowProtectedContentLabel), NekoConfig.protectedContentLabel, getString(R.string.ShowProtectedContentLabelInfo), null));
     private final AbstractConfigCell dividerMedia = cellGroup.appendCell(new ConfigCellDivider());
 
     // Stickers
