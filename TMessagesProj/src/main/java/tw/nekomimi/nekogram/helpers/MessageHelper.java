@@ -25,6 +25,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.DatePicker;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -97,6 +98,10 @@ public class MessageHelper extends BaseController {
 
     private static final MessageHelper[] Instance = new MessageHelper[UserConfig.MAX_ACCOUNT_COUNT];
     private static final CharsetDecoder utf8Decoder = StandardCharsets.UTF_8.newDecoder();
+    private static final String DELETE_OWN_LIMIT_KEY = "delete_own_limit";
+    private static final String DELETE_OWN_ORDER_KEY = "delete_own_order";
+    private static final int DELETE_ORDER_NEWEST = 0;
+    private static final int DELETE_ORDER_OLDEST = 1;
 
     public MessageHelper(int num) {
         super(num);
@@ -476,20 +481,100 @@ public class MessageHelper extends BaseController {
         limitInput.setInputType(InputType.TYPE_CLASS_NUMBER);
         limitInput.setHint("0 = unlimited");
         try {
-            int saved = NekoConfig.getPreferences().getInt("delete_own_limit", 0);
-            if (saved > 0) limitInput.setText(String.valueOf(saved));
+            int savedLimit = NekoConfig.getPreferences().getInt(DELETE_OWN_LIMIT_KEY, 0);
+            if (savedLimit > 0) limitInput.setText(String.valueOf(savedLimit));
         } catch (Exception e) {
             FileLog.e(e);
         }
+
+        final int labelWidth = AndroidUtilities.dp(52);
 
         TextView limitLabel = new TextView(context);
         limitLabel.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, resourcesProvider));
         limitLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
         limitLabel.setGravity(Gravity.CENTER_VERTICAL);
+        limitLabel.setIncludeFontPadding(false);
         limitLabel.setText("Max:");
 
-        frameLayout.addView(limitLabel, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, 24, 120, 0, 0));
-        frameLayout.addView(limitInput, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, 24 + AndroidUtilities.dp(34), 120, 24, 0));
+        LinearLayout limitRow = new LinearLayout(context);
+        limitRow.setOrientation(LinearLayout.HORIZONTAL);
+        limitRow.setGravity(Gravity.CENTER_VERTICAL);
+
+        LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(
+            labelWidth,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        labelParams.setMargins(0, 0, AndroidUtilities.dp(6), 0);
+        limitRow.addView(limitLabel, labelParams);
+
+        LinearLayout.LayoutParams inputParams = new LinearLayout.LayoutParams(
+            0,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            1f
+        );
+        limitInput.setGravity(Gravity.CENTER_VERTICAL);
+        limitInput.setIncludeFontPadding(false);
+        limitInput.setPadding(0, 0, 0, 0);
+        limitRow.addView(limitInput, inputParams);
+
+        TextView orderLabel = new TextView(context);
+        orderLabel.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, resourcesProvider));
+        orderLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+        orderLabel.setGravity(Gravity.CENTER_VERTICAL);
+        orderLabel.setIncludeFontPadding(false);
+        orderLabel.setText("Mode:");
+
+        final boolean[] deleteNewestFirst = new boolean[1];
+        try {
+            int savedOrder = NekoConfig.getPreferences().getInt(DELETE_OWN_ORDER_KEY, DELETE_ORDER_NEWEST);
+            deleteNewestFirst[0] = savedOrder != DELETE_ORDER_OLDEST;
+        } catch (Exception e) {
+            FileLog.e(e);
+            deleteNewestFirst[0] = true;
+        }
+
+        TextView orderValue = new TextView(context);
+        orderValue.setTextColor(Theme.getColor(Theme.key_dialogTextBlack, resourcesProvider));
+        orderValue.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+        orderValue.setGravity(Gravity.CENTER_VERTICAL);
+        orderValue.setSingleLine(true);
+        orderValue.setEllipsize(TextUtils.TruncateAt.END);
+        orderValue.setText(deleteNewestFirst[0] ? "Newest" : "Oldest");
+        orderValue.setPadding(0, 0, AndroidUtilities.dp(4), 0);
+        orderValue.setOnClickListener(v -> {
+            deleteNewestFirst[0] = !deleteNewestFirst[0];
+            orderValue.setText(deleteNewestFirst[0] ? "Newest" : "Oldest");
+        });
+
+        LinearLayout orderRow = new LinearLayout(context);
+        orderRow.setOrientation(LinearLayout.HORIZONTAL);
+        orderRow.setGravity(Gravity.CENTER_VERTICAL);
+
+        LinearLayout.LayoutParams orderLabelParams = new LinearLayout.LayoutParams(
+            labelWidth,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        orderLabelParams.setMargins(0, 0, AndroidUtilities.dp(6), 0);
+        orderRow.addView(orderLabel, orderLabelParams);
+
+        LinearLayout.LayoutParams orderValueParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        orderRow.addView(orderValue, orderValueParams);
+
+        LinearLayout contentLayout = new LinearLayout(context);
+        contentLayout.setOrientation(LinearLayout.VERTICAL);
+        contentLayout.setPadding(AndroidUtilities.dp(24), AndroidUtilities.dp(120), AndroidUtilities.dp(24), 0);
+        contentLayout.addView(limitRow);
+
+        LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        rowParams.topMargin = AndroidUtilities.dp(8);
+        contentLayout.addView(orderRow, rowParams);
+        frameLayout.addView(contentLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, 0, 0, 0, 0));
 
         AvatarDrawable avatarDrawable = new AvatarDrawable();
         avatarDrawable.setTextSize(AndroidUtilities.dp(12));
@@ -549,12 +634,17 @@ public class MessageHelper extends BaseController {
                     limit = Integer.parseInt(txt);
                     if (limit < 0) limit = 0;
                 }
-                NekoConfig.getPreferences().edit().putInt("delete_own_limit", limit).apply();
+                NekoConfig.getPreferences().edit()
+                    .putInt(DELETE_OWN_LIMIT_KEY, limit)
+                    .putInt(DELETE_OWN_ORDER_KEY, deleteNewestFirst[0] ? DELETE_ORDER_NEWEST : DELETE_ORDER_OLDEST)
+                    .apply();
             } catch (Exception e) {
                 FileLog.e(e);
                 limit = 0;
+                deleteNewestFirst[0] = true;
             }
 
+            final boolean newestFirst = deleteNewestFirst[0];
             if (cell != null && cell.isChecked()) {
                 final int finalLimit = limit;
                 showDeleteHistoryBulletin(fragment, 0, false, () -> {
@@ -562,11 +652,11 @@ public class MessageHelper extends BaseController {
                         getMessagesController().deleteUserChannelHistory(chat, getUserConfig().getCurrentUser(), null, 0);
                     } else {
                         // delete with limit: use search-based deletion to respect limit
-                        deleteUserHistoryWithSearch(fragment, -chat.id, forumTopic != null ? forumTopic.id : 0, mergeDialogId, before == -1 ? getConnectionsManager().getCurrentTime() : before, finalLimit, (count, deleteAction) -> deleteAction.run());
+                        deleteUserHistoryWithSearch(fragment, -chat.id, forumTopic != null ? forumTopic.id : 0, mergeDialogId, before == -1 ? getConnectionsManager().getCurrentTime() : before, finalLimit, newestFirst, (count, deleteAction) -> deleteAction.run());
                     }
                 }, resourcesProvider);
             } else {
-                deleteUserHistoryWithSearch(fragment, -chat.id, forumTopic != null ? forumTopic.id : 0, mergeDialogId, before == -1 ? getConnectionsManager().getCurrentTime() : before, limit, (count, deleteAction) -> showDeleteHistoryBulletin(fragment, count, true, deleteAction, resourcesProvider));
+                deleteUserHistoryWithSearch(fragment, -chat.id, forumTopic != null ? forumTopic.id : 0, mergeDialogId, before == -1 ? getConnectionsManager().getCurrentTime() : before, limit, newestFirst, (count, deleteAction) -> showDeleteHistoryBulletin(fragment, count, true, deleteAction, resourcesProvider));
             }
         });
         builder.setNegativeButton(getString(R.string.Cancel), null);
@@ -666,42 +756,58 @@ public class MessageHelper extends BaseController {
         Bulletin.make(fragment, buttonLayout, Bulletin.DURATION_PROLONG).show();
     }
 
-    private void deleteUserHistoryWithSearch(BaseFragment fragment, final long dialogId, int replyMessageId, final long mergeDialogId, int before, int limit, SearchMessagesResultCallback callback) {
+    private void deleteUserHistoryWithSearch(BaseFragment fragment, final long dialogId, int replyMessageId, final long mergeDialogId, int before, int limit, boolean newestFirst, SearchMessagesResultCallback callback) {
         Utilities.globalQueue.postRunnable(() -> {
-            ArrayList<Integer> messageIds = new ArrayList<>();
-            var latch = new CountDownLatch(1);
-            var peer = getMessagesController().getInputPeer(dialogId);
-            var fromId = MessagesController.getInputPeer(getUserConfig().getCurrentUser());
-            doSearchMessages(fragment, latch, messageIds, peer, replyMessageId, fromId, before, Integer.MAX_VALUE, 0, limit);
             try {
-                latch.await();
+                ArrayList<Integer> messageIds = new ArrayList<>();
+                var latch = new CountDownLatch(1);
+                var peer = getMessagesController().getInputPeer(dialogId);
+                var fromId = MessagesController.getInputPeer(getUserConfig().getCurrentUser());
+                doSearchMessages(fragment, latch, messageIds, peer, replyMessageId, fromId, before, Integer.MAX_VALUE, 0, limit);
+                try {
+                    latch.await();
+                } catch (Exception e) {
+                    FileLog.e(e);
+                }
+                if (!messageIds.isEmpty()) {
+                    if (!newestFirst) {
+                        Collections.reverse(messageIds);
+                    }
+                    if (limit > 0 && messageIds.size() > limit) {
+                        messageIds = new ArrayList<>(messageIds.subList(0, limit));
+                    }
+
+                    ArrayList<ArrayList<Integer>> lists = new ArrayList<>();
+                    final int N = messageIds.size();
+                    for (int i = 0; i < N; i += 100) {
+                        lists.add(new ArrayList<>(messageIds.subList(i, Math.min(N, i + 100))));
+                    }
+                    Runnable deleteAction = () -> {
+                        try {
+                            for (ArrayList<Integer> list : lists) {
+                                for (int msgId : list) {
+                                    AyuState.permitDeleteMessage(dialogId, msgId);
+                                }
+                                getMessagesController().deleteMessages(list, null, null, dialogId, 0, true, 0);
+                            }
+                        } catch (Exception e) {
+                            FileLog.e(e);
+                        }
+                    };
+                    final int deletedCount = messageIds.size();
+                    Runnable result = callback != null ? () -> callback.run(deletedCount, deleteAction) : deleteAction;
+                    AndroidUtilities.runOnUIThread(result);
+                }
+                if (mergeDialogId != 0) {
+                    deleteUserHistoryWithSearch(fragment, mergeDialogId, 0, 0, before, 0, newestFirst, null);
+                }
             } catch (Exception e) {
                 FileLog.e(e);
-            }
-            if (!messageIds.isEmpty()) {
-                if (limit > 0 && messageIds.size() > limit) {
-                    messageIds = new ArrayList<>(messageIds.subList(0, limit));
-                }
-
-                ArrayList<ArrayList<Integer>> lists = new ArrayList<>();
-                final int N = messageIds.size();
-                for (int i = 0; i < N; i += 100) {
-                    lists.add(new ArrayList<>(messageIds.subList(i, Math.min(N, i + 100))));
-                }
-                Runnable deleteAction = () -> {
-                    for (ArrayList<Integer> list : lists) {
-                        for (int msgId : list) {
-                            AyuState.permitDeleteMessage(dialogId, msgId);
-                        }
-                        getMessagesController().deleteMessages(list, null, null, dialogId, 0, true, 0);
+                AndroidUtilities.runOnUIThread(() -> {
+                    if (fragment != null && fragment.getParentActivity() != null) {
+                        AlertsCreator.showSimpleAlert(fragment, getString(R.string.ErrorOccurred));
                     }
-                };
-                final int deletedCount = messageIds.size();
-                Runnable result = callback != null ? () -> callback.run(deletedCount, deleteAction) : deleteAction;
-                AndroidUtilities.runOnUIThread(result);
-            }
-            if (mergeDialogId != 0) {
-                deleteUserHistoryWithSearch(fragment, mergeDialogId, 0, 0, before, 0, null);
+                });
             }
         });
     }

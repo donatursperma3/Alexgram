@@ -126,7 +126,7 @@ public class NekoChatSettingsActivity extends BaseNekoXSettingsActivity implemen
             getString(R.string.BulkForwardDelayPreset1s),
             getString(R.string.BulkForwardDelayPresetManual),
     }, null));
-    private final AbstractConfigCell bulkForwardDelayManualRow = cellGroup.appendCell(new ConfigCellTextInput("BulkForwardDelayManual", NekoConfig.bulkForwardDelayManualSeconds, getString(R.string.BulkForwardDelayManualHint), null, input -> {
+    private final AbstractConfigCell bulkForwardDelayManualRow = cellGroup.appendCell(new ConfigCellTextInput(getString(R.string.BulkForwardDelayManual), NekoConfig.bulkForwardDelayManualSeconds, getString(R.string.BulkForwardDelayManualHint), null, input -> {
         String normalized = input == null ? "" : input.trim();
         if (normalized.isEmpty()) {
             return "0.1";
@@ -329,7 +329,7 @@ public class NekoChatSettingsActivity extends BaseNekoXSettingsActivity implemen
         }}));
     }));
 
-    private final AbstractConfigCell deleteOwnMessagesLimitRow = cellGroup.appendCell(new ConfigCellTextInput("DeleteOwnMessagesLimit", NekoConfig.deleteOwnMessagesLimit, "0 = unlimited", null, input -> {
+    private final AbstractConfigCell deleteOwnMessagesLimitRow = cellGroup.appendCell(new ConfigCellTextInput(getString(R.string.DeleteOwnMessagesLimit), NekoConfig.deleteOwnMessagesLimit, "0 = unlimited", null, input -> {
         String normalized = input == null ? "" : input.trim();
         if (normalized.isEmpty()) {
             return "0";

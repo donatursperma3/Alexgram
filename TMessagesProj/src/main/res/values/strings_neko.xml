@@ -235,6 +235,7 @@
     <string name="BulkForwardDelayPresetManual">Manual</string>
     <string name="BulkForwardDelayManual">Manual delay (seconds)</string>
     <string name="BulkForwardDelayManualHint">Example: 0.25</string>
+    <string name="DeleteOwnMessagesLimit">Delete own messages limit</string>
     <string name="ImportLogin">QR Login</string>
     <string name="UserRestrictionsSendGames">Send Games</string>
     <string name="UserRestrictionsSendInline">Send via Inline Bots</string>

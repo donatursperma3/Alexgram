@@ -4,11 +4,15 @@ import android.app.AlertDialog;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.text.InputType;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.appcompat.widget.Toolbar;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -33,12 +37,23 @@ public class FileManagerActivity extends AppCompatActivity {
     private static final int ITEM_TYPE_AUDIO = 2;
     private static final int ITEM_TYPE_LINK = 3;
 
-    private final String[] mediaLabels = {"Photos", "Files", "Audio", "Links"};
+    private final String[] mediaLabels = {
+            "Photos",
+            "Files",
+            "Voice",
+            "Links",
+            "GIFs",
+            "Polls",
+            "Stories"
+    };
     private final int[] mediaTabs = {
             SharedMediaLayout.TAB_PHOTOVIDEO,
             SharedMediaLayout.TAB_FILES,
-            SharedMediaLayout.TAB_AUDIO,
-            SharedMediaLayout.TAB_LINKS
+            SharedMediaLayout.TAB_VOICE,
+            SharedMediaLayout.TAB_LINKS,
+            SharedMediaLayout.TAB_GIF,
+            SharedMediaLayout.TAB_POLL,
+            SharedMediaLayout.TAB_STORIES
     };
     private final String[] chatLabels = {"All chats", "Private", "Groups", "Channels"};
     private final String[] statusLabels = {"All", "Downloaded", "Pending"};
@@ -67,6 +82,8 @@ public class FileManagerActivity extends AppCompatActivity {
     private TextView[] mediaChips;
     private TextView[] chatChips;
     private TextView[] statusChips;
+    private LinearLayout mediaChipContainer;
+    private Toolbar toolbar;
     private TextView summaryText;
     private TextView selectionStatus;
     private Button selectSingleButton;
@@ -95,7 +112,15 @@ public class FileManagerActivity extends AppCompatActivity {
             return;
         }
 
-        setTitle("File Manager");
+        toolbar = findViewById(R.id.fm_toolbar);
+        if (toolbar != null) {
+            setSupportActionBar(toolbar);
+            if (getSupportActionBar() != null) {
+                getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+                getSupportActionBar().setDisplayShowHomeEnabled(true);
+                getSupportActionBar().setTitle("File Manager");
+            }
+        }
         summaryText = findViewById(R.id.fm_selection_summary);
         selectionStatus = findViewById(R.id.fm_selection_status);
         selectSingleButton = findViewById(R.id.fm_select_single_button);
@@ -104,12 +129,8 @@ public class FileManagerActivity extends AppCompatActivity {
         detailButton = findViewById(R.id.fm_detail_button);
         unselectButton = findViewById(R.id.fm_unselect_button);
 
-        mediaChips = new TextView[] {
-                findViewById(R.id.fm_media_chip_photos),
-                findViewById(R.id.fm_media_chip_files),
-                findViewById(R.id.fm_media_chip_audio),
-                findViewById(R.id.fm_media_chip_links)
-        };
+        mediaChipContainer = findViewById(R.id.fm_media_chip_container);
+        buildMediaChips();
         chatChips = new TextView[] {
                 findViewById(R.id.fm_chat_chip_all),
                 findViewById(R.id.fm_chat_chip_private),
@@ -181,7 +202,7 @@ public class FileManagerActivity extends AppCompatActivity {
             if (selectedItems.isEmpty()) {
                 Toast.makeText(this, "Select at least one item to forward", Toast.LENGTH_SHORT).show();
             } else {
-                showForwardDialog();
+                openForwardTargetSelector();
             }
         });
 
@@ -224,6 +245,78 @@ public class FileManagerActivity extends AppCompatActivity {
         updateStatusSelection();
         refreshItemLabels();
         updateSelectionUi();
+    }
+
+    private void buildMediaChips() {
+        mediaChipContainer.removeAllViews();
+        mediaChips = new TextView[mediaLabels.length];
+
+        for (int i = 0; i < mediaLabels.length; i++) {
+            TextView chip = new TextView(this);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    AndroidUtilities.dp(40)
+            );
+            lp.setMarginEnd(AndroidUtilities.dp(6));
+            chip.setLayoutParams(lp);
+            chip.setMinWidth(AndroidUtilities.dp(72));
+            chip.setBackgroundResource(R.drawable.bg_file_manager_chip);
+            chip.setGravity(android.view.Gravity.CENTER);
+            chip.setPadding(AndroidUtilities.dp(12), 0, AndroidUtilities.dp(12), 0);
+            chip.setText(mediaLabels[i]);
+            chip.setTextColor(Color.parseColor("#354B63"));
+            chip.setTextSize(12);
+            chip.setAllCaps(false);
+            chip.setSingleLine();
+            chip.setMaxLines(1);
+            mediaChipContainer.addView(chip);
+            mediaChips[i] = chip;
+        }
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == android.R.id.home) {
+            onBackPressed();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    private void openForwardTargetSelector() {
+        if (LaunchActivity.instance == null) {
+            Toast.makeText(this, "Unable to open target chooser", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Bundle args = new Bundle();
+        args.putInt("dialogsType", DialogsActivity.DIALOGS_TYPE_FORWARD);
+        args.putBoolean("onlySelect", true);
+        args.putBoolean("checkCanWrite", false);
+        args.putString("selectAlertString", "Select a destination chat");
+        args.putString("selectAlertStringGroup", "Select a destination group or channel");
+        args.putLong("dialog_id", UserConfig.getInstance(UserConfig.selectedAccount).getClientUserId());
+
+        DialogsActivity dialogsActivity = new DialogsActivity(args);
+        dialogsActivity.setDelegate((fragment, dids, message, param, notify, scheduleDate, scheduleRepeatPeriod, topicsFragment) -> {
+            if (dids == null || dids.isEmpty()) {
+                return true;
+            }
+
+            long selectedDialogId = dids.get(0).dialogId;
+            try {
+                Toast.makeText(FileManagerActivity.this,
+                        "Selected destination: " + selectedDialogId,
+                        Toast.LENGTH_SHORT).show();
+            } catch (Exception ignored) {
+            }
+
+            dialogsActivity.finishFragment();
+            finish();
+            return true;
+        });
+
+        LaunchActivity.instance.presentFragment(dialogsActivity);
     }
 
     private void openMediaScreen() {
@@ -403,18 +496,4 @@ public class FileManagerActivity extends AppCompatActivity {
                 .show();
     }
 
-    private void showForwardDialog() {
-        String message = "Forward " + selectedItems.size() + " selected item(s) to the next destination?";
-        new AlertDialog.Builder(this)
-                .setTitle("Forward items")
-                .setMessage(message)
-                .setPositiveButton("Confirm", (dialog, which) -> {
-                    Toast.makeText(this, "Forward request prepared for " + selectedItems.size() + " item(s)", Toast.LENGTH_SHORT).show();
-                    selectionMode = false;
-                    selectedItems.clear();
-                    updateSelectionUi();
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
-    }
 }

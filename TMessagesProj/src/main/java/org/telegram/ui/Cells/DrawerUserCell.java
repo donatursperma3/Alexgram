@@ -57,9 +57,6 @@ public class DrawerUserCell extends FrameLayout implements NotificationCenter.No
     private final AnimatedEmojiDrawable.SwapAnimatedEmojiDrawable status;
     private final Paint selectedBackgroundPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint avatarRingPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    // [Alexgram: Account Numbers] - Start
-    private final SimpleTextView ordinalNumberView;
-    // [Alexgram: Account Numbers] - End
 
     private int accountNumber;
     private final RectF rect = new RectF();
@@ -69,16 +66,6 @@ public class DrawerUserCell extends FrameLayout implements NotificationCenter.No
 
         avatarDrawable = new AvatarDrawable();
         avatarDrawable.setTextSize(dp(20));
-
-        // [Alexgram: Account Numbers] - Start
-        ordinalNumberView = new SimpleTextView(context);
-        ordinalNumberView.setTextSize(13);
-        ordinalNumberView.setTypeface(AndroidUtilities.bold());
-        ordinalNumberView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
-        ordinalNumberView.setGravity(Gravity.CENTER);
-        ordinalNumberView.setVisibility(GONE);
-        addView(ordinalNumberView, LayoutHelper.createFrame(20, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.TOP, 8, 0, 8, 0));
-        // [Alexgram: Account Numbers] - End
 
         imageView = new BackupImageView(context);
         imageView.setRoundRadius(dp(18));
@@ -184,9 +171,6 @@ public class DrawerUserCell extends FrameLayout implements NotificationCenter.No
         CharSequence text = ContactsController.formatName(user.first_name, user.last_name);
         if (position >= 0 && NaConfig.INSTANCE.getShowAccountNumbers().Bool()) {
             text = String.format("%d. %s", position + 1, text);
-            ordinalNumberView.setVisibility(GONE);
-        } else {
-            ordinalNumberView.setVisibility(GONE);
         }
         try {
             text = Emoji.replaceEmoji(text, textView.getPaint().getFontMetricsInt(), false);
@@ -211,13 +195,6 @@ public class DrawerUserCell extends FrameLayout implements NotificationCenter.No
             subtitleTextView.setVisibility(GONE);
         }
         
-        if (position >= 0 && NaConfig.INSTANCE.getShowAccountNumbers().Bool()) {
-            ordinalNumberView.setVisibility(VISIBLE);
-            ordinalNumberView.setText(String.valueOf(position + 1));
-        } else {
-            ordinalNumberView.setVisibility(GONE);
-        }
-        // [Alexgram: Account Numbers] - End
         final Long emojiStatusId = UserObject.getEmojiStatusDocumentId(user);
         if (emojiStatusId != null) {
             textView.setDrawablePadding(dp(4));

@@ -731,21 +731,6 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         btn.setOrientation(LinearLayout.HORIZONTAL);
         btn.setBackground(Theme.createRadSelectorDrawable(getThemedColor(Theme.key_listSelector), 0, 0));
 
-        // [Alexgram: Account Numbers] - Start
-        final SimpleTextView ordinalNumberView = new SimpleTextView(getContext());
-        ordinalNumberView.setTextSize(13);
-        ordinalNumberView.setTypeface(AndroidUtilities.bold());
-        ordinalNumberView.setTextColor(getThemedColor(Theme.key_windowBackgroundWhiteGrayText));
-        ordinalNumberView.setGravity(Gravity.CENTER);
-        if (position >= 0 && NaConfig.INSTANCE.getShowAccountNumbers().Bool()) {
-            ordinalNumberView.setVisibility(View.VISIBLE);
-            ordinalNumberView.setText(String.valueOf(position + 1));
-        } else {
-            ordinalNumberView.setVisibility(View.GONE);
-        }
-        btn.addView(ordinalNumberView, LayoutHelper.createLinear(20, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL, 8, 0, 8, 0));
-        // [Alexgram: Account Numbers] - End
-
         final TLRPC.User user = UserConfig.getInstance(account).getCurrentUser();
 
         final AvatarDrawable avatarDrawable = new AvatarDrawable();

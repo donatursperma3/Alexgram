@@ -1216,10 +1216,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         private AvatarDrawable avatarDrawable;
         private BackupImageView avatarView;
         private SimpleTextView textView;
-        // [Alexgram: Account Numbers] - Start
-        private SimpleTextView ordinalNumberView;
         private SimpleTextView subtitleTextView;
-        // [Alexgram: Account Numbers] - End
         private TextView counterView;
         private ImageView arrowView;
         private ImageView reorderView;
@@ -1242,14 +1239,6 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             textView.setTextSize(15);
             textView.setTypeface(AndroidUtilities.bold());
             textView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, resourcesProvider));
-
-            // [Alexgram: Account Numbers] - Start
-            ordinalNumberView = new SimpleTextView(context);
-            ordinalNumberView.setTextSize(13);
-            ordinalNumberView.setTypeface(AndroidUtilities.bold());
-            ordinalNumberView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText, resourcesProvider));
-            ordinalNumberView.setGravity(Gravity.CENTER);
-            // [Alexgram: Account Numbers] - End
 
             botDrawable = new AnimatedEmojiDrawable.SwapAnimatedEmojiDrawable(textView, dp(24), AnimatedEmojiDrawable.CACHE_TYPE_EMOJI_STATUS);
             emojiStatusDrawable = new AnimatedEmojiDrawable.SwapAnimatedEmojiDrawable(textView, dp(24), AnimatedEmojiDrawable.CACHE_TYPE_EMOJI_STATUS);
@@ -1292,9 +1281,6 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                 addView(reorderView, LayoutHelper.createLinear(48, 48, 0, Gravity.CENTER_VERTICAL | Gravity.LEFT, 0, 0, 0, 0));
                 addView(arrowView, LayoutHelper.createLinear(24, 24, 0, Gravity.CENTER_VERTICAL | Gravity.LEFT, 12, 0, 0, 0));
                 addView(counterView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, 20, 0, Gravity.CENTER_VERTICAL, 0, 0, 0, 0));
-                // [Alexgram: Account Numbers] - Start
-                addView(ordinalNumberView, LayoutHelper.createLinear(20, LayoutHelper.WRAP_CONTENT, 0, Gravity.CENTER_VERTICAL, 8, 0, 8, 0));
-                // name container (vertical)
                 LinearLayout nameContainerRtl = new LinearLayout(context);
                 nameContainerRtl.setOrientation(LinearLayout.VERTICAL);
                 subtitleTextView = new SimpleTextView(context);
@@ -1311,9 +1297,6 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                 textView.setGravity(Gravity.CENTER_VERTICAL | Gravity.LEFT);
 
                 addView(avatarView, LayoutHelper.createLinear(28, 28, Gravity.CENTER_VERTICAL | Gravity.LEFT, 18, 0, 18, 0));
-                // [Alexgram: Account Numbers] - Start
-                addView(ordinalNumberView, LayoutHelper.createLinear(20, LayoutHelper.WRAP_CONTENT, 0, Gravity.CENTER_VERTICAL, 8, 0, 8, 0));
-                // name container (vertical)
                 LinearLayout nameContainer = new LinearLayout(context);
                 nameContainer.setOrientation(LinearLayout.VERTICAL);
                 subtitleTextView = new SimpleTextView(context);
@@ -1362,10 +1345,8 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                 String accountName = UserObject.getUserName(user);
                 if (position >= 0 && NaConfig.INSTANCE.getShowAccountNumbers().Bool()) {
                     textView.setText(String.format("%d. %s", position + 1, accountName));
-                    ordinalNumberView.setVisibility(View.GONE);
                 } else {
                     textView.setText(accountName);
-                    ordinalNumberView.setVisibility(View.GONE);
                 }
 
                 botDrawable.setCurrentAccount(account);
@@ -1392,16 +1373,6 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                 int counter = MessagesStorage.getInstance(account).getMainUnreadCount();
                 counterView.setVisibility(counter > 0 ? View.VISIBLE : View.GONE);
                 counterView.setText(LocaleController.formatNumber(counter, ','));
-
-                // [Alexgram: Account Numbers] - Display ordinal number
-                if (position >= 0 && NaConfig.INSTANCE.getShowAccountNumbers().Bool()) {
-                    ordinalNumberView.setVisibility(View.VISIBLE);
-                    ordinalNumberView.setText(String.valueOf(position + 1));
-                    FileLog.d("AccountCell: Displaying account number " + (position + 1) + " for account " + account);
-                } else {
-                    ordinalNumberView.setVisibility(View.GONE);
-                }
-                // [Alexgram: Account Numbers] - End
 
                 boolean selected = account == activeAccount;
                 checkView.setVisibility(selected ? View.VISIBLE : View.GONE);

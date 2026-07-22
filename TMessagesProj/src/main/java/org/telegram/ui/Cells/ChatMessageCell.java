@@ -16870,6 +16870,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         try {
             boolean singleLineText = currentMessageObject != null && currentMessageObject.textHeight(transitionParams) <= dp(20);
             if (singleLineText && currentMessageObject != null && currentMessageObject.textWidth > 0) {
+                int leftBoundary = getCurrentBackgroundLeft() + dp(currentMessageObject.isOutOwner() ? 6 : 12);
+                if (textX < leftBoundary) {
+                    textX = leftBoundary;
+                }
                 int extraTimeOffset = getExtraTimeX();
                 if (currentMessageObject.isOutOwner()) {
                     extraTimeOffset += dp(28);
@@ -16878,7 +16882,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 int textRight = textX + currentMessageObject.textWidth;
                 if (textRight > rightBoundary) {
                     int shift = textRight - rightBoundary;
-                    textX = Math.max(getCurrentBackgroundLeft() + dp(6), textX - shift);
+                    textX = Math.max(leftBoundary, textX - shift);
                 }
                 unmovedTextX = textX;
             }
@@ -22311,6 +22315,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         right -= (mediaBackground ? 0 : dp(3));
         if (!mediaBackground && drawPinnedBottom) {
             right -= dp(6);
+        }
+        if (currentMessageObject != null && currentMessageObject.isOutOwner()) {
+            right -= getOutgoingContentRightInset();
         }
         return getBackgroundDrawableLeft() + right;
     }
