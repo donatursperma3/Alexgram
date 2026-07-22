@@ -1,38 +1,439 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
-    android:padding="16dp"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="#F5F7FB"
+    android:fillViewport="true">
 
-    <Spinner
-        android:id="@+id/fm_media_type_spinner"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:prompt="@string/file_manager_media_type" />
+        android:orientation="vertical"
+        android:padding="20dp">
 
-    <Spinner
-        android:id="@+id/fm_chat_type_spinner"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:prompt="@string/file_manager_chat_type" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="File manager"
+            android:textColor="#152033"
+            android:textSize="24sp"
+            android:textStyle="bold" />
 
-    <Spinner
-        android:id="@+id/fm_download_filter_spinner"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:prompt="@string/file_manager_download_filter" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Quickly jump to your media, files, and messages."
+            android:textColor="#677489"
+            android:textSize="14sp" />
 
-    <Button
-        android:id="@+id/fm_refresh_button"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/Refresh" />
+        <TextView
+            android:id="@+id/fm_selection_summary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_file_manager_card"
+            android:padding="16dp"
+            android:text="Showing Photos • All chats • All"
+            android:textColor="#2F6FED"
+            android:textSize="15sp"
+            android:textStyle="bold" />
 
-    <Button
-        android:id="@+id/fm_gotomessage_button"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/file_manager_goto_message" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_file_manager_card"
+            android:orientation="vertical"
+            android:padding="16dp">
 
-</LinearLayout>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Media type"
+                android:textColor="#152033"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:orientation="horizontal"
+                android:weightSum="4">
+
+                <TextView
+                    android:id="@+id/fm_media_chip_photos"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_file_manager_chip"
+                    android:gravity="center"
+                    android:text="Photos"
+                    android:textColor="#354B63"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/fm_media_chip_files"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_file_manager_chip"
+                    android:gravity="center"
+                    android:text="Files"
+                    android:textColor="#354B63"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/fm_media_chip_audio"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_file_manager_chip"
+                    android:gravity="center"
+                    android:text="Audio"
+                    android:textColor="#354B63"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/fm_media_chip_links"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_file_manager_chip"
+                    android:gravity="center"
+                    android:text="Links"
+                    android:textColor="#354B63"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_file_manager_card"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Chat scope"
+                android:textColor="#152033"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:orientation="horizontal"
+                android:weightSum="4">
+
+                <TextView
+                    android:id="@+id/fm_chat_chip_all"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_file_manager_chip"
+                    android:gravity="center"
+                    android:text="All"
+                    android:textColor="#354B63"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/fm_chat_chip_private"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_file_manager_chip"
+                    android:gravity="center"
+                    android:text="Private"
+                    android:textColor="#354B63"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/fm_chat_chip_groups"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_file_manager_chip"
+                    android:gravity="center"
+                    android:text="Groups"
+                    android:textColor="#354B63"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/fm_chat_chip_channels"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_file_manager_chip"
+                    android:gravity="center"
+                    android:text="Channels"
+                    android:textColor="#354B63"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_file_manager_card"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Download status"
+                android:textColor="#152033"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:orientation="horizontal"
+                android:weightSum="3">
+
+                <TextView
+                    android:id="@+id/fm_status_chip_all"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_file_manager_chip"
+                    android:gravity="center"
+                    android:text="All"
+                    android:textColor="#354B63"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/fm_status_chip_downloaded"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_file_manager_chip"
+                    android:gravity="center"
+                    android:text="Downloaded"
+                    android:textColor="#354B63"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/fm_status_chip_pending"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_file_manager_chip"
+                    android:gravity="center"
+                    android:text="Pending"
+                    android:textColor="#354B63"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:background="@drawable/bg_file_manager_card"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Selection"
+                android:textColor="#152033"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/fm_selection_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="No items selected"
+                android:textColor="#677489"
+                android:textSize="13sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:orientation="horizontal"
+                android:weightSum="2">
+
+                <Button
+                    android:id="@+id/fm_select_single_button"
+                    android:layout_width="0dp"
+                    android:layout_height="42dp"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_file_manager_button_secondary"
+                    android:text="Single select"
+                    android:textAllCaps="false"
+                    android:textColor="#2F6FED" />
+
+                <Button
+                    android:id="@+id/fm_select_range_button"
+                    android:layout_width="0dp"
+                    android:layout_height="42dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_file_manager_button_secondary"
+                    android:text="Select range"
+                    android:textAllCaps="false"
+                    android:textColor="#2F6FED" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:orientation="horizontal"
+                android:weightSum="3">
+
+                <Button
+                    android:id="@+id/fm_forward_button"
+                    android:layout_width="0dp"
+                    android:layout_height="42dp"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_file_manager_button"
+                    android:text="Forward"
+                    android:textAllCaps="false"
+                    android:textColor="#FFFFFF" />
+
+                <Button
+                    android:id="@+id/fm_detail_button"
+                    android:layout_width="0dp"
+                    android:layout_height="42dp"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_file_manager_button_secondary"
+                    android:text="Detail"
+                    android:textAllCaps="false"
+                    android:textColor="#2F6FED" />
+
+                <Button
+                    android:id="@+id/fm_unselect_button"
+                    android:layout_width="0dp"
+                    android:layout_height="42dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_file_manager_button_secondary"
+                    android:text="Unselect"
+                    android:textAllCaps="false"
+                    android:textColor="#2F6FED" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_file_manager_card"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Items"
+                android:textColor="#152033"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/fm_item_0"
+                android:layout_width="match_parent"
+                android:layout_height="54dp"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/bg_file_manager_chip"
+                android:gravity="center_vertical"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:text="IMG-001.jpg • 2.4 MB"
+                android:textColor="#354B63" />
+
+            <TextView
+                android:id="@+id/fm_item_1"
+                android:layout_width="match_parent"
+                android:layout_height="54dp"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_file_manager_chip"
+                android:gravity="center_vertical"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:text="Document.pdf • 180 KB"
+                android:textColor="#354B63" />
+
+            <TextView
+                android:id="@+id/fm_item_2"
+                android:layout_width="match_parent"
+                android:layout_height="54dp"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_file_manager_chip"
+                android:gravity="center_vertical"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:text="Voice note.m4a • 1.1 MB"
+                android:textColor="#354B63" />
+
+            <TextView
+                android:id="@+id/fm_item_3"
+                android:layout_width="match_parent"
+                android:layout_height="54dp"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_file_manager_chip"
+                android:gravity="center_vertical"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:text="IMG-002.jpg • 3.7 MB"
+                android:textColor="#354B63" />
+
+            <TextView
+                android:id="@+id/fm_item_4"
+                android:layout_width="match_parent"
+                android:layout_height="54dp"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_file_manager_chip"
+                android:gravity="center_vertical"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:text="Link • shared from chat"
+                android:textColor="#354B63" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/fm_refresh_button"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="18dp"
+            android:background="@drawable/bg_file_manager_button"
+            android:text="Open media"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF" />
+
+        <Button
+            android:id="@+id/fm_gotomessage_button"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/bg_file_manager_button_secondary"
+            android:text="Go to message"
+            android:textAllCaps="false"
+            android:textColor="#2F6FED" />
+
+    </LinearLayout>
+</ScrollView>

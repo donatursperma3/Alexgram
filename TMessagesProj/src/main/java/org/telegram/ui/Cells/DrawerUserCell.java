@@ -182,6 +182,12 @@ public class DrawerUserCell extends FrameLayout implements NotificationCenter.No
         }
         avatarDrawable.setInfo(account, user);
         CharSequence text = ContactsController.formatName(user.first_name, user.last_name);
+        if (position >= 0 && NaConfig.INSTANCE.getShowAccountNumbers().Bool()) {
+            text = String.format("%d. %s", position + 1, text);
+            ordinalNumberView.setVisibility(GONE);
+        } else {
+            ordinalNumberView.setVisibility(GONE);
+        }
         try {
             text = Emoji.replaceEmoji(text, textView.getPaint().getFontMetricsInt(), false);
         } catch (Exception ignore) {}

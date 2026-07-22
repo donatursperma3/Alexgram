@@ -13937,10 +13937,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             }
             if (mediaBackground) {
                 if (currentMessageObject.isOutOwner()) {
-                    timeX = layoutWidth - timeWidth - dp(42.0f);
-                    if (isAvatarVisible && !isWidthAdaptive()) {
-                        timeX -= dp(48);
-                    }
+                    timeX = getCurrentBackgroundRight() - timeWidth - dp(8);
                 } else {
                     timeX = backgroundWidth - dp(4) - timeWidth;
                     if (currentMessageObject.isAnyKindOfSticker()) {
@@ -13963,10 +13960,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 }
             } else {
                 if (currentMessageObject.isOutOwner()) {
-                    timeX = layoutWidth - timeWidth - dp(38.5f);
-                    if (isAvatarVisible && !isWidthAdaptive()) {
-                        timeX -= dp(48);
-                    }
+                    timeX = getCurrentBackgroundRight() - timeWidth - dp(8);
                 } else {
                     timeX = backgroundWidth - dp(9) - timeWidth;
                     if (currentMessageObject.isAnyKindOfSticker()) {
@@ -16831,12 +16825,15 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         }
         factCheckY = linkPreviewAbove ? textY + currentMessageObject.textHeight(transitionParams) + dp(10) : linkPreviewY + linkPreviewHeight + dp(drawInstantView ? 46 : 0) + dp(linkPreviewHeight > 0 ? 4 : -8);
         unmovedTextX = textX;
-        // Ensure single-line outgoing text does not overlap with time/check when avatar visible
+        // Reserve extra padding for single-line text so it doesn't overlap with time/status icons.
         try {
             boolean singleLineText = currentMessageObject != null && currentMessageObject.textHeight(transitionParams) <= dp(20);
             if (singleLineText && currentMessageObject != null && currentMessageObject.textWidth > 0) {
-                int avatarOffset = (isAvatarVisible && !isWidthAdaptive()) ? dp(48) : 0;
-                int rightBoundary = getCurrentBackgroundRight() - avatarOffset - timeWidth - dp(8);
+                int extraTimeOffset = getExtraTimeX();
+                if (currentMessageObject.isOutOwner()) {
+                    extraTimeOffset += dp(20);
+                }
+                int rightBoundary = getCurrentBackgroundRight() - timeWidth - dp(8) - extraTimeOffset;
                 int textRight = textX + currentMessageObject.textWidth;
                 if (textRight > rightBoundary) {
                     int shift = textRight - rightBoundary;

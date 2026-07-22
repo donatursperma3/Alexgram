@@ -1359,7 +1359,14 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                 avatarDrawable.setInfo(account, user);
                 avatarView.getImageReceiver().setCurrentAccount(account);
                 avatarView.setForUserOrChat(user, avatarDrawable);
-                textView.setText(UserObject.getUserName(user));
+                String accountName = UserObject.getUserName(user);
+                if (position >= 0 && NaConfig.INSTANCE.getShowAccountNumbers().Bool()) {
+                    textView.setText(String.format("%d. %s", position + 1, accountName));
+                    ordinalNumberView.setVisibility(View.GONE);
+                } else {
+                    textView.setText(accountName);
+                    ordinalNumberView.setVisibility(View.GONE);
+                }
 
                 botDrawable.setCurrentAccount(account);
                 emojiStatusDrawable.setCurrentAccount(account);

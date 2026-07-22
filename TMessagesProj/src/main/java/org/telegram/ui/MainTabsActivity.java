@@ -779,8 +779,12 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         final TextView textView = new TextView(getContext());
         textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
         textView.setTextColor(getThemedColor(Theme.key_dialogTextBlack));
-        textView.setText(UserObject.getUserName(user));
-        textView.setMaxLines(2);
+        if (position >= 0 && NaConfig.INSTANCE.getShowAccountNumbers().Bool()) {
+            textView.setText(String.format("%d. %s", position + 1, UserObject.getUserName(user)));
+        } else {
+            textView.setText(UserObject.getUserName(user));
+        }
+        textView.setMaxLines(1);
         textView.setEllipsize(TextUtils.TruncateAt.END);
         btn.addView(textView, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f, Gravity.CENTER_VERTICAL, 13, 0, 14, 0));
 
