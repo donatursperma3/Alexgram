@@ -233,7 +233,7 @@ public class FileManagerActivity extends AppCompatActivity {
         }
 
         Bundle args = new Bundle();
-        args.putLong("dialog_id", UserConfig.getInstance(UserConfig.selectedAccount).getClientUserId());
+        args.putLong("dialog_id", 0L);
         args.putInt("type", MediaActivity.TYPE_MEDIA);
         args.putInt("start_from", getInitialTab());
         LaunchActivity.instance.presentFragment(new MediaActivity(args, null));

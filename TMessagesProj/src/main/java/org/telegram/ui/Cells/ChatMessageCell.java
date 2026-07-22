@@ -13910,6 +13910,47 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         return 0;
     }
 
+    private int getOutgoingContentLeftInset() {
+        if (currentMessageObject == null || !currentMessageObject.isOutOwner()) {
+            return 0;
+        }
+        int inset = dp(8);
+        if (checkQuickEditVisible()) {
+            inset += dp(12);
+        }
+        return inset;
+    }
+
+    private int getOutgoingContentRightInset() {
+        if (currentMessageObject == null || !currentMessageObject.isOutOwner()) {
+            return 0;
+        }
+        return getMessageTextRightInset();
+    }
+
+    private int getOutgoingTimeRightInset() {
+        if (currentMessageObject == null || !currentMessageObject.isOutOwner()) {
+            return 0;
+        }
+        return dp(12);
+    }
+
+    private int getMessageTextRightInset() {
+        if (currentMessageObject == null) {
+            return 0;
+        }
+        int inset = dp(12);
+        if (drawTime && timeWidth > 0) {
+            inset += timeWidth + signWidth + dp(12);
+        } else {
+            inset += dp(8);
+        }
+        if (currentMessageObject.isOutOwner()) {
+            inset += dp(14);
+        }
+        return inset + getOutgoingTimeRightInset();
+    }
+
     public void relayout() {
         forcedLayout = true;
         forceLayout();
@@ -16775,7 +16816,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
 
     public void layoutTextXY(boolean parent) {
         if (currentMessageObject.isOutOwner()) {
-            textX = (parent ? (int) (backgroundDrawableLeft + transitionParams.deltaLeft) : getCurrentBackgroundLeft()) + dp(11) + getExtraTextX();
+            textX = (parent ? (int) (backgroundDrawableLeft + transitionParams.deltaLeft) : getCurrentBackgroundLeft()) + dp(11) + getExtraTextX() + getOutgoingContentLeftInset();
         } else {
             textX = (parent ? (int) (backgroundDrawableLeft + transitionParams.deltaLeft) : getCurrentBackgroundLeft()) + (currentMessageObject.type == MessageObject.TYPE_EMOJIS ? 0 : dp(!mediaBackground && drawPinnedBottom ? 11 : 17)) + getExtraTextX();
         }
@@ -16831,9 +16872,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             if (singleLineText && currentMessageObject != null && currentMessageObject.textWidth > 0) {
                 int extraTimeOffset = getExtraTimeX();
                 if (currentMessageObject.isOutOwner()) {
-                    extraTimeOffset += dp(20);
+                    extraTimeOffset += dp(28);
                 }
-                int rightBoundary = getCurrentBackgroundRight() - timeWidth - dp(8) - extraTimeOffset;
+                int rightBoundary = getCurrentBackgroundRight() - getMessageTextRightInset() - extraTimeOffset;
                 int textRight = textX + currentMessageObject.textWidth;
                 if (textRight > rightBoundary) {
                     int shift = textRight - rightBoundary;
@@ -17062,7 +17103,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 end -= getExtraTextX() + dp(8 + (isAvatarVisible ? 48 : 0));
                 right = end;
             }
-            right -= dp(10 + (currentMessageObject.isOutOwner() && !mediaBackground && !drawPinnedBottom ? 6 : 0)) + getExtraTextX();
+            right -= dp(10 + (currentMessageObject.isOutOwner() && !mediaBackground && !drawPinnedBottom ? 6 : 0)) + getExtraTextX() + getMessageTextRightInset();
             final float maxWidth = right - textX;
             int restore = Integer.MIN_VALUE;
             int oldAlpha = 0;
@@ -20723,12 +20764,13 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             //   so the bubble must be shifted dp(48) to end at (layoutWidth - dp(48)).
             // - Repost previews: avatar is dp(36) wide and starts at (layoutWidth - dp(51)),
             //   so the bubble must be shifted dp(51) instead of dp(48) to avoid a dp(3) overlap.
-            backgroundDrawableLeft = layoutWidth - backgroundWidth - (isAvatarVisible ? dp(51) : 0) - (!mediaBackground ? 0 : dp(9));
+            // We also reserve extra room on the left so the quick-edit affordance stays visible.
+            backgroundDrawableLeft = layoutWidth - backgroundWidth - (isAvatarVisible ? dp(51) : 0) - (!mediaBackground ? 0 : dp(9)) - getOutgoingContentLeftInset();
             if (currentMessageObject.isAnyKindOfSticker() && isAvatarVisible) {
                 // Shift outgoing stickers slightly left so the right-side avatar stays visible.
                 backgroundDrawableLeft -= dp(6);
             }
-            backgroundDrawableRight = backgroundWidth - (mediaBackground ? 0 : dp(3));
+            backgroundDrawableRight = backgroundWidth - (mediaBackground ? 0 : dp(3)) - getOutgoingContentRightInset();
             if (currentMessagesGroup != null && !currentMessagesGroup.isDocuments) {
                 if (!currentPosition.edge) {
                     backgroundDrawableRight += dp(10);
@@ -21744,7 +21786,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             end -= getExtraTextX() + dp(8 + (isAvatarVisible ? 48 : 0));
             right = end;
         }
-        right -= dp(10 + (currentMessageObject.isOutOwner() && !mediaBackground && !drawPinnedBottom ? 6 : 0)) + getExtraTextX();
+        right -= dp(10 + (currentMessageObject.isOutOwner() && !mediaBackground && !drawPinnedBottom ? 6 : 0)) + getExtraTextX() + getMessageTextRightInset();
         final float maxWidth = right - textX;
 
         for (int a = firstVisibleBlockNum; a <= lastVisibleBlockNum; a++) {
@@ -21913,7 +21955,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             float bottom = getBackgroundDrawableBottom();
 
             if (currentMessageObject.isOutOwner()) {
-                x = left - dp(8) - buttonSize;
+                x = left - dp(8) - buttonSize - getOutgoingContentLeftInset();
                 if (currentMessagesGroup != null) {
                     x += currentMessagesGroup.transitionParams.offsetLeft - animationOffsetX;
                 }
@@ -22223,10 +22265,11 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             if (messageObject.isAnyKindOfSticker() && isAvatarVisible) {
                 avatarMargin += dp(6);
             }
+            int extraInset = getOutgoingContentLeftInset();
             if (isRoundVideo) {
-                return layoutWidth - backgroundWidth - avatarMargin - (int) ((1f - getVideoTranscriptionProgress()) * dp(9));
+                return layoutWidth - backgroundWidth - avatarMargin - extraInset - (int) ((1f - getVideoTranscriptionProgress()) * dp(9));
             }
-            return layoutWidth - backgroundWidth - avatarMargin - (!mediaBackground ? 0 : dp(9));
+            return layoutWidth - backgroundWidth - avatarMargin - extraInset - (!mediaBackground ? 0 : dp(9));
         } else {
             int r;
             boolean isUserDialog = DialogObject.isUserDialog(messageObject.getDialogId());
@@ -23220,7 +23263,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                         end -= getExtraTextX() + dp(8) + lerp(dp(isAvatarVisible ? 48 : 0), dp(ChatActivity.SIDE_MENU_WIDTH), sideMenuAlpha);
                         right = end;
                     }
-                    right -= dp(10 + (currentMessageObject.isOutOwner() && !mediaBackground && !drawPinnedBottom ? 6 : 0)) + getExtraTextX();
+                    right -= dp(10 + (currentMessageObject.isOutOwner() && !mediaBackground && !drawPinnedBottom ? 6 : 0)) + getExtraTextX() + (currentMessageObject != null && currentMessageObject.isOutOwner() ? getOutgoingContentRightInset() : 0);
                     replySelectorRect.set(
                         (backgroundDrawableLeft + transitionParams.deltaLeft + dp(10 + (!currentMessageObject.isOutOwner() && !mediaBackground && !drawPinnedBottom ? 6 : 0)) + getExtraTextX()),
                         (replyStartY - dp((!mediaBackground && drawPinnedTop && !drawNameLayout ? 2 : 0)) - (drawForwardedName && forwardedNameLayout[0] != null && !drawNameLayout ? 2 : 0)),
@@ -23428,7 +23471,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     end -= getExtraTextX() + dp(8) + lerp(dp(isAvatarVisible ? 48 : 0), dp(ChatActivity.SIDE_MENU_WIDTH), sideMenuAlpha);
                     right = end;
                 }
-                right -= dp(10 + (currentMessageObject.isOutOwner() && !mediaBackground && !drawPinnedBottom ? 6 : 0)) + getExtraTextX();
+                right -= dp(10 + (currentMessageObject.isOutOwner() && !mediaBackground && !drawPinnedBottom ? 6 : 0)) + getExtraTextX() + (currentMessageObject != null && currentMessageObject.isOutOwner() ? getOutgoingContentRightInset() : 0);
                 summarySelectorRect.set(
                     (backgroundDrawableLeft + transitionParams.deltaLeft + dp(10 + (!currentMessageObject.isOutOwner() && !mediaBackground && !drawPinnedBottom ? 6 : 0)) + getExtraTextX()),
                     (summaryStartY - dp((!mediaBackground && drawPinnedTop && !drawNameLayout ? 2 : 0)) - (drawForwardedName && forwardedNameLayout[0] != null && !drawNameLayout ? 2 : 0)),

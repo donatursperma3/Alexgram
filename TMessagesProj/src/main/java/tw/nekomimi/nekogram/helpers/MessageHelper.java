@@ -13,6 +13,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Build;
+import android.text.InputType;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
@@ -471,6 +472,8 @@ public class MessageHelper extends BaseController {
         limitInput.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
         limitInput.setHintTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteHintText));
         limitInput.setBackground(null);
+        limitInput.setSingleLine(true);
+        limitInput.setInputType(InputType.TYPE_CLASS_NUMBER);
         limitInput.setHint("0 = unlimited");
         try {
             int saved = NekoConfig.getPreferences().getInt("delete_own_limit", 0);
@@ -478,7 +481,15 @@ public class MessageHelper extends BaseController {
         } catch (Exception e) {
             FileLog.e(e);
         }
-        frameLayout.addView(limitInput, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, 24, 120, 24, 0));
+
+        TextView limitLabel = new TextView(context);
+        limitLabel.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, resourcesProvider));
+        limitLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+        limitLabel.setGravity(Gravity.CENTER_VERTICAL);
+        limitLabel.setText("Max:");
+
+        frameLayout.addView(limitLabel, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, 24, 120, 0, 0));
+        frameLayout.addView(limitInput, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, 24 + AndroidUtilities.dp(34), 120, 24, 0));
 
         AvatarDrawable avatarDrawable = new AvatarDrawable();
         avatarDrawable.setTextSize(AndroidUtilities.dp(12));

@@ -14,7 +14,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="File manager"
+            android:text="Shared media"
             android:textColor="#152033"
             android:textSize="24sp"
             android:textStyle="bold" />
@@ -23,7 +23,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="Quickly jump to your media, files, and messages."
+            android:text="Browse shared media from chats, files, and saved content in one place."
             android:textColor="#677489"
             android:textSize="14sp" />
 
@@ -349,7 +349,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Items"
+                android:text="Recent shared items"
                 android:textColor="#152033"
                 android:textSize="15sp"
                 android:textStyle="bold" />
@@ -363,7 +363,7 @@
                 android:gravity="center_vertical"
                 android:paddingStart="14dp"
                 android:paddingEnd="14dp"
-                android:text="IMG-001.jpg • 2.4 MB"
+                android:text="Photos • recent from chats"
                 android:textColor="#354B63" />
 
             <TextView
@@ -375,7 +375,7 @@
                 android:gravity="center_vertical"
                 android:paddingStart="14dp"
                 android:paddingEnd="14dp"
-                android:text="Document.pdf • 180 KB"
+                android:text="Files • shared recently"
                 android:textColor="#354B63" />
 
             <TextView
@@ -387,7 +387,7 @@
                 android:gravity="center_vertical"
                 android:paddingStart="14dp"
                 android:paddingEnd="14dp"
-                android:text="Voice note.m4a • 1.1 MB"
+                android:text="Audio • voice and music"
                 android:textColor="#354B63" />
 
             <TextView
@@ -399,7 +399,7 @@
                 android:gravity="center_vertical"
                 android:paddingStart="14dp"
                 android:paddingEnd="14dp"
-                android:text="IMG-002.jpg • 3.7 MB"
+                android:text="Photos • from groups"
                 android:textColor="#354B63" />
 
             <TextView
@@ -411,7 +411,7 @@
                 android:gravity="center_vertical"
                 android:paddingStart="14dp"
                 android:paddingEnd="14dp"
-                android:text="Link • shared from chat"
+                android:text="Links • from shared media"
                 android:textColor="#354B63" />
         </LinearLayout>
 
@@ -421,7 +421,7 @@
             android:layout_height="48dp"
             android:layout_marginTop="18dp"
             android:background="@drawable/bg_file_manager_button"
-            android:text="Open media"
+            android:text="Open shared media"
             android:textAllCaps="false"
             android:textColor="#FFFFFF" />
 

@@ -4282,6 +4282,19 @@ public class MediaDataController extends BaseController {
     public void getMediaCounts(long dialogId, long topicId, int classGuid) {
         getMessagesStorage().getStorageQueue().postRunnable(() -> {
             try {
+                if (dialogId == 0 && topicId == 0) {
+                    int[] counts = new int[]{0, 0, 0, 0, 0, 0, 0, 0, 0};
+                    for (int type = 0; type < counts.length; type++) {
+                        SQLiteCursor cursor = getMessagesStorage().getDatabase().queryFinalized(String.format(Locale.US, "SELECT COUNT(mid) FROM media_v4 WHERE mid > 0 AND type = %d", type));
+                        if (cursor.next()) {
+                            counts[type] = cursor.intValue(0);
+                        }
+                        cursor.dispose();
+                    }
+                    AndroidUtilities.runOnUIThread(() -> getNotificationCenter().postNotificationName(NotificationCenter.mediaCountsDidLoad, 0L, 0L, counts));
+                    return;
+                }
+
                 int[] counts = new int[]{-1, -1, -1, -1, -1, -1, -1, -1, -1};
                 int[] countsFinal = new int[]{-1, -1, -1, -1, -1, -1, -1, -1, -1};
                 int[] old = new int[]{0, 0, 0, 0, 0, 0, 0, 0, 0};
@@ -4410,6 +4423,22 @@ public class MediaDataController extends BaseController {
     }
 
     public void getMediaCount(long dialogId, long topicId, int type, int classGuid, boolean fromCache) {
+        if (dialogId == 0 && topicId == 0) {
+            getMessagesStorage().getStorageQueue().postRunnable(() -> {
+                try {
+                    SQLiteCursor cursor = getMessagesStorage().getDatabase().queryFinalized(String.format(Locale.US, "SELECT COUNT(mid) FROM media_v4 WHERE mid > 0 AND type = %d", type));
+                    int count = 0;
+                    if (cursor.next()) {
+                        count = cursor.intValue(0);
+                    }
+                    cursor.dispose();
+                    processLoadedMediaCount(count, dialogId, topicId, type, classGuid, true, 0);
+                } catch (Exception e) {
+                    FileLog.e(e);
+                }
+            });
+            return;
+        }
         if (fromCache || DialogObject.isEncryptedDialog(dialogId)) {
             getMediaCountDatabase(dialogId, topicId, type, classGuid);
         } else {
@@ -4685,7 +4714,21 @@ public class MediaDataController extends BaseController {
                     boolean isEnd = false;
                     boolean reverseMessages = false;
 
-                    if (!DialogObject.isEncryptedDialog(uid)) {
+                    if (uid == 0 && topicId == 0) {
+                        String query = String.format(Locale.US, "SELECT data, mid, uid FROM media_v4 WHERE mid > 0 AND type = %d", type);
+                        if (max_id != 0) {
+                            query += String.format(Locale.US, " AND mid < %d", max_id);
+                        } else if (min_id != 0) {
+                            query += String.format(Locale.US, " AND mid > %d", min_id);
+                        }
+                        if (min_id != 0) {
+                            query += " ORDER BY date ASC, mid ASC LIMIT " + countToLoad;
+                            reverseMessages = true;
+                        } else {
+                            query += " ORDER BY date DESC, mid DESC LIMIT " + countToLoad;
+                        }
+                        cursor = database.queryFinalized(query);
+                    } else if (!DialogObject.isEncryptedDialog(uid)) {
                         if (min_id == 0) {
                             if (topicId != 0) {
                                 cursor = database.queryFinalized(String.format(Locale.US, "SELECT start FROM media_holes_topics WHERE uid = %d AND topic_id = %d AND type = %d AND start IN (0, 1)", uid, topicId, type));
