@@ -189,11 +189,20 @@ public class DrawerUserCell extends FrameLayout implements NotificationCenter.No
         applyTextColors();
         subtitleTextView.setVisibility(GONE);
         if (NaConfig.INSTANCE.getShowLastSeenOnAccountRows().Bool()) {
-            String lastSeenText = LastSeenHelper.getFormattedLastSeenOrDefault(user, null, "");
-            if (lastSeenText != null && !lastSeenText.isEmpty()) {
-                subtitleTextView.setText(lastSeenText);
-                subtitleTextView.setVisibility(VISIBLE);
+            try {
+                String lastSeenText = LastSeenHelper.getFormattedLastSeenOrDefault(user, null, "");
+                if (lastSeenText != null && !lastSeenText.isEmpty()) {
+                    subtitleTextView.setText(lastSeenText);
+                    subtitleTextView.setVisibility(VISIBLE);
+                } else {
+                    subtitleTextView.setVisibility(GONE);
+                }
+            } catch (Exception e) {
+                subtitleTextView.setVisibility(GONE);
+                org.telegram.messenger.FileLog.e(e);
             }
+        } else {
+            subtitleTextView.setVisibility(GONE);
         }
         
         if (position >= 0 && NaConfig.INSTANCE.getShowAccountNumbers().Bool()) {

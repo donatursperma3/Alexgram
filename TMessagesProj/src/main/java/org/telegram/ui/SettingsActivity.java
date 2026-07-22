@@ -78,6 +78,7 @@ import org.telegram.messenger.ImageLoader;
 import org.telegram.messenger.ImageLocation;
 import org.telegram.messenger.LiteMode;
 import org.telegram.messenger.LocaleController;
+import com.radolyn.ayugram.utils.LastSeenHelper;
 import org.telegram.messenger.MediaDataController;
 import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.MessagesStorage;
@@ -1217,6 +1218,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         private SimpleTextView textView;
         // [Alexgram: Account Numbers] - Start
         private SimpleTextView ordinalNumberView;
+        private SimpleTextView subtitleTextView;
         // [Alexgram: Account Numbers] - End
         private TextView counterView;
         private ImageView arrowView;
@@ -1292,8 +1294,17 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                 addView(counterView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, 20, 0, Gravity.CENTER_VERTICAL, 0, 0, 0, 0));
                 // [Alexgram: Account Numbers] - Start
                 addView(ordinalNumberView, LayoutHelper.createLinear(20, LayoutHelper.WRAP_CONTENT, 0, Gravity.CENTER_VERTICAL, 8, 0, 8, 0));
+                // name container (vertical)
+                LinearLayout nameContainerRtl = new LinearLayout(context);
+                nameContainerRtl.setOrientation(LinearLayout.VERTICAL);
+                subtitleTextView = new SimpleTextView(context);
+                subtitleTextView.setTextSize(12);
+                subtitleTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText, resourcesProvider));
+                subtitleTextView.setVisibility(View.GONE);
+                nameContainerRtl.addView(textView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+                nameContainerRtl.addView(subtitleTextView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+                addView(nameContainerRtl, LayoutHelper.createLinear(0, LayoutHelper.MATCH_PARENT, 1f, Gravity.FILL, 18, 0, 0, 0));
                 // [Alexgram: Account Numbers] - End
-                addView(textView, LayoutHelper.createLinear(0, LayoutHelper.MATCH_PARENT, 1f, Gravity.FILL, 18, 0, 0, 0));
                 addView(avatarView, LayoutHelper.createLinear(28, 28, Gravity.CENTER_VERTICAL | Gravity.RIGHT, 18, 0, 18, 0));
 
             } else {
@@ -1302,8 +1313,17 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                 addView(avatarView, LayoutHelper.createLinear(28, 28, Gravity.CENTER_VERTICAL | Gravity.LEFT, 18, 0, 18, 0));
                 // [Alexgram: Account Numbers] - Start
                 addView(ordinalNumberView, LayoutHelper.createLinear(20, LayoutHelper.WRAP_CONTENT, 0, Gravity.CENTER_VERTICAL, 8, 0, 8, 0));
+                // name container (vertical)
+                LinearLayout nameContainer = new LinearLayout(context);
+                nameContainer.setOrientation(LinearLayout.VERTICAL);
+                subtitleTextView = new SimpleTextView(context);
+                subtitleTextView.setTextSize(12);
+                subtitleTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText, resourcesProvider));
+                subtitleTextView.setVisibility(View.GONE);
+                nameContainer.addView(textView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+                nameContainer.addView(subtitleTextView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+                addView(nameContainer, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f, Gravity.FILL, 0, 0, 18, 0));
                 // [Alexgram: Account Numbers] - End
-                addView(textView, LayoutHelper.createLinear(0, LayoutHelper.MATCH_PARENT, 1f, Gravity.FILL, 0, 0, 18, 0));
                 addView(counterView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, 20, 0, Gravity.CENTER_VERTICAL, 0, 0, 0, 0));
                 addView(arrowView, LayoutHelper.createLinear(24, 24, 0, Gravity.CENTER_VERTICAL | Gravity.RIGHT, 0, 0, 12, 0));
                 addView(reorderView, LayoutHelper.createLinear(48, 48, 0, Gravity.CENTER_VERTICAL | Gravity.RIGHT, 0, 0, 0, 0));
@@ -1379,6 +1399,23 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                 boolean selected = account == activeAccount;
                 checkView.setVisibility(selected ? View.VISIBLE : View.GONE);
                 arrowView.setVisibility(selected ? View.GONE : View.VISIBLE);
+                // last seen
+                try {
+                    if (NaConfig.INSTANCE.getShowLastSeenOnAccountRows().Bool()) {
+                        String lastSeenText = LastSeenHelper.getFormattedLastSeenOrDefault(user, null, "");
+                        if (lastSeenText != null && !lastSeenText.isEmpty()) {
+                            subtitleTextView.setText(lastSeenText);
+                            subtitleTextView.setVisibility(View.VISIBLE);
+                        } else {
+                            subtitleTextView.setVisibility(View.GONE);
+                        }
+                    } else {
+                        subtitleTextView.setVisibility(View.GONE);
+                    }
+                } catch (Exception e) {
+                    subtitleTextView.setVisibility(View.GONE);
+                    FileLog.e(e);
+                }
             } catch (Exception e) {
                 FileLog.e("AccountCell.set() exception", e);
             }

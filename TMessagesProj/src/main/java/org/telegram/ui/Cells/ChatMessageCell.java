@@ -13938,6 +13938,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             if (mediaBackground) {
                 if (currentMessageObject.isOutOwner()) {
                     timeX = layoutWidth - timeWidth - dp(42.0f);
+                    if (isAvatarVisible && !isWidthAdaptive()) {
+                        timeX -= dp(48);
+                    }
                 } else {
                     timeX = backgroundWidth - dp(4) - timeWidth;
                     if (currentMessageObject.isAnyKindOfSticker()) {
@@ -13961,6 +13964,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             } else {
                 if (currentMessageObject.isOutOwner()) {
                     timeX = layoutWidth - timeWidth - dp(38.5f);
+                    if (isAvatarVisible && !isWidthAdaptive()) {
+                        timeX -= dp(48);
+                    }
                 } else {
                     timeX = backgroundWidth - dp(9) - timeWidth;
                     if (currentMessageObject.isAnyKindOfSticker()) {
@@ -16825,6 +16831,22 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         }
         factCheckY = linkPreviewAbove ? textY + currentMessageObject.textHeight(transitionParams) + dp(10) : linkPreviewY + linkPreviewHeight + dp(drawInstantView ? 46 : 0) + dp(linkPreviewHeight > 0 ? 4 : -8);
         unmovedTextX = textX;
+        // Ensure single-line outgoing text does not overlap with time/check when avatar visible
+        try {
+            boolean singleLineText = currentMessageObject != null && currentMessageObject.textHeight(transitionParams) <= dp(20);
+            if (singleLineText && currentMessageObject != null && currentMessageObject.textWidth > 0) {
+                int avatarOffset = (isAvatarVisible && !isWidthAdaptive()) ? dp(48) : 0;
+                int rightBoundary = getCurrentBackgroundRight() - avatarOffset - timeWidth - dp(8);
+                int textRight = textX + currentMessageObject.textWidth;
+                if (textRight > rightBoundary) {
+                    int shift = textRight - rightBoundary;
+                    textX = Math.max(getCurrentBackgroundLeft() + dp(6), textX - shift);
+                }
+                unmovedTextX = textX;
+            }
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
         if (currentMessageObject.textXOffset != 0 && replyNameLayout != null) {
             int diff = backgroundWidth - dp(31) - currentMessageObject.textWidth;
             if (!hasNewLineForTime) {

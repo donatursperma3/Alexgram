@@ -685,7 +685,9 @@ public class MessageHelper extends BaseController {
                         getMessagesController().deleteMessages(list, null, null, dialogId, 0, true, 0);
                     }
                 };
-                AndroidUtilities.runOnUIThread(callback != null ? () -> callback.run(messageIds.size(), deleteAction) : deleteAction);
+                final int deletedCount = messageIds.size();
+                Runnable result = callback != null ? () -> callback.run(deletedCount, deleteAction) : deleteAction;
+                AndroidUtilities.runOnUIThread(result);
             }
             if (mergeDialogId != 0) {
                 deleteUserHistoryWithSearch(fragment, mergeDialogId, 0, 0, before, 0, null);
