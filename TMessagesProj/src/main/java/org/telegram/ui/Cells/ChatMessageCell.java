@@ -20774,7 +20774,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 // Shift outgoing stickers slightly left so the right-side avatar stays visible.
                 backgroundDrawableLeft -= dp(6);
             }
-            backgroundDrawableRight = backgroundWidth - (mediaBackground ? 0 : dp(3)) - getOutgoingContentRightInset();
+            backgroundDrawableRight = backgroundWidth - (mediaBackground ? 0 : dp(3));
             if (currentMessagesGroup != null && !currentMessagesGroup.isDocuments) {
                 if (!currentPosition.edge) {
                     backgroundDrawableRight += dp(10);
@@ -22315,9 +22315,6 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         right -= (mediaBackground ? 0 : dp(3));
         if (!mediaBackground && drawPinnedBottom) {
             right -= dp(6);
-        }
-        if (currentMessageObject != null && currentMessageObject.isOutOwner()) {
-            right -= getOutgoingContentRightInset();
         }
         return getBackgroundDrawableLeft() + right;
     }
