@@ -8409,6 +8409,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             mediaCounterTextView.setText(LocaleController.formatPluralString("CommonGroups", userInfo.common_chats_count));
         } else if (id == SharedMediaLayout.TAB_GROUPUSERS) {
             mediaCounterTextView.setText(onlineTextView[1].getText());
+        } else if (id == SharedMediaLayout.TAB_FRIENDS_ACTIVITIES) {
+            mediaCounterTextView.setText(LocaleController.getString(R.string.FriendsActivitiesTab));
         } else if (id == SharedMediaLayout.TAB_STORIES || SharedMediaLayout.isStoryAlbumPageType(id)) {
             if (isBot) {
                 mediaCounterTextView.setText(sharedMediaLayout.getBotPreviewsSubtitle(false));
