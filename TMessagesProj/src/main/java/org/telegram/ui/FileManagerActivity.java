@@ -110,12 +110,9 @@ public class FileManagerActivity extends AppCompatActivity {
 
             toolbar = findViewById(R.id.fm_toolbar);
             if (toolbar != null) {
-                setSupportActionBar(toolbar);
-                if (getSupportActionBar() != null) {
-                    getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-                    getSupportActionBar().setDisplayShowHomeEnabled(true);
-                    getSupportActionBar().setTitle("File Manager");
-                }
+                toolbar.setNavigationIcon(R.drawable.ic_ab_back);
+                toolbar.setNavigationOnClickListener(v -> onBackPressed());
+                toolbar.setTitle("File Manager");
             }
             summaryText = findViewById(R.id.fm_selection_summary);
             selectionStatus = findViewById(R.id.fm_selection_status);

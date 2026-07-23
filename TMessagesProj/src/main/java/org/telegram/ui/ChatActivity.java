@@ -46779,24 +46779,18 @@ public class ChatActivity extends BaseFragment implements
 		if (item == null) {
 			return;
 		}
-		// Explicitly wire the kebab-menu click to toggle its submenu.
-		// We cannot rely on the default ActionBarMenu listener here because:
-		//   1. headerItem uses a custom ComposeDrawable icon (otherIcon), which is
-		//      not a standard icon resource path expected by the default flow.
-		//   2. sub items are added via lazilyAddSubItem AFTER this binding, so the
-		//      default hasSubMenu() check can misbehave on the very first clicks.
-		//   3. ChatAvatarContainer also references the same item as
-		//      avatarOptionsMenuItem and expects toggleSubMenu() to be the single
-		//      source of truth for opening the popup.
+		// Explicitly wire the chat header kebab item to always open its submenu.
+		// This avoids relying on the default ActionBarMenu click path, which can
+		// miss the first click when the submenu is populated lazily via
+		// lazilyAddSubItem() after the item is created.
 		item.setOnClickListener(v -> {
 			if (item.getVisibility() == View.VISIBLE && item.isEnabled()) {
 				FileLog.d("ChatActivity", "headerItem clicked tag=" + item.getTag());
-				if (item.hasSubMenu()) {
-					item.toggleSubMenu();
-				}
+				item.toggleSubMenu();
 			}
 		});
-		// Ensure the item is properly clickable and enabled
+		// Ensure the item is always ready to open the popup in the normal header state.
+		item.setVisibility(View.VISIBLE);
 		item.setEnabled(true);
 		item.setClickable(true);
 		item.setFocusable(true);

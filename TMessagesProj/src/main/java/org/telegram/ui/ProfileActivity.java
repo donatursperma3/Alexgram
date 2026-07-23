@@ -489,6 +489,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     private ActionBarMenuSubItem editColorItem;
     private ActionBarMenuSubItem linkItem;
     private ActionBarMenuSubItem setUsernameItem;
+    private ActionBarMenuSubItem favoriteChatItem;
     private ImageView ttlIconView;
     private ActionBarMenuSubItem autoDeleteItem;
     AutoDeletePopupWrapper autoDeletePopupWrapper;

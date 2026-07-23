@@ -864,6 +864,14 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         }
         actionModeVisible = true;
         checkMenuItemsWidth();
+        if (chatAvatarContainer != null) {
+            chatAvatarContainer.setVisibility(INVISIBLE);
+            chatAvatarContainer.setAlpha(0.0f);
+        }
+        if (menu != null) {
+            menu.setVisibility(INVISIBLE);
+            menu.setAlpha(0.0f);
+        }
         if (animated) {
             ArrayList<Animator> animators = new ArrayList<>();
             animators.add(ObjectAnimator.ofFloat(actionMode, View.ALPHA, 0.0f, 1.0f));
@@ -1044,6 +1052,21 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         }
         actionMode.hideAllPopupMenus();
         actionModeVisible = false;
+        if (!isSearchFieldVisible) {
+            if (chatAvatarContainer != null) {
+                chatAvatarContainer.setVisibility(VISIBLE);
+                chatAvatarContainer.setAlpha(1.0f);
+                chatAvatarContainer.setEnabled(true);
+                chatAvatarContainer.setClickable(true);
+            }
+        }
+        if (menu != null) {
+            menu.setVisibility(VISIBLE);
+            menu.setAlpha(1.0f);
+            menu.setEnabled(true);
+            menu.setClickable(true);
+            menu.bringToFront();
+        }
         ArrayList<Animator> animators = new ArrayList<>();
         animators.add(ObjectAnimator.ofFloat(actionMode, View.ALPHA, 0.0f));
         if (actionModeHidingViews != null) {
@@ -1135,6 +1158,9 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         }
         if (menu != null) {
             menu.setVisibility(VISIBLE);
+            menu.setAlpha(1.0f);
+            menu.setEnabled(true);
+            menu.setClickable(true);
         }
         if (backButtonImageView != null) {
             Drawable drawable = backButtonImageView.getDrawable();

@@ -2144,6 +2144,7 @@
     <string name="AddToStickerPack">Add to Sticker Pack</string>
     <string name="AddToFavorites">Add to Favorites</string>
     <string name="RemoveFromFavorites">Remove from Favorites</string>
+    <string name="Favorites">Favorites</string>
     <string name="AddedToFavorites">Sticker was added to Favorites</string>
     <string name="RemovedFromFavorites">Sticker was removed from Favorites</string>
     <string name="RemovedFromRecent">Sticker was removed from Recent</string>
