@@ -646,6 +646,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     private final static int add_to_folder = 105;
     private final static int shadow_ban = 107;
     private final static int manage_privacy = 108;
+    private final static int favorite_chat = 109;
 
     private Rect rect = new Rect();
 
@@ -2630,6 +2631,12 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     TLRPC.User user = getMessagesController().getUser(userId);
                     if (user != null) {
                         presentFragment(new ProfilePrivacyActivity(user));
+                    }
+                } else if (id == favorite_chat) {
+                    long profileDialogId = getCurrentProfileDialogId();
+                    if (profileDialogId != 0) {
+                        boolean favorite = !tw.nekomimi.nekogram.helpers.FavoriteChatsFilterHelper.isFavorite(currentAccount, profileDialogId);
+                        tw.nekomimi.nekogram.helpers.FavoriteChatsFilterHelper.setFavorite(currentAccount, profileDialogId, favorite);
                     }
                 } else if (id == add_contact) {
                     TLRPC.User user = getMessagesController().getUser(userId);
@@ -12487,6 +12494,19 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         return color;
     }
 
+    private long getCurrentProfileDialogId() {
+        if (dialogId != 0) {
+            return dialogId;
+        }
+        if (userId != 0) {
+            return userId;
+        }
+        if (chatId != 0) {
+            return -chatId;
+        }
+        return 0;
+    }
+
     private void createActionBarMenu(boolean animated) {
         if (actionBar == null || otherItem == null) {
             return;
@@ -12771,6 +12791,11 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 otherItem.addSubItem(leave_group, R.drawable.msg_leave, LocaleController.getString(R.string.DeleteAndExit));
                 leaveAction = true;
             }
+        }
+
+        long profileDialogId = getCurrentProfileDialogId();
+        if (profileDialogId != 0) {
+            favoriteChatItem = otherItem.addSubItem(favorite_chat, R.drawable.msg_fave, tw.nekomimi.nekogram.helpers.FavoriteChatsFilterHelper.isFavorite(currentAccount, profileDialogId) ? getString(R.string.RemoveFromFavorites) : getString(R.string.AddToFavorites));
         }
 
         if (imageUpdater != null) {

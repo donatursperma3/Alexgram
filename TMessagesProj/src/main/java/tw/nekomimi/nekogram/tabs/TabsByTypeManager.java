@@ -190,6 +190,9 @@ public class TabsByTypeManager {
         if (name.contains("unread")) {
             return TabsByTypeEntry.UNREAD;
         }
+        if ((flags & tw.nekomimi.nekogram.helpers.FavoriteChatsFilterHelper.FAVORITE_FILTER_FLAG) != 0 || name.contains("favorite")) {
+            return TabsByTypeEntry.FAVORITE;
+        }
         if ((flags & 0x20000000) != 0 || name.contains("secret")) {
             return TabsByTypeEntry.SECRET_CHATS;
         }

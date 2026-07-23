@@ -90,6 +90,7 @@ public class NekoCustomizationSettingsActivity extends BaseNekoXSettingsActivity
     // [Alexgram: Launch Animation] - End
     private final AbstractConfigCell showQuickEditIconRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.showQuickEditIconInChatList, LocaleController.getString("ShowQuickEditIconDesc", R.string.ShowQuickEditIconDesc), LocaleController.getString("ShowQuickEditIcon", R.string.ShowQuickEditIcon)));
     private final AbstractConfigCell quickEditIconOnlyOwnRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.quickEditIconOnlyForOwnMessages, LocaleController.getString("QuickEditIconOnlyOwnDesc", R.string.QuickEditIconOnlyOwnDesc), LocaleController.getString("QuickEditIconOnlyOwn", R.string.QuickEditIconOnlyOwn)));
+    private final AbstractConfigCell showFavoriteAvatarIndicatorRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.showFavoriteAvatarIndicator, LocaleController.getString("ShowFavoriteAvatarIndicatorDesc", R.string.ShowFavoriteAvatarIndicatorDesc), LocaleController.getString("ShowFavoriteAvatarIndicator", R.string.ShowFavoriteAvatarIndicator)));
     private final AbstractConfigCell forceMusicSpeedControlRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.forceMusicSpeedControl, LocaleController.getString("ExperimentalMusicSpeedControlAbout", R.string.ExperimentalMusicSpeedControlAbout), LocaleController.getString("ExperimentalMusicSpeedControl", R.string.ExperimentalMusicSpeedControl)));
     private final AbstractConfigCell enableEditFileNameRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.enableEditFileName, LocaleController.getString("ExperimentalEditFileNameAbout", R.string.ExperimentalEditFileNameAbout), LocaleController.getString("ExperimentalEditFileName", R.string.ExperimentalEditFileName)));
     private final AbstractConfigCell enableChangeNameInGroupsRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.enableChangeNameInGroups, LocaleController.getString("ExperimentalChangeSenderNameAbout", R.string.ExperimentalChangeSenderNameAbout), LocaleController.getString("ExperimentalChangeSenderName", R.string.ExperimentalChangeSenderName)));
@@ -203,6 +204,12 @@ public class NekoCustomizationSettingsActivity extends BaseNekoXSettingsActivity
                 getNotificationCenter().postNotificationName(NotificationCenter.updateSearchSettings);
             } else if (key.equals(NaConfig.INSTANCE.getMainTabsShowSearchButton().getKey())) {
                 getNotificationCenter().postNotificationName(NotificationCenter.mainTabsLayoutChanged);
+            } else if (key.equals(NekoConfig.showFavoriteAvatarIndicator.getKey())) {
+                getNotificationCenter().postNotificationName(NotificationCenter.dialogsNeedReload, true);
+                NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.reloadInterface);
+                if (getParentLayout() != null) {
+                    getParentLayout().rebuildAllFragmentViews(false, false);
+                }
             } else if (key.equals(NekoConfig.forceMusicSpeedControl.getKey())) {
                 tooltip.showWithAction(0, UndoView.ACTION_NEED_RESTART, null, null);
             } else if (key.equals(NekoConfig.enableEditFileName.getKey())) {

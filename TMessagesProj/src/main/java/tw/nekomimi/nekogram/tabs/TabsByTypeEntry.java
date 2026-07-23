@@ -89,6 +89,12 @@ public enum TabsByTypeEntry {
             true,   // editable FAB
             false
     ),
+    FAVORITE(
+            R.drawable.msg_fave,
+            MessagesController.DIALOG_FILTER_FLAG_EXCLUDE_ARCHIVED | tw.nekomimi.nekogram.helpers.FavoriteChatsFilterHelper.FAVORITE_FILTER_FLAG,
+            true,
+            false
+    ),
     SECRET_CHATS(
             R.drawable.fork_filter_icon_lock,
             MessagesController.DIALOG_FILTER_FLAG_EXCLUDE_ARCHIVED | 0x20000000,
@@ -122,6 +128,7 @@ public enum TabsByTypeEntry {
             case MENTIONED_CHATS: return context.getString(R.string.TabsByTypeMentioned);
             case LIVE_CHATS:      return context.getString(R.string.TabsByTypeLive);
             case DELETED_USERS:   return context.getString(R.string.TabsByTypeDeleted);
+            case FAVORITE:        return context.getString(R.string.Favorites);
             case SECRET_CHATS:    return context.getString(R.string.TabsByTypeSecret);
             default:              return name();
         }

@@ -1388,6 +1388,11 @@ public class MessagesController extends BaseController implements NotificationCe
                     return true;
                 }
             }
+            if ((flags & tw.nekomimi.nekogram.helpers.FavoriteChatsFilterHelper.FAVORITE_FILTER_FLAG) != 0) {
+                if (tw.nekomimi.nekogram.helpers.FavoriteChatsFilterHelper.shouldInclude(flags, accountInstance.getCurrentAccount(), d.id)) {
+                    return true;
+                }
+            }
             if (DialogObject.isEncryptedDialog(d.id) && (flags & 0x20000000) != 0) { // SECRET_CHATS
                 return true;
             }

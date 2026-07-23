@@ -629,6 +629,8 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     private ActionBarMenuSubItem readItem;
     @Nullable
     private ActionBarMenuSubItem blockItem;
+    @Nullable
+    private ActionBarMenuSubItem favoriteChatItem;
     // [Alexgram: Hidden Chats] - Start
     @Nullable
     private ActionBarMenuSubItem hideChatItem;
@@ -755,10 +757,11 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     private final static int pin2 = 108;
     private final static int add_to_folder = 109;
     private final static int remove_from_folder = 110;
+    private final static int favorite_chat = 111;
     // [Alexgram: Hidden Chats] - Start
-    private final static int hide_chat = 111;
+    private final static int hide_chat = 112;
     // [Alexgram: Hidden Chats] - End
-    private final static int community_ungroup = 112;
+    private final static int community_ungroup = 113;
 
     private final static int select_all = 1000;
 
@@ -4359,6 +4362,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                     }
                     hideActionMode(false);
                 } else if (id == pin || id == read || id == delete || id == clear || id == mute || id == archive || id == block || id == archive2 || id == pin2 ||
+                        id == favorite_chat ||
                         // [Alexgram: Hidden Chats] - Start
                         id == hide_chat
                         // [Alexgram: Hidden Chats] - End
@@ -7268,6 +7272,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         readItem = otherItem.addSubItem(read, R.drawable.msg_markread, LocaleController.getString(R.string.MarkAsRead));
         clearItem = otherItem.addSubItem(clear, R.drawable.msg_clear, LocaleController.getString(R.string.ClearHistory));
         blockItem = otherItem.addSubItem(block, R.drawable.msg_block, LocaleController.getString(R.string.BlockUser));
+        favoriteChatItem = otherItem.addSubItem(favorite_chat, R.drawable.msg_fave, LocaleController.getString(R.string.AddToFavorites));
         // [Alexgram: Hidden Chats] - Start
         hideChatItem = otherItem.addSubItem(hide_chat, R.drawable.msg_hidden, HiddenChatsController.getInstance().isLocked() ? getString(R.string.HideChat) : getString(R.string.UnhideChat));
         // [Alexgram: Hidden Chats] - End
@@ -9230,6 +9235,16 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 finishPreviewFragment();
             });
             previewMenu[0].addView(markAsUnreadItem);
+
+            ActionBarMenuSubItem favoriteItem = new ActionBarMenuSubItem(getParentActivity(), false, false);
+            boolean isFavorite = tw.nekomimi.nekogram.helpers.FavoriteChatsFilterHelper.isFavorite(currentAccount, dialogId);
+            favoriteItem.setTextAndIcon(isFavorite ? LocaleController.getString(R.string.RemoveFromFavorites) : LocaleController.getString(R.string.AddToFavorites), R.drawable.msg_fave);
+            favoriteItem.setMinimumWidth(160);
+            favoriteItem.setOnClickListener(e -> {
+                tw.nekomimi.nekogram.helpers.FavoriteChatsFilterHelper.setFavorite(currentAccount, dialogId, !isFavorite);
+                finishPreviewFragment();
+            });
+            previewMenu[0].addView(favoriteItem);
         }
 
         final boolean[] hasPinAction = new boolean[1];
@@ -9779,6 +9794,28 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             return;
         }
         // [Alexgram: Hidden Chats] - End
+        if (action == favorite_chat) {
+            boolean allFavorite = true;
+            for (int a = 0; a < selectedDialogs.size(); a++) {
+                if (!tw.nekomimi.nekogram.helpers.FavoriteChatsFilterHelper.isFavorite(currentAccount, selectedDialogs.get(a))) {
+                    allFavorite = false;
+                    break;
+                }
+            }
+            boolean favorite = !allFavorite;
+            for (int a = 0; a < selectedDialogs.size(); a++) {
+                tw.nekomimi.nekogram.helpers.FavoriteChatsFilterHelper.setFavorite(currentAccount, selectedDialogs.get(a), favorite);
+            }
+            hideActionMode(true);
+            if (viewPages != null) {
+                for (ViewPage viewPage : viewPages) {
+                    if (viewPage != null && viewPage.dialogsAdapter != null) {
+                        viewPage.dialogsAdapter.notifyDataSetChanged();
+                    }
+                }
+            }
+            return;
+        }
         performSelectedDialogsAction(selectedDialogs, action, alert, longPress, null);
     }
 
@@ -10585,6 +10622,20 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 blockItem.setVisibility(View.GONE);
             } else {
                 blockItem.setVisibility(View.VISIBLE);
+            }
+        }
+        if (favoriteChatItem != null) {
+            boolean canToggleFavorite = count > 0 && count == selectedDialogs.size();
+            favoriteChatItem.setVisibility(canToggleFavorite ? View.VISIBLE : View.GONE);
+            if (canToggleFavorite) {
+                boolean allFavorite = true;
+                for (int a = 0; a < count; a++) {
+                    if (!tw.nekomimi.nekogram.helpers.FavoriteChatsFilterHelper.isFavorite(currentAccount, selectedDialogs.get(a))) {
+                        allFavorite = false;
+                        break;
+                    }
+                }
+                favoriteChatItem.setTextAndIcon(allFavorite ? LocaleController.getString(R.string.RemoveFromFavorites) : LocaleController.getString(R.string.AddToFavorites), R.drawable.msg_fave);
             }
         }
         if (removeFromFolderItem != null) {

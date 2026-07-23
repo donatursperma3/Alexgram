@@ -181,6 +181,7 @@ public class NekoConfig {
     public static ConfigItem showSharedMediaPhotoSize = addConfig("showSharedMediaPhotoSize", configTypeBool, false);
     public static ConfigItem showSharedMediaVideoSize = addConfig("showSharedMediaVideoSize", configTypeBool, false);
     public static ConfigItem showSharedMediaGifSize = addConfig("showSharedMediaGifSize", configTypeBool, false);
+    public static ConfigItem showFavoriteAvatarIndicator = addConfig("showFavoriteAvatarIndicator", configTypeBool, true);
     public static ConfigItem showProtectedContentInSharedMedia = addConfig("showProtectedContentInSharedMedia", configTypeBool, false);
     public static ConfigItem protectedContentLabel = addConfig("protectedContentLabel", configTypeString, "Protected");
 

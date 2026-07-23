@@ -2143,6 +2143,7 @@
     <string name="AddToStickers">Add to Stickers</string>
     <string name="AddToStickerPack">Add to Sticker Pack</string>
     <string name="AddToFavorites">Add to Favorites</string>
+    <string name="RemoveFromFavorites">Remove from Favorites</string>
     <string name="AddedToFavorites">Sticker was added to Favorites</string>
     <string name="RemovedFromFavorites">Sticker was removed from Favorites</string>
     <string name="RemovedFromRecent">Sticker was removed from Recent</string>
@@ -11030,6 +11031,8 @@
     <!-- [Alexgram: Quick Edit Icon] - Start -->
     <string name="ShowQuickEditIcon">Quick Edit Button near Messages</string>
     <string name="ShowQuickEditIconDesc">Show a pencil icon next to messages for quick access to edit them</string>
+    <string name="ShowFavoriteAvatarIndicator">Favorite chat avatar badge</string>
+    <string name="ShowFavoriteAvatarIndicatorDesc">Show a small star on chat avatars for favorite chats</string>
     <string name="QuickEditIconOnlyOwn">Only for Editable Messages</string>
     <string name="QuickEditIconOnlyOwnDesc">Only show the edit icon when the message can still be edited</string>
     <!-- [Alexgram: Quick Edit Icon] - End -->

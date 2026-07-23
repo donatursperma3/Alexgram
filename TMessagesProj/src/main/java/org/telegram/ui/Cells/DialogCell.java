@@ -5060,9 +5060,10 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
     private Drawable starFg, starBg;
 
     public boolean drawAvatarOverlays(Canvas canvas) {
-        boolean needInvalidate = false, stars = false;
-        if (chat != null && (chat.flags2 & 2048) != 0) {
-            stars = true;
+        boolean needInvalidate = false;
+        boolean favoriteOverlay = NekoConfig.showFavoriteAvatarIndicator.Bool() && tw.nekomimi.nekogram.helpers.FavoriteChatsFilterHelper.isFavorite(currentAccount, currentDialogId);
+        boolean stars = favoriteOverlay || (chat != null && (chat.flags2 & 2048) != 0);
+        if (stars) {
             float bottom =  avatarImage.getImageY2();
             float right = avatarImage.getImageX2();
             float checkProgress = checkBox != null && checkBox.isChecked() ? 1.0f - checkBox.getProgress() : 1.0f;
