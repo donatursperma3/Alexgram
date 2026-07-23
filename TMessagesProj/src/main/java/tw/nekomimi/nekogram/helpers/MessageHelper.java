@@ -490,7 +490,7 @@ public class MessageHelper extends BaseController {
         final int labelWidth = AndroidUtilities.dp(52);
 
         TextView limitLabel = new TextView(context);
-        limitLabel.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, resourcesProvider));
+        limitLabel.setTextColor(Theme.getColor(Theme.key_actionBarDefaultSubmenuItem, resourcesProvider));
         limitLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
         limitLabel.setGravity(Gravity.CENTER_VERTICAL);
         limitLabel.setIncludeFontPadding(false);
@@ -504,7 +504,7 @@ public class MessageHelper extends BaseController {
             labelWidth,
             LinearLayout.LayoutParams.WRAP_CONTENT
         );
-        labelParams.setMargins(0, 0, AndroidUtilities.dp(6), 0);
+        labelParams.setMargins(0, 0, AndroidUtilities.dp(8), 0);
         limitRow.addView(limitLabel, labelParams);
 
         LinearLayout.LayoutParams inputParams = new LinearLayout.LayoutParams(
@@ -518,7 +518,7 @@ public class MessageHelper extends BaseController {
         limitRow.addView(limitInput, inputParams);
 
         TextView orderLabel = new TextView(context);
-        orderLabel.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, resourcesProvider));
+        orderLabel.setTextColor(Theme.getColor(Theme.key_actionBarDefaultSubmenuItem, resourcesProvider));
         orderLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
         orderLabel.setGravity(Gravity.CENTER_VERTICAL);
         orderLabel.setIncludeFontPadding(false);

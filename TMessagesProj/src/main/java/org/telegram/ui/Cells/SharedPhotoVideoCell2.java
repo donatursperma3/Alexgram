@@ -981,7 +981,15 @@ public class SharedPhotoVideoCell2 extends FrameLayout {
             }
         }
 
-        boolean showProtected = NekoConfig.showProtectedContentInSharedMedia.Bool() && !messageObject.canForwardMessage();
+        boolean showProtected = false;
+        if (NekoConfig.showProtectedContentInSharedMedia.Bool()) {
+            if (messageObject.messageOwner != null && messageObject.messageOwner.noforwards) {
+                showProtected = true;
+            } else if (!messageObject.canForwardMessage()) {
+                showProtected = true;
+            }
+        }
+
         String protectedLabel = null;
         if (showProtected) {
             protectedLabel = NekoConfig.protectedContentLabel.String();
