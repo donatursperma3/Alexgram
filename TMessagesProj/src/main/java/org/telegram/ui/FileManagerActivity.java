@@ -26,6 +26,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.R;
 import org.telegram.messenger.UserConfig;
+import org.telegram.messenger.FileLog;
 import org.telegram.ui.Components.MediaActivity;
 import org.telegram.ui.Components.SharedMediaLayout;
 import tw.nekomimi.nekogram.NekoConfig;
@@ -125,7 +126,11 @@ public class FileManagerActivity extends AppCompatActivity {
             unselectButton = findViewById(R.id.fm_unselect_button);
 
             mediaChipContainer = findViewById(R.id.fm_media_chip_container);
-            buildMediaChips();
+            try {
+                buildMediaChips();
+            } catch (Exception e) {
+                FileLog.e("FileManagerActivity", e);
+            }
             chatChips = new TextView[] {
                     findViewById(R.id.fm_chat_chip_all),
                     findViewById(R.id.fm_chat_chip_private),
@@ -140,39 +145,61 @@ public class FileManagerActivity extends AppCompatActivity {
 
             for (int i = 0; i < mediaChips.length; i++) {
                 final int index = i;
-                mediaChips[i].setOnClickListener(v -> {
-                    selectedMediaType = index;
-                    updateMediaSelection();
-                });
+                TextView chip = mediaChips[i];
+                if (chip != null) {
+                    chip.setOnClickListener(v -> {
+                        selectedMediaType = index;
+                        updateMediaSelection();
+                    });
+                }
             }
 
             for (int i = 0; i < chatChips.length; i++) {
                 final int index = i;
-                chatChips[i].setOnClickListener(v -> {
-                    selectedChatType = index;
-                    updateChatSelection();
-                });
+                TextView chip = chatChips[i];
+                if (chip != null) {
+                    chip.setOnClickListener(v -> {
+                        selectedChatType = index;
+                        updateChatSelection();
+                    });
+                }
             }
 
             for (int i = 0; i < statusChips.length; i++) {
                 final int index = i;
-                statusChips[i].setOnClickListener(v -> {
-                    selectedStatus = index;
-                    updateStatusSelection();
-                });
+                TextView chip = statusChips[i];
+                if (chip != null) {
+                    chip.setOnClickListener(v -> {
+                        selectedStatus = index;
+                        updateStatusSelection();
+                    });
+                }
             }
 
-            itemViews.addAll(Arrays.asList(
-                    findViewById(R.id.fm_item_0),
-                    findViewById(R.id.fm_item_1),
-                    findViewById(R.id.fm_item_2),
-                    findViewById(R.id.fm_item_3),
-                    findViewById(R.id.fm_item_4)
-            ));
+            try {
+                int[] itemIds = {
+                        R.id.fm_item_0,
+                        R.id.fm_item_1,
+                        R.id.fm_item_2,
+                        R.id.fm_item_3,
+                        R.id.fm_item_4
+                };
+                for (int itemId : itemIds) {
+                    TextView item = findViewById(itemId);
+                    if (item != null) {
+                        itemViews.add(item);
+                    }
+                }
+            } catch (Exception e) {
+                FileLog.e("FileManagerActivity", e);
+            }
 
             for (int i = 0; i < itemViews.size(); i++) {
                 final int index = i;
-                itemViews.get(i).setOnClickListener(v -> toggleItemSelection(index));
+                TextView itemView = itemViews.get(i);
+                if (itemView != null) {
+                    itemView.setOnClickListener(v -> toggleItemSelection(index));
+                }
             }
 
             selectSingleButton.setOnClickListener(v -> {
@@ -247,112 +274,37 @@ public class FileManagerActivity extends AppCompatActivity {
         }
     }
 
-        }
-
-        itemViews.addAll(Arrays.asList(
-                findViewById(R.id.fm_item_0),
-                findViewById(R.id.fm_item_1),
-                findViewById(R.id.fm_item_2),
-                findViewById(R.id.fm_item_3),
-                findViewById(R.id.fm_item_4)
-        ));
-
-        for (int i = 0; i < itemViews.size(); i++) {
-            final int index = i;
-            itemViews.get(i).setOnClickListener(v -> toggleItemSelection(index));
-        }
-
-        selectSingleButton.setOnClickListener(v -> {
-            selectionMode = true;
-            rangeSelectionMode = false;
-            selectionAnchorIndex = 0;
-            selectedItems.clear();
-            selectedItems.add(0);
-            updateSelectionUi();
-        });
-
-        selectRangeButton.setOnClickListener(v -> {
-            selectionMode = true;
-            rangeSelectionMode = true;
-            selectionAnchorIndex = 0;
-            selectedItems.clear();
-            selectedItems.addAll(Arrays.asList(0, 1, 2));
-            updateSelectionUi();
-        });
-
-        forwardButton.setOnClickListener(v -> {
-            if (selectedItems.isEmpty()) {
-                Toast.makeText(this, "Select at least one item to forward", Toast.LENGTH_SHORT).show();
-            } else {
-                openForwardTargetSelector();
-            }
-        });
-
-        detailButton.setOnClickListener(v -> {
-            if (selectedItems.isEmpty()) {
-                Toast.makeText(this, "Select an item to view details", Toast.LENGTH_SHORT).show();
-            } else {
-                showDetailDialog();
-            }
-        });
-
-        unselectButton.setOnClickListener(v -> {
-            selectionMode = false;
-            rangeSelectionMode = false;
-            selectionAnchorIndex = -1;
-            selectedItems.clear();
-            updateSelectionUi();
-        });
-
-        Button refresh = findViewById(R.id.fm_refresh_button);
-        refresh.setOnClickListener(v -> {
-            try {
-                openMediaScreen();
-            } catch (Exception ex) {
-                Toast.makeText(FileManagerActivity.this, "Unable to open media view", Toast.LENGTH_SHORT).show();
-            }
-        });
-
-        Button goToMessage = findViewById(R.id.fm_gotomessage_button);
-        goToMessage.setOnClickListener(v -> {
-            try {
-                promptAndOpenMessage();
-            } catch (Exception ex) {
-                Toast.makeText(FileManagerActivity.this, "Action failed", Toast.LENGTH_SHORT).show();
-            }
-        });
-
-        updateMediaSelection();
-        updateChatSelection();
-        updateStatusSelection();
-        refreshItemLabels();
-        updateSelectionUi();
-    }
-
     private void buildMediaChips() {
-        mediaChipContainer.removeAllViews();
-        mediaChips = new TextView[mediaLabels.length];
+        try {
+            if (mediaChipContainer == null) {
+                return;
+            }
+            mediaChipContainer.removeAllViews();
+            mediaChips = new TextView[mediaLabels.length];
 
-        for (int i = 0; i < mediaLabels.length; i++) {
-            TextView chip = new TextView(this);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    AndroidUtilities.dp(40)
-            );
-            lp.setMarginEnd(AndroidUtilities.dp(6));
-            chip.setLayoutParams(lp);
-            chip.setMinWidth(AndroidUtilities.dp(72));
-            chip.setBackgroundResource(R.drawable.bg_file_manager_chip);
-            chip.setGravity(android.view.Gravity.CENTER);
-            chip.setPadding(AndroidUtilities.dp(12), 0, AndroidUtilities.dp(12), 0);
-            chip.setText(mediaLabels[i]);
-            chip.setTextColor(Color.parseColor("#354B63"));
-            chip.setTextSize(12);
-            chip.setAllCaps(false);
-            chip.setSingleLine();
-            chip.setMaxLines(1);
-            mediaChipContainer.addView(chip);
-            mediaChips[i] = chip;
+            for (int i = 0; i < mediaLabels.length; i++) {
+                TextView chip = new TextView(this);
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        AndroidUtilities.dp(40)
+                );
+                lp.setMarginEnd(AndroidUtilities.dp(6));
+                chip.setLayoutParams(lp);
+                chip.setMinWidth(AndroidUtilities.dp(72));
+                chip.setBackgroundResource(R.drawable.bg_file_manager_chip);
+                chip.setGravity(android.view.Gravity.CENTER);
+                chip.setPadding(AndroidUtilities.dp(12), 0, AndroidUtilities.dp(12), 0);
+                chip.setText(mediaLabels[i]);
+                chip.setTextColor(Color.parseColor("#354B63"));
+                chip.setTextSize(12);
+                chip.setAllCaps(false);
+                chip.setSingleLine();
+                chip.setMaxLines(1);
+                mediaChipContainer.addView(chip);
+                mediaChips[i] = chip;
+            }
+        } catch (Exception e) {
+            FileLog.e("FileManagerActivity", e);
         }
     }
 
@@ -371,34 +323,39 @@ public class FileManagerActivity extends AppCompatActivity {
             return;
         }
 
-        Bundle args = new Bundle();
-        args.putInt("dialogsType", DialogsActivity.DIALOGS_TYPE_FORWARD);
-        args.putBoolean("onlySelect", true);
-        args.putBoolean("checkCanWrite", false);
-        args.putString("selectAlertString", "Select a destination chat");
-        args.putString("selectAlertStringGroup", "Select a destination group or channel");
-        args.putLong("dialog_id", UserConfig.getInstance(UserConfig.selectedAccount).getClientUserId());
+        try {
+            Bundle args = new Bundle();
+            args.putInt("dialogsType", DialogsActivity.DIALOGS_TYPE_FORWARD);
+            args.putBoolean("onlySelect", true);
+            args.putBoolean("checkCanWrite", false);
+            args.putString("selectAlertString", "Select a destination chat");
+            args.putString("selectAlertStringGroup", "Select a destination group or channel");
+            args.putLong("dialog_id", UserConfig.getInstance(UserConfig.selectedAccount).getClientUserId());
 
-        DialogsActivity dialogsActivity = new DialogsActivity(args);
-        dialogsActivity.setDelegate((fragment, dids, message, param, notify, scheduleDate, scheduleRepeatPeriod, topicsFragment) -> {
-            if (dids == null || dids.isEmpty()) {
+            DialogsActivity dialogsActivity = new DialogsActivity(args);
+            dialogsActivity.setDelegate((fragment, dids, message, param, notify, scheduleDate, scheduleRepeatPeriod, topicsFragment) -> {
+                if (dids == null || dids.isEmpty()) {
+                    return true;
+                }
+
+                long selectedDialogId = dids.get(0).dialogId;
+                try {
+                    Toast.makeText(FileManagerActivity.this,
+                            "Selected destination: " + selectedDialogId,
+                            Toast.LENGTH_SHORT).show();
+                } catch (Exception ignored) {
+                }
+
+                dialogsActivity.finishFragment();
+                finish();
                 return true;
-            }
+            });
 
-            long selectedDialogId = dids.get(0).dialogId;
-            try {
-                Toast.makeText(FileManagerActivity.this,
-                        "Selected destination: " + selectedDialogId,
-                        Toast.LENGTH_SHORT).show();
-            } catch (Exception ignored) {
-            }
-
-            dialogsActivity.finishFragment();
-            finish();
-            return true;
-        });
-
-        LaunchActivity.instance.presentFragment(dialogsActivity);
+            LaunchActivity.instance.presentFragment(dialogsActivity);
+        } catch (Exception e) {
+            FileLog.e("FileManagerActivity", e);
+            Toast.makeText(this, "Unable to open target chooser", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void openMediaScreen() {
@@ -407,12 +364,17 @@ public class FileManagerActivity extends AppCompatActivity {
             return;
         }
 
-        Bundle args = new Bundle();
-        args.putLong("dialog_id", 0L);
-        args.putInt("type", MediaActivity.TYPE_MEDIA);
-        args.putInt("start_from", getInitialTab());
-        LaunchActivity.instance.presentFragment(new MediaActivity(args, null));
-        finish();
+        try {
+            Bundle args = new Bundle();
+            args.putLong("dialog_id", 0L);
+            args.putInt("type", MediaActivity.TYPE_MEDIA);
+            args.putInt("start_from", getInitialTab());
+            LaunchActivity.instance.presentFragment(new MediaActivity(args, null));
+            finish();
+        } catch (Exception e) {
+            FileLog.e("FileManagerActivity", e);
+            Toast.makeText(this, "Unable to open media view", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void promptAndOpenMessage() {

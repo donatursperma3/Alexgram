@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.autoMirrored.Icons as AutoMirroredIcons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -118,7 +119,7 @@ fun DashboardScreen(vm: DashboardViewModel = viewModel()) {
             // ── Live Activity ─────────────────────────────────────────────────
             item {
                 AnimatedIn(isVisible, 200) {
-                    SectionLabel("LIVE ACTIVITY", "Account message volume (14d)", Icons.Default.ShowChart, NeonCyan)
+                    SectionLabel("LIVE ACTIVITY", "Account message volume (14d)", AutoMirroredIcons.Filled.ShowChart, NeonCyan)
                 }
             }
             item {
@@ -843,13 +844,13 @@ fun SessionInsightsCard(state: xyz.nextalone.nagram.analytics.ui.viewmodel.Dashb
             Text("All-Time Breakdown", color = c.textPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(14.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                InsightTile(Modifier.weight(1f), "Sent", si.totalSent.toString(), NeonCyan, Icons.Default.Send)
+                InsightTile(Modifier.weight(1f), "Sent", si.totalSent.toString(), NeonCyan, AutoMirroredIcons.Filled.Send)
                 InsightTile(Modifier.weight(1f), "Received", si.totalReceived.toString(), NeonPurple, Icons.Default.Inbox)
             }
             Spacer(Modifier.height(10.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 InsightTile(Modifier.weight(1f), "Media", si.totalMedia.toString(), NeonOrange, Icons.Default.Image)
-                InsightTile(Modifier.weight(1f), "Chats", si.uniqueChats.toString(), NeonGreen, Icons.Default.Chat)
+                InsightTile(Modifier.weight(1f), "Chats", si.uniqueChats.toString(), NeonGreen, AutoMirroredIcons.Filled.Chat)
             }
             if (si.totalTimeSeconds > 0) {
                 Spacer(Modifier.height(10.dp))
