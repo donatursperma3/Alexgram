@@ -20159,7 +20159,26 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 }
                 return emojiStatusId;
             } else if (currentUser.premium) {
-                return ContextCompat.getDrawable(ApplicationLoader.applicationContext, R.drawable.msg_premium_liststar).mutate();
+                int mode = NekoConfig.memberPremiumIndicator.Int();
+                if (mode == NekoConfig.MEMBER_PREMIUM_INDICATOR_NONE) {
+                    return null;
+                } else if (mode == NekoConfig.MEMBER_PREMIUM_INDICATOR_FAKE) {
+                    try {
+                        return new org.telegram.ui.Components.ScamDrawable(11, 1);
+                    } catch (Exception e) {
+                        FileLog.e(e);
+                        return ContextCompat.getDrawable(ApplicationLoader.applicationContext, R.drawable.msg_premium_liststar).mutate();
+                    }
+                } else if (mode == NekoConfig.MEMBER_PREMIUM_INDICATOR_SCAM) {
+                    try {
+                        return new org.telegram.ui.Components.ScamDrawable(11, 0);
+                    } catch (Exception e) {
+                        FileLog.e(e);
+                        return ContextCompat.getDrawable(ApplicationLoader.applicationContext, R.drawable.msg_premium_liststar).mutate();
+                    }
+                } else {
+                    return ContextCompat.getDrawable(ApplicationLoader.applicationContext, R.drawable.msg_premium_liststar).mutate();
+                }
             }
         } else if (currentChat != null) {
             if (currentMessageObject != null && (currentMessageObject.getDialogId() != UserObject.REPLY_BOT) && currentChat.signature_profiles) {

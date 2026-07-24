@@ -3443,10 +3443,31 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
                             nameLayoutEllipsizeByGradient = true;
                             emojiStatus.set(DialogObject.getEmojiStatusDocumentId(user.emoji_status), animated);
                             emojiStatus.setParticles(DialogObject.isEmojiStatusCollectible(user.emoji_status), animated);
-                        } else {
+                        } else if (user != null && user.premium) {
                             nameLayoutEllipsizeByGradient = true;
-                            emojiStatus.set(PremiumGradient.getInstance().premiumStarDrawableMini, animated);
+                            int mode = NekoConfig.memberPremiumIndicator.Int();
+                            if (mode == NekoConfig.MEMBER_PREMIUM_INDICATOR_NONE) {
+                                emojiStatus.set((Drawable) null, animated);
+                            } else if (mode == NekoConfig.MEMBER_PREMIUM_INDICATOR_FAKE) {
+                                try {
+                                    emojiStatus.set(new org.telegram.ui.Components.ScamDrawable(11, 1), animated);
+                                } catch (Exception e) {
+                                    FileLog.e(e);
+                                    emojiStatus.set(PremiumGradient.getInstance().premiumStarDrawableMini, animated);
+                                }
+                            } else if (mode == NekoConfig.MEMBER_PREMIUM_INDICATOR_SCAM) {
+                                try {
+                                    emojiStatus.set(new org.telegram.ui.Components.ScamDrawable(11, 0), animated);
+                                } catch (Exception e) {
+                                    FileLog.e(e);
+                                    emojiStatus.set(PremiumGradient.getInstance().premiumStarDrawableMini, animated);
+                                }
+                            } else {
+                                emojiStatus.set(PremiumGradient.getInstance().premiumStarDrawableMini, animated);
+                            }
                             emojiStatus.setParticles(false, animated);
+                        } else {
+                            emojiStatus.set((Drawable) null, animated);
                         }
                         dialogBotVerificationIcon = DialogObject.getBotVerificationIcon(user);
                         invalidate = true;
@@ -4600,9 +4621,30 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
                     }
                     emojiStatus.setColor(Theme.getColor(Theme.key_chats_verifiedBackground, resourcesProvider));
                 } else {
-                    Drawable premiumDrawable = PremiumGradient.getInstance().premiumStarDrawableMini;
-                    setDrawableBounds(premiumDrawable, nameMuteLeft - dp(1), dp(useForceThreeLines || SharedConfig.useThreeLinesLayout ? 12.5f : 15.5f));
-                    premiumDrawable.draw(canvas);
+                    int mode = NekoConfig.memberPremiumIndicator.Int();
+                    if (mode == NekoConfig.MEMBER_PREMIUM_INDICATOR_NONE) {
+                        // don't draw
+                    } else if (mode == NekoConfig.MEMBER_PREMIUM_INDICATOR_FAKE) {
+                        try {
+                            Drawable premiumDrawable = new org.telegram.ui.Components.ScamDrawable(11, 1);
+                            setDrawableBounds(premiumDrawable, nameMuteLeft - dp(1), dp(useForceThreeLines || SharedConfig.useThreeLinesLayout ? 12.5f : 15.5f));
+                            premiumDrawable.draw(canvas);
+                        } catch (Exception e) {
+                            FileLog.e(e);
+                        }
+                    } else if (mode == NekoConfig.MEMBER_PREMIUM_INDICATOR_SCAM) {
+                        try {
+                            Drawable premiumDrawable = new org.telegram.ui.Components.ScamDrawable(11, 0);
+                            setDrawableBounds(premiumDrawable, nameMuteLeft - dp(1), dp(useForceThreeLines || SharedConfig.useThreeLinesLayout ? 12.5f : 15.5f));
+                            premiumDrawable.draw(canvas);
+                        } catch (Exception e) {
+                            FileLog.e(e);
+                        }
+                    } else {
+                        Drawable premiumDrawable = PremiumGradient.getInstance().premiumStarDrawableMini;
+                        setDrawableBounds(premiumDrawable, nameMuteLeft - dp(1), dp(useForceThreeLines || SharedConfig.useThreeLinesLayout ? 12.5f : 15.5f));
+                        premiumDrawable.draw(canvas);
+                    }
                 }
             } else if (drawScam != 0) {
                 int y = dp(useForceThreeLines || SharedConfig.useThreeLinesLayout ? 12 : 15);

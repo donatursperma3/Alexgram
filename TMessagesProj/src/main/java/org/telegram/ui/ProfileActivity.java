@@ -11494,12 +11494,34 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 
     private Drawable getPremiumCrossfadeDrawable(int a) {
         if (premiumCrossfadeDrawable[a] == null) {
-            premiumStarDrawable[a] = ContextCompat.getDrawable(getParentActivity(), R.drawable.msg_premium_liststar).mutate();
+            int mode = NekoConfig.memberPremiumIndicator.Int();
+            if (mode == NekoConfig.MEMBER_PREMIUM_INDICATOR_NONE) {
+                premiumStarDrawable[a] = null;
+                return null;
+            } else if (mode == NekoConfig.MEMBER_PREMIUM_INDICATOR_FAKE) {
+                try {
+                    premiumStarDrawable[a] = new ScamDrawable(11, 1);
+                } catch (Exception e) {
+                    FileLog.e(e);
+                    premiumStarDrawable[a] = ContextCompat.getDrawable(getParentActivity(), R.drawable.msg_premium_liststar).mutate();
+                }
+            } else if (mode == NekoConfig.MEMBER_PREMIUM_INDICATOR_SCAM) {
+                try {
+                    premiumStarDrawable[a] = new ScamDrawable(11, 0);
+                } catch (Exception e) {
+                    FileLog.e(e);
+                    premiumStarDrawable[a] = ContextCompat.getDrawable(getParentActivity(), R.drawable.msg_premium_liststar).mutate();
+                }
+            } else {
+                premiumStarDrawable[a] = ContextCompat.getDrawable(getParentActivity(), R.drawable.msg_premium_liststar).mutate();
+            }
             int color = getThemedColor(Theme.key_profile_verifiedBackground);
             if (a == 1) {
                 color = dontApplyPeerColor(color);
             }
-            premiumStarDrawable[a].setColorFilter(color, PorterDuff.Mode.MULTIPLY);
+            if (premiumStarDrawable[a] != null) {
+                premiumStarDrawable[a].setColorFilter(color, PorterDuff.Mode.MULTIPLY);
+            }
             premiumCrossfadeDrawable[a] = new CrossfadeDrawable(premiumStarDrawable[a], ContextCompat.getDrawable(getParentActivity(), R.drawable.msg_premium_prolfilestar).mutate());
         }
         return premiumCrossfadeDrawable[a];
