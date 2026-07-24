@@ -475,6 +475,9 @@
     <string name="LocalEditorRestore">Restore</string>
     <string name="LocalEditorEmptyTextError">Message text cannot be empty</string>
 
+    <!-- [Alexgram: Member Premium Indicator] - Start -->
+    <string name="MemberPremiumIndicator">Member Premium Indicator</string>
+    <!-- [Alexgram: Member Premium Indicator] - End -->
     <!-- [Alexgram: Admin Tag in Voice Chat] - Start -->
     <string name="ShowAdminTagInVoiceChat">Show Admin Tag in Voice Chat</string>
     <string name="ShowAdminTagInVoiceChatDesc">Display admin or owner badges next to user names in voice/video chats.</string>

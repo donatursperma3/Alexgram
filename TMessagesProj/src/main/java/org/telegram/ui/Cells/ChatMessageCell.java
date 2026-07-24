@@ -13994,7 +13994,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             }
             if (mediaBackground) {
                 if (currentMessageObject.isOutOwner()) {
-                    timeX = getCurrentBackgroundRight() - timeWidth - dp(8);
+                    timeX = getCurrentBackgroundRight() - timeWidth - dp(32);
                 } else {
                     timeX = backgroundWidth - dp(4) - timeWidth;
                     if (currentMessageObject.isAnyKindOfSticker()) {
@@ -14017,7 +14017,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 }
             } else {
                 if (currentMessageObject.isOutOwner()) {
-                    timeX = getCurrentBackgroundRight() - timeWidth - dp(8);
+                    timeX = getCurrentBackgroundRight() - timeWidth - dp(32);
                 } else {
                     timeX = backgroundWidth - dp(9) - timeWidth;
                     if (currentMessageObject.isAnyKindOfSticker()) {
@@ -16893,7 +16893,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         try {
             boolean singleLineText = currentMessageObject != null && currentMessageObject.textHeight(transitionParams) <= dp(20);
             if (singleLineText && currentMessageObject != null && currentMessageObject.textWidth > 0) {
-                int leftBoundary = getCurrentBackgroundLeft() + dp(currentMessageObject.isOutOwner() ? 6 : (!mediaBackground && drawPinnedBottom ? 11 : 17)) + getExtraTextX();
+                int leftBoundary = getCurrentBackgroundLeft() + dp(currentMessageObject.isOutOwner() ? 11 : (!mediaBackground && drawPinnedBottom ? 11 : 17)) + getExtraTextX();
                 if (textX < leftBoundary) {
                     textX = leftBoundary;
                 }
@@ -25281,6 +25281,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         timeY -= dp(8.5f);
 
         float offsetX = currentMessageObject != null && currentMessageObject.isAnyKindOfSticker() ? dp(-STICKER_STATUS_OFFSET) : 0;
+        // Use bubble right edge instead of layoutWidth for outgoing messages with avatar,
+        // so status icons stay inside the bubble and don't overflow onto the avatar.
+        int statusRightX = (currentMessageObject != null && currentMessageObject.isOutOwner() && isAvatarVisible) ? getCurrentBackgroundRight() : layoutWidth;
         if (drawClock) {
             MsgClockDrawable drawable = Theme.chat_msgClockDrawable;
             int color;
@@ -25296,7 +25299,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 }
             } else {
                 color = getThemedColor(Theme.key_chat_outSentClock);
-                setDrawableBounds(drawable, layoutWidth - dp(18.5f) - drawable.getIntrinsicWidth(), layoutHeight - dp(8.5f) - drawable.getIntrinsicHeight() + timeYOffset);
+                setDrawableBounds(drawable, statusRightX - dp(18.5f) - drawable.getIntrinsicWidth(), layoutHeight - dp(8.5f) - drawable.getIntrinsicHeight() + timeYOffset);
                 drawable.setAlpha((int) (255 * alpha));
             }
             drawable.setColor(color);
@@ -25363,10 +25366,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                         canvas.translate(dp(4) * (1f - progress), 0);
                     }
                     drawable = getThemedDrawable(drawSelectionBackground ? Theme.key_drawable_msgOutCheckReadSelected : Theme.key_drawable_msgOutCheckRead);
-                    setDrawableBounds(drawable, layoutWidth - dp(22.5f) - drawable.getIntrinsicWidth() + offsetX, layoutHeight - dp(pinnedBottom || pinnedTop ? 9 : 8) - drawable.getIntrinsicHeight() + timeYOffset);
+                    setDrawableBounds(drawable, statusRightX - dp(22.5f) - drawable.getIntrinsicWidth() + offsetX, layoutHeight - dp(pinnedBottom || pinnedTop ? 9 : 8) - drawable.getIntrinsicHeight() + timeYOffset);
                 } else {
                     drawable = getThemedDrawable(drawSelectionBackground ? Theme.key_drawable_msgOutCheckSelected : Theme.key_drawable_msgOutCheck);
-                    setDrawableBounds(drawable, layoutWidth - dp(18.5f) - drawable.getIntrinsicWidth() + offsetX, layoutHeight - dp(pinnedBottom || pinnedTop ? 9 : 8) - drawable.getIntrinsicHeight() + timeYOffset);
+                    setDrawableBounds(drawable, statusRightX - dp(18.5f) - drawable.getIntrinsicWidth() + offsetX, layoutHeight - dp(pinnedBottom || pinnedTop ? 9 : 8) - drawable.getIntrinsicHeight() + timeYOffset);
                 }
                 drawable.setAlpha((int) (255 * alpha));
                 if (useScale) {
@@ -25399,7 +25402,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 drawable.setAlpha(255);
             } else {
                 Drawable drawable = getThemedDrawable(drawSelectionBackground ? Theme.key_drawable_msgOutHalfCheckSelected : Theme.key_drawable_msgOutHalfCheck);
-                setDrawableBounds(drawable, layoutWidth - dp(18) - drawable.getIntrinsicWidth(), layoutHeight - dp(pinnedBottom || pinnedTop ? 9 : 8) - drawable.getIntrinsicHeight() + timeYOffset);
+                setDrawableBounds(drawable, statusRightX - dp(18) - drawable.getIntrinsicWidth(), layoutHeight - dp(pinnedBottom || pinnedTop ? 9 : 8) - drawable.getIntrinsicHeight() + timeYOffset);
                 drawable.setAlpha((int) (255 * alpha));
                 if (useScale || moveCheck) {
                     canvas.save();

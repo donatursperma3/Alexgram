@@ -222,7 +222,7 @@ object NaConfig {
         addConfig(
             "CustomTitle",
             ConfigItem.configTypeString,
-            "Alexgram"
+            "Alexgram AX"
         )
     val dateOfForwardedMsg =
         addConfig(
@@ -1904,8 +1904,8 @@ object NaConfig {
         if (normalizedLlmApiUrl != currentLlmApiUrl) {
             llmApiUrl.setConfigString(normalizedLlmApiUrl)
         }
-        if (customTitle.String() == "Nagram" || customTitle.String() == "NagramX") {
-            customTitle.setConfigString("Alexgram")
+        if (customTitle.String() == "Nagram" || customTitle.String() == "NagramX" || customTitle.String() == "Alexgram") {
+            customTitle.setConfigString("Alexgram AX")
         }
         if (NekoConfig.customSavePath.String() == "Nagram" || NekoConfig.customSavePath.String() == "NagramX") {
             NekoConfig.customSavePath.setConfigString("Alexgram")
