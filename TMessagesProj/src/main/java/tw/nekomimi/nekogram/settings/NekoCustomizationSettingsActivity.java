@@ -99,7 +99,7 @@ public class NekoCustomizationSettingsActivity extends BaseNekoXSettingsActivity
     private final AbstractConfigCell showAdminTagInVoiceChatRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.showAdminTagInVoiceChat, LocaleController.getString("ShowAdminTagInVoiceChatDesc", R.string.ShowAdminTagInVoiceChatDesc), LocaleController.getString("ShowAdminTagInVoiceChat", R.string.ShowAdminTagInVoiceChat)));
     private final AbstractConfigCell memberPremiumIndicatorRow = cellGroup.appendCell(new ConfigCellSelectBox("MemberPremiumIndicator", NekoConfig.memberPremiumIndicator, new String[]{
             getString(R.string.Default),
-            getString(R.string.FakeMark),
+            getString(R.string.FakeMessage),
             getString(R.string.ScamMessage),
             getString(R.string.None)
     }, null));
