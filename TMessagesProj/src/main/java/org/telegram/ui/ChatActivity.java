@@ -46779,22 +46779,14 @@ public class ChatActivity extends BaseFragment implements
 		if (item == null) {
 			return;
 		}
-		// Explicitly wire the chat header kebab item to always open its submenu.
-		// This avoids relying on the default ActionBarMenu click path, which can
-		// miss the first click when the submenu is populated lazily via
-		// lazilyAddSubItem() after the item is created.
-		item.setOnClickListener(v -> {
-			if (item.getVisibility() == View.VISIBLE && item.isEnabled()) {
-				FileLog.d("ChatActivity", "headerItem clicked tag=" + item.getTag());
-				item.toggleSubMenu();
-			}
-		});
-		// Ensure the item is always ready to open the popup in the normal header state.
+		// The default click listener set by ActionBarMenu.addItemAt() already
+		// handles hasSubMenu() → toggleSubMenu() correctly, even with lazily-added
+		// items (hasSubMenu() checks lazyList dynamically). Do NOT override it here.
+		// Only ensure the item is in the correct interactive state.
 		item.setVisibility(View.VISIBLE);
 		item.setEnabled(true);
 		item.setClickable(true);
 		item.setFocusable(true);
-		item.setOverrideMenuClick(true);
 	}
 
 	private void nkbtn_onclick_actionbar(int id) {
