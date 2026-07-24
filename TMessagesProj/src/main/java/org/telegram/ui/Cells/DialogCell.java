@@ -5080,12 +5080,19 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
             }
 
             final int sz = dp(19.33f);
-            AndroidUtilities.rectTmp2.set((int) right + dp(1.66f) - sz, (int) bottom - sz, (int) right + dp(1.66f), (int) bottom);
+            float x = right - dp(1.66f) - sz;
+            float y = bottom - dp(1.66f) - sz;
+            if (LocaleController.isRTL) {
+                x = right - dp(1.66f) - sz;
+            } else {
+                x = right - dp(1.66f) - sz - dp(2);
+            }
+            AndroidUtilities.rectTmp2.set((int) x, (int) y, (int) (x + sz), (int) (y + sz));
             AndroidUtilities.rectTmp2.inset(-dp(1), -dp(1));
             starBg.setBounds(AndroidUtilities.rectTmp2);
             starBg.setAlpha((int) (0xFF * checkProgress));
             starBg.draw(canvas);
-            AndroidUtilities.rectTmp2.set((int) right + dp(1.66f) - sz, (int) bottom - sz, (int) right + dp(1.66f), (int) bottom);
+            AndroidUtilities.rectTmp2.set((int) x, (int) y, (int) (x + sz), (int) (y + sz));
             starFg.setBounds(AndroidUtilities.rectTmp2);
             starFg.setAlpha((int) (0xFF * checkProgress));
             starFg.draw(canvas);
