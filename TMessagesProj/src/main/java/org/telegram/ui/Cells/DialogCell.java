@@ -5062,9 +5062,11 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
     public boolean drawAvatarOverlays(Canvas canvas) {
         boolean needInvalidate = false;
         boolean favoriteOverlay = NekoConfig.showFavoriteAvatarIndicator.Bool() && tw.nekomimi.nekogram.helpers.FavoriteChatsFilterHelper.isFavorite(currentAccount, currentDialogId);
-        boolean stars = favoriteOverlay || (chat != null && (chat.flags2 & 2048) != 0);
+        boolean officialStars = chat != null && (chat.flags2 & 2048) != 0;
+        boolean stars = favoriteOverlay || officialStars;
         if (stars) {
             float bottom =  avatarImage.getImageY2();
+            float avatarLeft = avatarImage.getImageX();
             float right = avatarImage.getImageX2();
             float checkProgress = checkBox != null && checkBox.isChecked() ? 1.0f - checkBox.getProgress() : 1.0f;
 
@@ -5080,12 +5082,23 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
             }
 
             final int sz = dp(19.33f);
-            float x = right - dp(1.66f) - sz;
+            float x;
             float y = bottom - dp(1.66f) - sz;
-            if (LocaleController.isRTL) {
-                x = right - dp(1.66f) - sz;
+            if (favoriteOverlay && !officialStars) {
+                // Favorite indicator: draw at the bottom-LEFT of the avatar
+                // so it does not overlap voice chat / self-destruct / online indicators at the right
+                if (LocaleController.isRTL) {
+                    x = right - dp(1.66f) - sz;
+                } else {
+                    x = avatarLeft + dp(1.66f);
+                }
             } else {
-                x = right - dp(1.66f) - sz - dp(2);
+                // Official stars badge: bottom-RIGHT (standard Telegram position)
+                if (LocaleController.isRTL) {
+                    x = right - dp(1.66f) - sz;
+                } else {
+                    x = right - dp(1.66f) - sz - dp(2);
+                }
             }
             AndroidUtilities.rectTmp2.set((int) x, (int) y, (int) (x + sz), (int) (y + sz));
             AndroidUtilities.rectTmp2.inset(-dp(1), -dp(1));
@@ -5097,7 +5110,7 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
             starFg.setAlpha((int) (0xFF * checkProgress));
             starFg.draw(canvas);
         }
-        float lockT = premiumBlockedT.set(premiumBlocked && !stars);
+        float lockT = premiumBlockedT.set(premiumBlocked && !officialStars);
         if (lockT > 0) {
             float top =  avatarImage.getCenterY() + dp(18);
             float left = avatarImage.getCenterX() + dp(18);
@@ -5125,7 +5138,7 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
             canvas.restore();
             return false;
         }
-        if (isDialogCell && currentDialogFolderId == 0 && !stars) {
+        if (isDialogCell && currentDialogFolderId == 0 && !officialStars) {
             showTtl = ttlPeriod > 0 && !isOnline() && !hasCall && !storyParams.drawnLive && AndroidUtil.getOnlineColor(user, resourcesProvider) == 0;
             if (rightFragmentOpenedProgress != 1f && (showTtl || ttlProgress > 0)) {
                 if (timerDrawable == null || (timerDrawable.getTime() != ttlPeriod && ttlPeriod > 0)) {

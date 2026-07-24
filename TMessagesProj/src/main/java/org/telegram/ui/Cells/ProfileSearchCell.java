@@ -72,6 +72,9 @@ import org.telegram.ui.community.CommunityUtils;
 
 import java.util.Locale;
 
+import org.telegram.messenger.FileLog;
+import org.telegram.ui.Components.ScamDrawable;
+import tw.nekomimi.nekogram.NekoConfig;
 import xyz.nextalone.nagram.NaConfig;
 import tw.nekomimi.nekogram.helpers.MessageHelper;
 
@@ -790,21 +793,40 @@ public class ProfileSearchCell extends BaseCell implements NotificationCenter.No
 
     public void updateStatus(boolean verified, TLRPC.User user, TLRPC.Chat chat, boolean animated) {
         statusDrawable.center = LocaleController.isRTL;
-        if (allowEmojiStatus && verified) {
-            statusDrawable.set(new CombinedDrawable(Theme.dialogs_verifiedDrawable, Theme.dialogs_verifiedCheckDrawable, 0, 0), animated);
-            statusDrawable.setColor(null);
-        } else if (allowEmojiStatus && user != null && !savedMessages && DialogObject.getEmojiStatusDocumentId(user.emoji_status) != 0) {
-            statusDrawable.set(DialogObject.getEmojiStatusDocumentId(user.emoji_status), animated);
-            statusDrawable.setColor(Theme.getColor(Theme.key_chats_verifiedBackground, resourcesProvider));
-        } else if (allowEmojiStatus && chat != null && !savedMessages && DialogObject.getEmojiStatusDocumentId(chat.emoji_status) != 0) {
-            statusDrawable.set(DialogObject.getEmojiStatusDocumentId(chat.emoji_status), animated);
-            statusDrawable.setColor(Theme.getColor(Theme.key_chats_verifiedBackground, resourcesProvider));
-        } else if (allowEmojiStatus && user != null && !savedMessages && MessagesController.getInstance(currentAccount).isPremiumUser(user)) {
-            statusDrawable.set(PremiumGradient.getInstance().premiumStarDrawableMini, animated);
-            statusDrawable.setColor(Theme.getColor(Theme.key_chats_verifiedBackground, resourcesProvider));
-        } else {
-            statusDrawable.set((Drawable) null, animated);
-            statusDrawable.setColor(Theme.getColor(Theme.key_chats_verifiedBackground, resourcesProvider));
+        try {
+            int mode = NekoConfig.memberPremiumIndicator.Int();
+            if (allowEmojiStatus && verified) {
+                statusDrawable.set(new CombinedDrawable(Theme.dialogs_verifiedDrawable, Theme.dialogs_verifiedCheckDrawable, 0, 0), animated);
+                statusDrawable.setColor(null);
+            } else if (allowEmojiStatus && user != null && !savedMessages && DialogObject.getEmojiStatusDocumentId(user.emoji_status) != 0) {
+                statusDrawable.set(DialogObject.getEmojiStatusDocumentId(user.emoji_status), animated);
+                statusDrawable.setColor(Theme.getColor(Theme.key_chats_verifiedBackground, resourcesProvider));
+            } else if (allowEmojiStatus && chat != null && !savedMessages && DialogObject.getEmojiStatusDocumentId(chat.emoji_status) != 0) {
+                statusDrawable.set(DialogObject.getEmojiStatusDocumentId(chat.emoji_status), animated);
+                statusDrawable.setColor(Theme.getColor(Theme.key_chats_verifiedBackground, resourcesProvider));
+            } else if (allowEmojiStatus && user != null && !savedMessages && MessagesController.getInstance(currentAccount).isPremiumUser(user)) {
+                if (mode == NekoConfig.MEMBER_PREMIUM_INDICATOR_NONE) {
+                    statusDrawable.set((Drawable) null, animated);
+                } else if (mode == NekoConfig.MEMBER_PREMIUM_INDICATOR_FAKE) {
+                    if (Theme.dialogs_fakeDrawable == null) {
+                        Theme.dialogs_fakeDrawable = new ScamDrawable(11, 1);
+                    }
+                    statusDrawable.set(Theme.dialogs_fakeDrawable, animated);
+                } else if (mode == NekoConfig.MEMBER_PREMIUM_INDICATOR_SCAM) {
+                    if (Theme.dialogs_scamDrawable == null) {
+                        Theme.dialogs_scamDrawable = new ScamDrawable(11, 0);
+                    }
+                    statusDrawable.set(Theme.dialogs_scamDrawable, animated);
+                } else {
+                    statusDrawable.set(PremiumGradient.getInstance().premiumStarDrawableMini, animated);
+                }
+                statusDrawable.setColor(Theme.getColor(Theme.key_chats_verifiedBackground, resourcesProvider));
+            } else {
+                statusDrawable.set((Drawable) null, animated);
+                statusDrawable.setColor(Theme.getColor(Theme.key_chats_verifiedBackground, resourcesProvider));
+            }
+        } catch (Exception e) {
+            FileLog.e(e);
         }
         long botVerificationIcon = 0;
         if (user != null) {

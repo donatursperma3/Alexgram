@@ -61,6 +61,8 @@ import org.telegram.ui.LaunchActivity;
 import org.telegram.ui.NotificationsSettingsActivity;
 import org.telegram.ui.Stories.StoriesListPlaceProvider;
 import org.telegram.ui.Stories.StoriesUtilities;
+import org.telegram.messenger.FileLog;
+import org.telegram.ui.Components.ScamDrawable;
 
 import tw.nekomimi.nekogram.NekoConfig;
 
@@ -690,31 +692,53 @@ public class UserCell extends FrameLayout implements NotificationCenter.Notifica
             botVerification.setColor(Theme.getColor(Theme.key_chats_verifiedBackground, resourcesProvider));
             nameTextView.setLeftDrawable(botVerification);
         }
-        if (currentUser != null && MessagesController.getInstance(currentAccount).isPremiumUser(currentUser) && !MessagesController.getInstance(currentAccount).premiumFeaturesBlocked()) {
-            if (DialogObject.getEmojiStatusDocumentId(currentUser.emoji_status) != 0) {
-                emojiStatus.set(DialogObject.getEmojiStatusDocumentId(currentUser.emoji_status), false);
-                emojiStatus.setColor(Theme.getColor(Theme.key_chats_verifiedBackground, resourcesProvider));
-                nameTextView.setRightDrawable(emojiStatus);
-            } else {
-                if (premiumDrawable == null) {
-                    premiumDrawable = getContext().getResources().getDrawable(R.drawable.msg_premium_liststar).mutate();
-                    premiumDrawable = new AnimatedEmojiDrawable.WrapSizeDrawable(premiumDrawable, dp(14), dp(14)) {
-                        @Override
-                        public void draw(@NonNull Canvas canvas) {
-                            canvas.save();
-                            canvas.translate(0, dp(1));
-                            super.draw(canvas);
-                            canvas.restore();
+        try {
+            if (currentUser != null && MessagesController.getInstance(currentAccount).isPremiumUser(currentUser) && !MessagesController.getInstance(currentAccount).premiumFeaturesBlocked()) {
+                int mode = NekoConfig.memberPremiumIndicator.Int();
+                if (mode == NekoConfig.MEMBER_PREMIUM_INDICATOR_NONE) {
+                    nameTextView.setRightDrawable(null);
+                    nameTextView.setRightDrawableTopPadding(0);
+                } else if (mode == NekoConfig.MEMBER_PREMIUM_INDICATOR_FAKE) {
+                    if (Theme.dialogs_fakeDrawable == null) {
+                        Theme.dialogs_fakeDrawable = new ScamDrawable(11, 1);
+                    }
+                    nameTextView.setRightDrawable(Theme.dialogs_fakeDrawable);
+                    nameTextView.setRightDrawableTopPadding(0);
+                } else if (mode == NekoConfig.MEMBER_PREMIUM_INDICATOR_SCAM) {
+                    if (Theme.dialogs_scamDrawable == null) {
+                        Theme.dialogs_scamDrawable = new ScamDrawable(11, 0);
+                    }
+                    nameTextView.setRightDrawable(Theme.dialogs_scamDrawable);
+                    nameTextView.setRightDrawableTopPadding(0);
+                } else {
+                    if (DialogObject.getEmojiStatusDocumentId(currentUser.emoji_status) != 0) {
+                        emojiStatus.set(DialogObject.getEmojiStatusDocumentId(currentUser.emoji_status), false);
+                        emojiStatus.setColor(Theme.getColor(Theme.key_chats_verifiedBackground, resourcesProvider));
+                        nameTextView.setRightDrawable(emojiStatus);
+                    } else {
+                        if (premiumDrawable == null) {
+                            premiumDrawable = getContext().getResources().getDrawable(R.drawable.msg_premium_liststar).mutate();
+                            premiumDrawable = new AnimatedEmojiDrawable.WrapSizeDrawable(premiumDrawable, dp(14), dp(14)) {
+                                @Override
+                                public void draw(@NonNull Canvas canvas) {
+                                    canvas.save();
+                                    canvas.translate(0, dp(1));
+                                    super.draw(canvas);
+                                    canvas.restore();
+                                }
+                            };
+                            premiumDrawable.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_chats_verifiedBackground, resourcesProvider), PorterDuff.Mode.MULTIPLY));
                         }
-                    };
-                    premiumDrawable.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_chats_verifiedBackground, resourcesProvider), PorterDuff.Mode.MULTIPLY));
+                        nameTextView.setRightDrawable(premiumDrawable);
+                    }
+                    nameTextView.setRightDrawableTopPadding(-dp(0.5f));
                 }
-                nameTextView.setRightDrawable(premiumDrawable);
+            } else {
+                nameTextView.setRightDrawable(null);
+                nameTextView.setRightDrawableTopPadding(0);
             }
-            nameTextView.setRightDrawableTopPadding(-dp(0.5f));
-        } else {
-            nameTextView.setRightDrawable(null);
-            nameTextView.setRightDrawableTopPadding(0);
+        } catch (Exception e) {
+            FileLog.e(e);
         }
         if (currentStatus != null) {
             statusTextView.setTextColor(statusColor);

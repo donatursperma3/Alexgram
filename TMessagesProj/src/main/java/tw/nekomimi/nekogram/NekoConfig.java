@@ -197,6 +197,12 @@ public class NekoConfig {
     public static ConfigItem localPremium = addConfig("localPremium", configTypeBool, false);
     public static ConfigItem hidePremiumIcon = addConfig("hidePremiumIcon", configTypeBool, false);
 
+    public static final int MEMBER_PREMIUM_INDICATOR_DEFAULT = 0;
+    public static final int MEMBER_PREMIUM_INDICATOR_FAKE = 1;
+    public static final int MEMBER_PREMIUM_INDICATOR_SCAM = 2;
+    public static final int MEMBER_PREMIUM_INDICATOR_NONE = 3;
+    public static ConfigItem memberPremiumIndicator = addConfig("memberPremiumIndicator", configTypeInt, MEMBER_PREMIUM_INDICATOR_DEFAULT);
+
     // [Alexgram: Native Features] - Start
     public static ConfigItem forceMusicSpeedControl = addConfig("forceMusicSpeedControl", configTypeBool, false);
     public static ConfigItem enableEditFileName = addConfig("enableEditFileName", configTypeBool, false);

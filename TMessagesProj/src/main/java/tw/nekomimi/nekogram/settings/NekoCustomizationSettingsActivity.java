@@ -97,6 +97,12 @@ public class NekoCustomizationSettingsActivity extends BaseNekoXSettingsActivity
     private final AbstractConfigCell enableLocalEditorPlusRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.enableLocalEditorPlus, LocaleController.getString("LocalEditorPlusAbout", R.string.LocalEditorPlusAbout), LocaleController.getString("LocalEditorPlus", R.string.LocalEditorPlus)));
     private final AbstractConfigCell showCopyFileRefRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.showCopyFileRef, LocaleController.getString("CopyFileRefAbout", R.string.CopyFileRefAbout), LocaleController.getString("CopyFileRef", R.string.CopyFileRef)));
     private final AbstractConfigCell showAdminTagInVoiceChatRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.showAdminTagInVoiceChat, LocaleController.getString("ShowAdminTagInVoiceChatDesc", R.string.ShowAdminTagInVoiceChatDesc), LocaleController.getString("ShowAdminTagInVoiceChat", R.string.ShowAdminTagInVoiceChat)));
+    private final AbstractConfigCell memberPremiumIndicatorRow = cellGroup.appendCell(new ConfigCellSelectBox("MemberPremiumIndicator", NekoConfig.memberPremiumIndicator, new String[]{
+            getString(R.string.Default),
+            getString(R.string.FakeMark),
+            getString(R.string.ScamMessage),
+            getString(R.string.None)
+    }, null));
     private final AbstractConfigCell forceSelectVoiceChatProfileRow = cellGroup.appendCell(new ConfigCellTextCheck(
             NekoConfig.forceSelectVoiceChatProfile,
             LocaleController.getString("AlwaysAskHowToJoinVoiceChatDesc", R.string.AlwaysAskHowToJoinVoiceChatDesc),
@@ -204,7 +210,7 @@ public class NekoCustomizationSettingsActivity extends BaseNekoXSettingsActivity
                 getNotificationCenter().postNotificationName(NotificationCenter.updateSearchSettings);
             } else if (key.equals(NaConfig.INSTANCE.getMainTabsShowSearchButton().getKey())) {
                 getNotificationCenter().postNotificationName(NotificationCenter.mainTabsLayoutChanged);
-            } else if (key.equals(NekoConfig.showFavoriteAvatarIndicator.getKey())) {
+            } else if (key.equals(NekoConfig.showFavoriteAvatarIndicator.getKey()) || key.equals(NekoConfig.memberPremiumIndicator.getKey())) {
                 getNotificationCenter().postNotificationName(NotificationCenter.dialogsNeedReload, true);
                 NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.reloadInterface);
                 if (getParentLayout() != null) {
