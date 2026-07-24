@@ -9385,10 +9385,11 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
 
                 int x;
                 if (currentMessageObject.isOutOwner()) {
+                    int avatarOffset = getOutgoingAvatarOffset();
                     if (mediaBackground) {
-                        x = layoutWidth - backgroundWidth - dp(3);
+                        x = layoutWidth - backgroundWidth - avatarOffset - dp(3);
                     } else {
-                        x = layoutWidth - backgroundWidth + dp(6);
+                        x = layoutWidth - backgroundWidth - avatarOffset + dp(6);
                     }
                 } else {
                     boolean isUserDialog = DialogObject.isUserDialog(currentMessageObject.getDialogId());
@@ -14102,10 +14103,11 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         if (groupMedia != null) {
             int x;
             if (currentMessageObject.isOutOwner()) {
+                int avatarOffset = getOutgoingAvatarOffset();
                 if (mediaBackground) {
-                    x = layoutWidth - backgroundWidth - dp(3);
+                    x = layoutWidth - backgroundWidth - avatarOffset - dp(3);
                 } else {
-                    x = layoutWidth - backgroundWidth + dp(6);
+                    x = layoutWidth - backgroundWidth - avatarOffset + dp(6);
                 }
             } else {
                 isUserDialog = DialogObject.isUserDialog(currentMessageObject.getDialogId());
@@ -14124,9 +14126,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         }
         if (documentAttachType == DOCUMENT_ATTACH_TYPE_AUDIO || documentAttachType == DOCUMENT_ATTACH_TYPE_ROUND) {
             if (currentMessageObject.isOutOwner()) {
-                seekBarX = layoutWidth - backgroundWidth + dp(57);
-                buttonX = layoutWidth - backgroundWidth + dp(14);
-                timeAudioX = layoutWidth - backgroundWidth + dp(67);
+                int avatarOffset = getOutgoingAvatarOffset();
+                seekBarX = layoutWidth - backgroundWidth - avatarOffset + dp(57);
+                buttonX = layoutWidth - backgroundWidth - avatarOffset + dp(14);
+                timeAudioX = layoutWidth - backgroundWidth - avatarOffset + dp(67);
             } else {
                 seekBarX = dp(66);
                 buttonX = dp(23);
@@ -14171,10 +14174,11 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     }
                 } else {
                     if (currentMessageObject.isOutOwner()) {
+                        int avatarOffset = getOutgoingAvatarOffset();
                         if (mediaBackground) {
-                            x = layoutWidth - backgroundWidth - dp(3);
+                            x = layoutWidth - backgroundWidth - avatarOffset - dp(3);
                         } else {
-                            x = layoutWidth - backgroundWidth + dp(6);
+                            x = layoutWidth - backgroundWidth - avatarOffset + dp(6);
                         }
                     } else {
                         x = dp(15);
@@ -14209,9 +14213,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             }
         } else if (documentAttachType == DOCUMENT_ATTACH_TYPE_MUSIC) {
             if (currentMessageObject.isOutOwner()) {
-                seekBarX = layoutWidth - backgroundWidth + dp(56);
-                buttonX = layoutWidth - backgroundWidth + dp(14);
-                timeAudioX = layoutWidth - backgroundWidth + dp(67);
+                int avatarOffset = getOutgoingAvatarOffset();
+                seekBarX = layoutWidth - backgroundWidth - avatarOffset + dp(56);
+                buttonX = layoutWidth - backgroundWidth - avatarOffset + dp(14);
+                timeAudioX = layoutWidth - backgroundWidth - avatarOffset + dp(67);
             } else {
                 seekBarX = dp(65);
                 buttonX = dp(23);
@@ -14239,7 +14244,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             updatePlayingMessageProgress();
         } else if (documentAttachType == DOCUMENT_ATTACH_TYPE_DOCUMENT && !drawPhotoImage) {
             if (currentMessageObject.isOutOwner()) {
-                buttonX = layoutWidth - backgroundWidth + dp(14);
+                int avatarOffset = getOutgoingAvatarOffset();
+                buttonX = layoutWidth - backgroundWidth - avatarOffset + dp(14);
             } else {
                 if (isSideMenuLeftMargin()) {
                     buttonX = dp(23 + ChatActivity.SIDE_MENU_WIDTH);
@@ -14258,7 +14264,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         } else if (currentMessageObject.type == MessageObject.TYPE_CONTACT) {
             int x;
             if (currentMessageObject.isOutOwner()) {
-                x = layoutWidth - backgroundWidth + dp(26);
+                int avatarOffset = getOutgoingAvatarOffset();
+                x = layoutWidth - backgroundWidth - avatarOffset + dp(26);
             } else {
                 x = dp(35);
                 if (isSideMenuLeftMargin()) {
@@ -14286,10 +14293,11 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 }
             } else {
                 if (currentMessageObject.isOutOwner()) {
+                    int avatarOffset = getOutgoingAvatarOffset();
                     if (mediaBackground) {
-                        x = layoutWidth - backgroundWidth - dp(3);
+                        x = layoutWidth - backgroundWidth - avatarOffset - dp(3);
                     } else {
-                        x = layoutWidth - backgroundWidth + dp(6);
+                        x = layoutWidth - backgroundWidth - avatarOffset + dp(6);
                     }
                 } else {
                     x = dp(15);
@@ -15510,7 +15518,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         if (!reactionsLayoutInBubble.isEmpty && (currentPosition == null || ((currentPosition.flags & MessageObject.POSITION_FLAG_BOTTOM) != 0 && (currentPosition.flags & MessageObject.POSITION_FLAG_LEFT) != 0)) && !reactionsLayoutInBubble.isSmall) {
             if (currentMessageObject.type == MessageObject.TYPE_EMOJIS || currentMessageObject.isAnimatedEmoji() || currentMessageObject.isAnyKindOfSticker()) {
                 if (currentMessageObject.isOutOwner()) {
-                    reactionsLayoutInBubble.x = getMeasuredWidth() - reactionsLayoutInBubble.width - dp(16);//AndroidUtilities.displaySize.x - maxWidth - dp(17);
+                    reactionsLayoutInBubble.x = getCurrentBackgroundRight() - reactionsLayoutInBubble.width;
                 } else {
                     reactionsLayoutInBubble.x = getCurrentBackgroundLeft();
                 }
@@ -20780,7 +20788,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             }
             // For outgoing messages, the avatar sits on the right edge. The bubble should stay
             // close to the avatar without overlapping it, while also leaving room for the quick edit affordance.
-            int avatarOffset = isAvatarVisible ? dp(42) : 0;
+            int avatarOffset = getOutgoingAvatarOffset();
             backgroundDrawableLeft = layoutWidth - backgroundWidth - avatarOffset - (!mediaBackground ? dp(2) : dp(4)) - Math.min(getOutgoingContentLeftInset(), dp(6));
             if (currentMessageObject.isAnyKindOfSticker() && isAvatarVisible) {
                 backgroundDrawableLeft -= dp(1);
@@ -25854,7 +25862,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             forceNotDrawTime = true;
             int x;
             if (currentMessageObject.isOutOwner()) {
-                x = layoutWidth - backgroundWidth + dp(16);
+                int avatarOffset = getOutgoingAvatarOffset();
+                x = layoutWidth - backgroundWidth - avatarOffset + dp(16);
             } else {
                 if (needDrawAvatar()) {
                     x = dp(74);
@@ -25963,7 +25972,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             }
             float x;
             if (currentMessageObject.isOutOwner()) {
-                x = layoutWidth - backgroundWidth + dp(11);
+                int avatarOffset = getOutgoingAvatarOffset();
+                x = layoutWidth - backgroundWidth - avatarOffset + dp(11);
             } else {
                 if (isSideMenuEnabled) {
                     x = dp(20 + ChatActivity.SIDE_MENU_WIDTH);
@@ -26896,7 +26906,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
 
     public float getPollButtonsLeft() {
         if (getMessageObject() != null && getMessageObject().isOutOwner()) {
-            return dp(3) + this.layoutWidth - backgroundWidth;
+            return dp(3) + this.layoutWidth - backgroundWidth - getOutgoingAvatarOffset();
         } else if (isSideMenuEnabled) {
             return dp(11 + ChatActivity.SIDE_MENU_WIDTH);
         } else if (needDrawAvatar()) {
@@ -28544,8 +28554,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
 
     public int getCurrentBackgroundLeft() {
         if (currentBackgroundDrawable == null) {
-            FileLog.e("getCurrentBackgroundLeft accessed when currentBackgroundDrawable is null");
-            return 0;
+            return getBackgroundDrawableLeft();
         }
         int left = currentBackgroundDrawable.getBounds().left;
         if (!currentMessageObject.isOutOwner() && transitionParams.changePinnedBottomProgress != 1 && (isRoundVideo || !mediaBackground) && !drawPinnedBottom) {
@@ -28560,7 +28569,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
 
     public int getCurrentBackgroundRight() {
         if (currentBackgroundDrawable == null) {
-            return getWidth();
+            return getBackgroundDrawableRight();
         }
         int right = currentBackgroundDrawable.getBounds().right;
         if (currentMessageObject.isOutOwner() && transitionParams.changePinnedBottomProgress != 1 && (isRoundVideo || !mediaBackground) && !drawPinnedBottom) {
