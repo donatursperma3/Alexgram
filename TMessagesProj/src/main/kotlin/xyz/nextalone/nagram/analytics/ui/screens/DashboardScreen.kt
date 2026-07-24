@@ -118,7 +118,7 @@ fun DashboardScreen(vm: DashboardViewModel = viewModel()) {
             // ── Live Activity ─────────────────────────────────────────────────
             item {
                 AnimatedIn(isVisible, 200) {
-                    SectionLabel("LIVE ACTIVITY", "Account message volume (14d)", Icons.AutoMirrored.Filled.ShowChart, NeonCyan)
+                    SectionLabel("LIVE ACTIVITY", "Account message volume (14d)", Icons.Filled.ShowChart, NeonCyan)
                 }
             }
             item {
@@ -130,7 +130,7 @@ fun DashboardScreen(vm: DashboardViewModel = viewModel()) {
             // ── Domain Dominance ──────────────────────────────────────────────
             item {
                 AnimatedIn(isVisible, 300) {
-                    SectionLabel("DOMAIN DOMINANCE", "All-time chat breakdown", Icons.Default.Forum, NeonPurple)
+                    SectionLabel("DOMAIN DOMINANCE", "All-time chat breakdown", Icons.Filled.Forum, NeonPurple)
                 }
             }
             if (uiState.topChats.isEmpty()) {
@@ -157,7 +157,7 @@ fun DashboardScreen(vm: DashboardViewModel = viewModel()) {
             // ── Control Matrix ─────────────────────────────────────────────────
             item {
                 AnimatedIn(isVisible, 500) {
-                    SectionLabel("CONTROL MATRIX", "Daily limits & overrides", Icons.Default.Tune, NeonPink)
+                    SectionLabel("CONTROL MATRIX", "Daily limits & overrides", Icons.Filled.Tune, NeonPink)
                 }
             }
             items(uiState.limits, key = { "${it.type}_${it.targetId}" }) { limit ->
@@ -185,7 +185,7 @@ fun DashboardScreen(vm: DashboardViewModel = viewModel()) {
             // ── Session Insights ───────────────────────────────────────────────
             item {
                 AnimatedIn(isVisible, 700) {
-                    SectionLabel("SESSION INSIGHTS", "All-time message analytics", Icons.Default.Analytics, NeonGreen)
+                    SectionLabel("SESSION INSIGHTS", "All-time message analytics", Icons.Filled.Analytics, NeonGreen)
                 }
             }
             item {
@@ -463,7 +463,7 @@ fun AccountActivityPulseChart(history: List<xyz.nextalone.nagram.analytics.data.
             if (history.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.AutoMirrored.Filled.ShowChart, null, tint = c.textSecondary.copy(0.4f), modifier = Modifier.size(36.dp))
+                        Icon(Icons.Filled.ShowChart, null, tint = c.textSecondary.copy(0.4f), modifier = Modifier.size(36.dp))
                         Spacer(Modifier.height(6.dp))
                         Text("Start messaging to see your pulse", color = c.textSecondary, fontSize = 11.sp)
                     }
@@ -631,7 +631,7 @@ fun ChatDominanceRow(
                 )
                 if (chatInfo.isLocked) {
                     Spacer(Modifier.width(4.dp))
-                    Icon(Icons.Default.Lock, null, tint = NeonPink, modifier = Modifier.size(13.dp))
+                    Icon(Icons.Filled.Lock, null, tint = NeonPink, modifier = Modifier.size(13.dp))
                 }
             }
             val typeLabel = when {
@@ -753,7 +753,7 @@ fun ControlLimitCard(
                     ), contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        if (limit.type == 0) Icons.Default.Timer else Icons.Default.LockClock,
+                        if (limit.type == 0) Icons.Filled.Timer else Icons.Filled.LockClock,
                         null, tint = if (enabled) NeonPink else c.textSecondary,
                         modifier = Modifier.size(20.dp)
                     )
@@ -793,12 +793,12 @@ fun ControlLimitCard(
                 Text("Limit: $limitLabel", color = NeonCyan, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.weight(1f))
                 TextButton(onClick = { onEdit(limit) }, contentPadding = PaddingValues(horizontal = 8.dp)) {
-                    Icon(Icons.Default.Edit, null, tint = NeonCyan, modifier = Modifier.size(14.dp))
+                    Icon(Icons.Filled.Edit, null, tint = NeonCyan, modifier = Modifier.size(14.dp))
                     Spacer(Modifier.width(4.dp))
                     Text("Edit", color = NeonCyan, fontSize = 12.sp)
                 }
                 TextButton(onClick = { onDelete(limit) }, contentPadding = PaddingValues(horizontal = 8.dp)) {
-                    Icon(Icons.Default.Delete, null, tint = NeonPink.copy(0.7f), modifier = Modifier.size(14.dp))
+                    Icon(Icons.Filled.Delete, null, tint = NeonPink.copy(0.7f), modifier = Modifier.size(14.dp))
                 }
             }
         }
@@ -821,7 +821,7 @@ fun AddLimitButton(onAdd: () -> Unit) {
             .padding(16.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.AddCircle, null, tint = NeonPink, modifier = Modifier.size(26.dp))
+            Icon(Icons.Filled.AddCircle, null, tint = NeonPink, modifier = Modifier.size(26.dp))
             Spacer(Modifier.width(12.dp))
             Column {
                 Text("Set Daily Limit", color = c.textPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
@@ -843,13 +843,13 @@ fun SessionInsightsCard(state: xyz.nextalone.nagram.analytics.ui.viewmodel.Dashb
             Text("All-Time Breakdown", color = c.textPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(14.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                InsightTile(Modifier.weight(1f), "Sent", si.totalSent.toString(), NeonCyan, Icons.AutoMirrored.Filled.Send)
+                InsightTile(Modifier.weight(1f), "Sent", si.totalSent.toString(), NeonCyan, Icons.Filled.Send)
                 InsightTile(Modifier.weight(1f), "Received", si.totalReceived.toString(), NeonPurple, Icons.Default.Inbox)
             }
             Spacer(Modifier.height(10.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 InsightTile(Modifier.weight(1f), "Media", si.totalMedia.toString(), NeonOrange, Icons.Default.Image)
-                InsightTile(Modifier.weight(1f), "Chats", si.uniqueChats.toString(), NeonGreen, Icons.AutoMirrored.Filled.Chat)
+                InsightTile(Modifier.weight(1f), "Chats", si.uniqueChats.toString(), NeonGreen, Icons.Filled.Chat)
             }
             if (si.totalTimeSeconds > 0) {
                 Spacer(Modifier.height(10.dp))
@@ -858,7 +858,7 @@ fun SessionInsightsCard(state: xyz.nextalone.nagram.analytics.ui.viewmodel.Dashb
                 val totalH = si.totalTimeSeconds / 3600
                 val totalM = (si.totalTimeSeconds % 3600) / 60
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.History, null, tint = NeonCyan, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Filled.History, null, tint = NeonCyan, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(8.dp))
                     Text("Total chat time: ", color = c.textSecondary, fontSize = 12.sp)
                     Text(
@@ -972,7 +972,7 @@ fun ChatLockSheet(
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Icon(
-                                        if (mins == 0) Icons.Default.Lock else Icons.Default.Timer,
+                                        if (mins == 0) Icons.Filled.Lock else Icons.Filled.Timer,
                                         null, tint = if (sel) NeonPink else c.textSecondary,
                                         modifier = Modifier.size(16.dp)
                                     )
@@ -1010,7 +1010,7 @@ fun ChatLockSheet(
 
                     // Hybrid Hour Picker
                     IconButton(onClick = { if (customHours > 0) customHours-- }) {
-                        Icon(Icons.Default.Remove, null, tint = NeonCyan, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Filled.Remove, null, tint = NeonCyan, modifier = Modifier.size(16.dp))
                     }
                     WheelPicker(
                         value = customHours,
@@ -1019,14 +1019,14 @@ fun ChatLockSheet(
                         label = "Hrs"
                     )
                     IconButton(onClick = { if (customHours < 23) customHours++ }) {
-                        Icon(Icons.Default.Add, null, tint = NeonCyan, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Filled.Add, null, tint = NeonCyan, modifier = Modifier.size(16.dp))
                     }
 
                     Spacer(Modifier.width(16.dp))
 
                     // Hybrid Minute Picker
                     IconButton(onClick = { if (customMinutes > 0) customMinutes-- }) {
-                        Icon(Icons.Default.Remove, null, tint = NeonPurple, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Filled.Remove, null, tint = NeonPurple, modifier = Modifier.size(16.dp))
                     }
                     WheelPicker(
                         value = customMinutes,
@@ -1035,7 +1035,7 @@ fun ChatLockSheet(
                         label = "Min"
                     )
                     IconButton(onClick = { if (customMinutes < 59) customMinutes++ }) {
-                        Icon(Icons.Default.Add, null, tint = NeonPurple, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Filled.Add, null, tint = NeonPurple, modifier = Modifier.size(16.dp))
                     }
                 }
             }
@@ -1104,7 +1104,7 @@ fun LimitEditorDialog(
                     // Hours Column
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         IconButton(onClick = { if (hours < 23) hours++ }) {
-                            Icon(Icons.Default.KeyboardArrowUp, null, tint = NeonCyan)
+                            Icon(Icons.Filled.KeyboardArrowUp, null, tint = NeonCyan)
                         }
                         WheelPicker(
                             value = hours,
@@ -1113,7 +1113,7 @@ fun LimitEditorDialog(
                             label = "HOURS"
                         )
                         IconButton(onClick = { if (hours > 0) hours-- }) {
-                            Icon(Icons.Default.KeyboardArrowDown, null, tint = NeonCyan)
+                            Icon(Icons.Filled.KeyboardArrowDown, null, tint = NeonCyan)
                         }
                     }
 
@@ -1122,7 +1122,7 @@ fun LimitEditorDialog(
                     // Minutes Column
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         IconButton(onClick = { if (minutes < 59) minutes++ }) {
-                            Icon(Icons.Default.KeyboardArrowUp, null, tint = NeonPurple)
+                            Icon(Icons.Filled.KeyboardArrowUp, null, tint = NeonPurple)
                         }
                         WheelPicker(
                             value = minutes,
@@ -1131,7 +1131,7 @@ fun LimitEditorDialog(
                             label = "MINUTES"
                         )
                         IconButton(onClick = { if (minutes > 0) minutes-- }) {
-                            Icon(Icons.Default.KeyboardArrowDown, null, tint = NeonPurple)
+                            Icon(Icons.Filled.KeyboardArrowDown, null, tint = NeonPurple)
                         }
                     }
                 }
@@ -1199,7 +1199,7 @@ fun EmptyCard(message: String) {
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(Icons.Default.HourglassEmpty, null, tint = c.textSecondary.copy(0.5f), modifier = Modifier.size(30.dp))
+            Icon(Icons.Filled.HourglassEmpty, null, tint = c.textSecondary.copy(0.5f), modifier = Modifier.size(30.dp))
             Spacer(Modifier.height(8.dp))
             Text(message, color = c.textSecondary, fontSize = 12.sp)
         }

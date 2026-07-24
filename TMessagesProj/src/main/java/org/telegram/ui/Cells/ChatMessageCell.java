@@ -13910,11 +13910,24 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         return 0;
     }
 
+    private int getOutgoingAvatarOffset() {
+        if (!isAvatarVisible) {
+            return 0;
+        }
+        int avatarSize = dp(currentMessageObject != null && currentMessageObject.isRepostPreview ? 36 : 42);
+        int avatarGap = dp(10);
+        int avatarRightMargin = dp(6);
+        return avatarSize + avatarGap + avatarRightMargin;
+    }
+
     private int getOutgoingContentLeftInset() {
         if (currentMessageObject == null || !currentMessageObject.isOutOwner()) {
             return 0;
         }
         int inset = dp(12);
+        if (isAvatarVisible) {
+            inset += dp(2);
+        }
         if (checkQuickEditVisible()) {
             inset += dp(16);
         }
@@ -13940,6 +13953,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             return 0;
         }
         int inset = dp(10);
+        if (isAvatarVisible) {
+            inset += dp(2);
+        }
         if (drawTime && timeWidth > 0) {
             inset += timeWidth + signWidth + dp(12);
         } else {
@@ -22260,7 +22276,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     public int getBackgroundDrawableLeft() {
         MessageObject messageObject = getMessageObject();
         if (messageObject != null && messageObject.isOutOwner()) {
-            int avatarMargin = isAvatarVisible ? dp(42) : 0;
+            int avatarMargin = getOutgoingAvatarOffset();
             int extraInset = Math.min(getOutgoingContentLeftInset(), dp(6));
             if (isRoundVideo) {
                 return layoutWidth - backgroundWidth - avatarMargin - extraInset - (int) ((1f - getVideoTranscriptionProgress()) * dp(4));
