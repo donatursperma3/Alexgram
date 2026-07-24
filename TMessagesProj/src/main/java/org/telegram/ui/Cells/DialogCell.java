@@ -114,6 +114,7 @@ import org.telegram.ui.Components.Premium.PremiumGradient;
 import org.telegram.ui.Components.PullForegroundDrawable;
 import org.telegram.ui.Components.QuoteSpan;
 import org.telegram.ui.Components.RLottieDrawable;
+import org.telegram.ui.Components.ScamDrawable;
 import org.telegram.ui.Components.Reactions.ReactionsLayoutInBubble;
 import org.telegram.ui.Components.StaticLayoutEx;
 import org.telegram.ui.Components.StatusDrawable;
@@ -3450,14 +3451,18 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
                                 emojiStatus.set((Drawable) null, animated);
                             } else if (mode == NekoConfig.MEMBER_PREMIUM_INDICATOR_FAKE) {
                                 try {
-                                    emojiStatus.set(new org.telegram.ui.Components.ScamDrawable(11, 1), animated);
+                                    ScamDrawable sd = new ScamDrawable(11, 1);
+                                    sd.setColor(Theme.getColor(Theme.key_chats_draft, resourcesProvider));
+                                    emojiStatus.set(sd, animated);
                                 } catch (Exception e) {
                                     FileLog.e(e);
                                     emojiStatus.set(PremiumGradient.getInstance().premiumStarDrawableMini, animated);
                                 }
                             } else if (mode == NekoConfig.MEMBER_PREMIUM_INDICATOR_SCAM) {
                                 try {
-                                    emojiStatus.set(new org.telegram.ui.Components.ScamDrawable(11, 0), animated);
+                                    ScamDrawable sd = new ScamDrawable(11, 0);
+                                    sd.setColor(Theme.getColor(Theme.key_chats_draft, resourcesProvider));
+                                    emojiStatus.set(sd, animated);
                                 } catch (Exception e) {
                                     FileLog.e(e);
                                     emojiStatus.set(PremiumGradient.getInstance().premiumStarDrawableMini, animated);
@@ -4626,7 +4631,8 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
                         // don't draw
                     } else if (mode == NekoConfig.MEMBER_PREMIUM_INDICATOR_FAKE) {
                         try {
-                            Drawable premiumDrawable = new org.telegram.ui.Components.ScamDrawable(11, 1);
+                            ScamDrawable premiumDrawable = new ScamDrawable(11, 1);
+                            premiumDrawable.setColor(Theme.getColor(Theme.key_chats_draft, resourcesProvider));
                             setDrawableBounds(premiumDrawable, nameMuteLeft - dp(1), dp(useForceThreeLines || SharedConfig.useThreeLinesLayout ? 12.5f : 15.5f));
                             premiumDrawable.draw(canvas);
                         } catch (Exception e) {
@@ -4634,7 +4640,8 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
                         }
                     } else if (mode == NekoConfig.MEMBER_PREMIUM_INDICATOR_SCAM) {
                         try {
-                            Drawable premiumDrawable = new org.telegram.ui.Components.ScamDrawable(11, 0);
+                            ScamDrawable premiumDrawable = new ScamDrawable(11, 0);
+                            premiumDrawable.setColor(Theme.getColor(Theme.key_chats_draft, resourcesProvider));
                             setDrawableBounds(premiumDrawable, nameMuteLeft - dp(1), dp(useForceThreeLines || SharedConfig.useThreeLinesLayout ? 12.5f : 15.5f));
                             premiumDrawable.draw(canvas);
                         } catch (Exception e) {
@@ -5125,16 +5132,18 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
 
             final int sz = dp(19.33f);
             float x;
-            float y = bottom - dp(1.66f) - sz;
+            float y;
             if (favoriteOverlay && !officialStars) {
-                // Favorite indicator: draw at the bottom-LEFT of the avatar
-                // so it does not overlap voice chat / self-destruct / online indicators at the right
+                // Favorite indicator: draw at the bottom-LEFT of the avatar,
+                // aligned horizontally at the bottom with voice chat / TTL self-destruct icons (bottom + 2.5dp)
+                y = bottom + dp(2.5f) - sz;
                 if (LocaleController.isRTL) {
                     x = right - dp(1.66f) - sz;
                 } else {
-                    x = avatarLeft + dp(1.66f);
+                    x = avatarLeft - dp(1.5f);
                 }
             } else {
+                y = bottom - dp(1.66f) - sz;
                 // Official stars badge: bottom-RIGHT (standard Telegram position)
                 if (LocaleController.isRTL) {
                     x = right - dp(1.66f) - sz;

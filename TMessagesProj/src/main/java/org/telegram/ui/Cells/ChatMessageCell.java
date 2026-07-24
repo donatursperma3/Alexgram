@@ -198,6 +198,7 @@ import org.telegram.ui.Components.SeekBar;
 import org.telegram.ui.Components.SeekBarAccessibilityDelegate;
 import org.telegram.ui.Components.SeekBarWaveform;
 import org.telegram.ui.Components.SizeNotifierFrameLayout;
+import org.telegram.ui.Components.ScamDrawable;
 import org.telegram.ui.Components.SlotsDrawable;
 import org.telegram.ui.Components.StaticLayoutEx;
 import org.telegram.ui.Components.StickerSetLinkIcon;
@@ -7496,7 +7497,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 if (messageObject.isQuickReply() && !messageObject.isSendError()) {
                     timeMore -= dp(3);
                 } else if (messageObject.isOutOwner()) {
-                    timeMore += dp(20.5f);
+                    timeMore += dp(32.5f);
                 }
                 timeMore += getExtraTimeX();
 
@@ -9191,7 +9192,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                         if (messageObject.isQuickReply() && !messageObject.isSendError()) {
                             timeMore -= dp(3);
                         } else if (messageObject.isOutOwner()) {
-                            timeMore += dp(20.5f);
+                            timeMore += dp(32.5f);
                         }
                         timeMore += getExtraTimeX();
                         if (reactionsLayoutInBubble.lastLineX + timeMore >= backgroundWidth) {
@@ -13103,13 +13104,22 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             totalHeight += dp(newLineForTimeDp);
             hasNewLineForTime = true;
             backgroundWidth = Math.max(maxChildWidth, lastLineWidth) + dp(31);
-            backgroundWidth = Math.max(backgroundWidth, (currentMessageObject.isOutOwner() ? timeWidth + dp(17) : timeWidth) + dp(31));
         } else {
             int diff = maxChildWidth - getExtraTextX() - lastLineWidth;
             if (diff >= 0 && diff <= timeMore) {
                 backgroundWidth = maxChildWidth + timeMore - diff + dp(31);
             } else {
                 backgroundWidth = Math.max(maxChildWidth, lastLineWidth + timeMore) + dp(31);
+            }
+        }
+        // Clamp outgoing bubble width to ensure edit button visibility
+        if (currentMessageObject != null && currentMessageObject.isOutOwner()) {
+            int avatarMargin = getOutgoingAvatarOffset();
+            int extraInset = Math.min(getOutgoingContentLeftInset(), dp(6));
+            int editButtonSpace = dp(8) + dp(32) + getOutgoingContentLeftInset();
+            int maxAllowed = getParentWidth() - avatarMargin - extraInset - editButtonSpace;
+            if (backgroundWidth > maxAllowed) {
+                backgroundWidth = maxAllowed;
             }
         }
     }
@@ -13994,7 +14004,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             }
             if (mediaBackground) {
                 if (currentMessageObject.isOutOwner()) {
-                    timeX = getCurrentBackgroundRight() - timeWidth - dp(32);
+                    timeX = getCurrentBackgroundRight() - timeWidth - dp(44);
                 } else {
                     timeX = backgroundWidth - dp(4) - timeWidth;
                     if (currentMessageObject.isAnyKindOfSticker()) {
@@ -14017,7 +14027,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 }
             } else {
                 if (currentMessageObject.isOutOwner()) {
-                    timeX = getCurrentBackgroundRight() - timeWidth - dp(32);
+                    timeX = getCurrentBackgroundRight() - timeWidth - dp(44);
                 } else {
                     timeX = backgroundWidth - dp(9) - timeWidth;
                     if (currentMessageObject.isAnyKindOfSticker()) {
@@ -16889,29 +16899,6 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         }
         factCheckY = linkPreviewAbove ? textY + currentMessageObject.textHeight(transitionParams) + dp(10) : linkPreviewY + linkPreviewHeight + dp(drawInstantView ? 46 : 0) + dp(linkPreviewHeight > 0 ? 4 : -8);
         unmovedTextX = textX;
-        // Reserve extra padding for single-line text so it doesn't overlap with time/status icons.
-        try {
-            boolean singleLineText = currentMessageObject != null && currentMessageObject.textHeight(transitionParams) <= dp(20);
-            if (singleLineText && currentMessageObject != null && currentMessageObject.textWidth > 0) {
-                int leftBoundary = getCurrentBackgroundLeft() + dp(currentMessageObject.isOutOwner() ? 11 : (!mediaBackground && drawPinnedBottom ? 11 : 17)) + getExtraTextX();
-                if (textX < leftBoundary) {
-                    textX = leftBoundary;
-                }
-                int extraTimeOffset = getExtraTimeX();
-                if (currentMessageObject.isOutOwner()) {
-                    extraTimeOffset += dp(28);
-                }
-                int rightBoundary = getCurrentBackgroundRight() - getMessageTextRightInset() - extraTimeOffset;
-                int textRight = textX + currentMessageObject.textWidth;
-                if (textRight > rightBoundary) {
-                    int shift = textRight - rightBoundary;
-                    textX = Math.max(leftBoundary, textX - shift);
-                }
-                unmovedTextX = textX;
-            }
-        } catch (Exception e) {
-            FileLog.e(e);
-        }
         if (currentMessageObject.textXOffset != 0 && replyNameLayout != null) {
             int diff = backgroundWidth - dp(31) - currentMessageObject.textWidth;
             if (!hasNewLineForTime) {
@@ -20152,31 +20139,35 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             return null;
         }
         if (currentUser != null) {
-            Long emojiStatusId = UserObject.getEmojiStatusDocumentId(currentUser);
-            if (emojiStatusId != null) {
-                if (currentUser.emoji_status instanceof TLRPC.TL_emojiStatusCollectible) {
-                    nameStatusSlug = ((TLRPC.TL_emojiStatusCollectible) currentUser.emoji_status).slug;
+            int mode = NekoConfig.memberPremiumIndicator.Int();
+            if (mode == NekoConfig.MEMBER_PREMIUM_INDICATOR_NONE) {
+                return null;
+            } else if (mode == NekoConfig.MEMBER_PREMIUM_INDICATOR_FAKE) {
+                try {
+                    ScamDrawable scamDrawable = new ScamDrawable(11, 1);
+                    scamDrawable.setColor(Theme.getColor(Theme.key_chats_draft, resourcesProvider));
+                    return scamDrawable;
+                } catch (Exception e) {
+                    FileLog.e(e);
+                    return ContextCompat.getDrawable(ApplicationLoader.applicationContext, R.drawable.msg_premium_liststar).mutate();
                 }
-                return emojiStatusId;
-            } else if (currentUser.premium) {
-                int mode = NekoConfig.memberPremiumIndicator.Int();
-                if (mode == NekoConfig.MEMBER_PREMIUM_INDICATOR_NONE) {
-                    return null;
-                } else if (mode == NekoConfig.MEMBER_PREMIUM_INDICATOR_FAKE) {
-                    try {
-                        return new org.telegram.ui.Components.ScamDrawable(11, 1);
-                    } catch (Exception e) {
-                        FileLog.e(e);
-                        return ContextCompat.getDrawable(ApplicationLoader.applicationContext, R.drawable.msg_premium_liststar).mutate();
+            } else if (mode == NekoConfig.MEMBER_PREMIUM_INDICATOR_SCAM) {
+                try {
+                    ScamDrawable scamDrawable = new ScamDrawable(11, 0);
+                    scamDrawable.setColor(Theme.getColor(Theme.key_chats_draft, resourcesProvider));
+                    return scamDrawable;
+                } catch (Exception e) {
+                    FileLog.e(e);
+                    return ContextCompat.getDrawable(ApplicationLoader.applicationContext, R.drawable.msg_premium_liststar).mutate();
+                }
+            } else {
+                Long emojiStatusId = UserObject.getEmojiStatusDocumentId(currentUser);
+                if (emojiStatusId != null) {
+                    if (currentUser.emoji_status instanceof TLRPC.TL_emojiStatusCollectible) {
+                        nameStatusSlug = ((TLRPC.TL_emojiStatusCollectible) currentUser.emoji_status).slug;
                     }
-                } else if (mode == NekoConfig.MEMBER_PREMIUM_INDICATOR_SCAM) {
-                    try {
-                        return new org.telegram.ui.Components.ScamDrawable(11, 0);
-                    } catch (Exception e) {
-                        FileLog.e(e);
-                        return ContextCompat.getDrawable(ApplicationLoader.applicationContext, R.drawable.msg_premium_liststar).mutate();
-                    }
-                } else {
+                    return emojiStatusId;
+                } else if (currentUser.premium) {
                     return ContextCompat.getDrawable(ApplicationLoader.applicationContext, R.drawable.msg_premium_liststar).mutate();
                 }
             }
@@ -21996,7 +21987,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             float bottom = getBackgroundDrawableBottom();
 
             if (currentMessageObject.isOutOwner()) {
-                x = left - dp(8) - buttonSize - getOutgoingContentLeftInset();
+                x = left - dp(8) - buttonSize;
                 if (currentMessagesGroup != null) {
                     x += currentMessagesGroup.transitionParams.offsetLeft - animationOffsetX;
                 }
@@ -25300,20 +25291,20 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         timeY -= dp(8.5f);
 
         float offsetX = currentMessageObject != null && currentMessageObject.isAnyKindOfSticker() ? dp(-STICKER_STATUS_OFFSET) : 0;
-        // Use bubble right edge instead of layoutWidth for outgoing messages with avatar,
+        // Use bubble right edge instead of layoutWidth for outgoing messages,
         // so status icons stay inside the bubble and don't overflow onto the avatar.
-        int statusRightX = (currentMessageObject != null && currentMessageObject.isOutOwner() && isAvatarVisible) ? getCurrentBackgroundRight() : layoutWidth;
+        int statusRightX = (currentMessageObject != null && currentMessageObject.isOutOwner()) ? getCurrentBackgroundRight() : layoutWidth;
         if (drawClock) {
             MsgClockDrawable drawable = Theme.chat_msgClockDrawable;
             int color;
             if (shouldDrawTimeOnMedia()) {
                 if (currentMessageObject.shouldDrawWithoutBackground()) {
                     color = getThemedColor(Theme.key_chat_serviceText);
-                    setDrawableBounds(drawable, layoutWidth - dp(bigRadius ? 24 : 22) - drawable.getIntrinsicWidth() + offsetX, timeY - drawable.getIntrinsicHeight() + timeYOffset);
+                    setDrawableBounds(drawable, statusRightX - dp(bigRadius ? 24 : 22) - drawable.getIntrinsicWidth() + offsetX, timeY - drawable.getIntrinsicHeight() + timeYOffset);
                     drawable.setAlpha((int) (255 * timeAlpha * alpha));
                 } else {
                     color = getThemedColor(Theme.key_chat_mediaSentClock);
-                    setDrawableBounds(drawable, layoutWidth - dp(bigRadius ? 24 : 22) - drawable.getIntrinsicWidth() + offsetX, timeY - drawable.getIntrinsicHeight() + timeYOffset);
+                    setDrawableBounds(drawable, statusRightX - dp(bigRadius ? 24 : 22) - drawable.getIntrinsicWidth() + offsetX, timeY - drawable.getIntrinsicHeight() + timeYOffset);
                     drawable.setAlpha((int) (255 * alpha));
                 }
             } else {
@@ -25346,9 +25337,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                         if (moveCheck) {
                             canvas.translate(dp(4.8f) * (1f - progress), 0);
                         }
-                        setDrawableBounds(drawable, layoutWidth - dp(bigRadius ? 28.3f : 26.3f) - drawable.getIntrinsicWidth() + offsetX, timeY - drawable.getIntrinsicHeight() + timeYOffset);
+                        setDrawableBounds(drawable, statusRightX - dp(bigRadius ? 28.3f : 26.3f) - drawable.getIntrinsicWidth() + offsetX, timeY - drawable.getIntrinsicHeight() + timeYOffset);
                     } else {
-                        setDrawableBounds(drawable, layoutWidth - dp(bigRadius ? 23.5f : 21.5f) - drawable.getIntrinsicWidth() + offsetX, timeY - drawable.getIntrinsicHeight() + timeYOffset);
+                        setDrawableBounds(drawable, statusRightX - dp(bigRadius ? 23.5f : 21.5f) - drawable.getIntrinsicWidth() + offsetX, timeY - drawable.getIntrinsicHeight() + timeYOffset);
                     }
                     drawable.setAlpha((int) (255 * timeAlpha * alpha));
                 } else {
@@ -25356,9 +25347,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                         if (moveCheck) {
                             canvas.translate(dp(4.8f) * (1f - progress), 0);
                         }
-                        setDrawableBounds(Theme.chat_msgMediaCheckDrawable, layoutWidth - dp(bigRadius ? 28.3f : 26.3f) - Theme.chat_msgMediaCheckDrawable.getIntrinsicWidth(), timeY - Theme.chat_msgMediaCheckDrawable.getIntrinsicHeight() + timeYOffset);
+                        setDrawableBounds(Theme.chat_msgMediaCheckDrawable, statusRightX - dp(bigRadius ? 28.3f : 26.3f) - Theme.chat_msgMediaCheckDrawable.getIntrinsicWidth(), timeY - Theme.chat_msgMediaCheckDrawable.getIntrinsicHeight() + timeYOffset);
                     } else {
-                        setDrawableBounds(Theme.chat_msgMediaCheckDrawable, layoutWidth - dp(bigRadius ? 23.5f : 21.5f) - Theme.chat_msgMediaCheckDrawable.getIntrinsicWidth(), timeY - Theme.chat_msgMediaCheckDrawable.getIntrinsicHeight() + timeYOffset);
+                        setDrawableBounds(Theme.chat_msgMediaCheckDrawable, statusRightX - dp(bigRadius ? 23.5f : 21.5f) - Theme.chat_msgMediaCheckDrawable.getIntrinsicWidth(), timeY - Theme.chat_msgMediaCheckDrawable.getIntrinsicHeight() + timeYOffset);
                     }
                     Theme.chat_msgMediaCheckDrawable.setAlpha((int) (255 * timeAlpha * alpha));
                     drawable = Theme.chat_msgMediaCheckDrawable;
@@ -25408,7 +25399,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         if (drawCheck1) {
             if (shouldDrawTimeOnMedia()) {
                 Drawable drawable = currentMessageObject.shouldDrawWithoutBackground() ? getThemedDrawable(Theme.key_drawable_msgStickerHalfCheck) : Theme.chat_msgMediaHalfCheckDrawable;
-                setDrawableBounds(drawable, layoutWidth - dp(bigRadius ? 23.5f : 21.5f) - drawable.getIntrinsicWidth() + offsetX, timeY - drawable.getIntrinsicHeight() + timeYOffset);
+                setDrawableBounds(drawable, statusRightX - dp(bigRadius ? 23.5f : 21.5f) - drawable.getIntrinsicWidth() + offsetX, timeY - drawable.getIntrinsicHeight() + timeYOffset);
                 drawable.setAlpha((int) (255 * timeAlpha * alpha));
                 if (useScale || moveCheck) {
                     canvas.save();
@@ -25438,10 +25429,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             int x;
             float y;
             if (shouldDrawTimeOnMedia()) {
-                x = layoutWidth - dp(34.5f);
+                x = statusRightX - dp(34.5f);
                 y = layoutHeight - dp(26.5f) + timeYOffset;
             } else {
-                x = layoutWidth - dp(32);
+                x = statusRightX - dp(32);
                 y = layoutHeight - dp(pinnedBottom || pinnedTop ? 22 : 21) + timeYOffset;
             }
             x += offsetX;

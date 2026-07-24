@@ -11500,14 +11500,18 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 return null;
             } else if (mode == NekoConfig.MEMBER_PREMIUM_INDICATOR_FAKE) {
                 try {
-                    premiumStarDrawable[a] = new ScamDrawable(11, 1);
+                    ScamDrawable sd = new ScamDrawable(11, 1);
+                    sd.setColor(getThemedColor(Theme.key_chats_draft));
+                    premiumStarDrawable[a] = sd;
                 } catch (Exception e) {
                     FileLog.e(e);
                     premiumStarDrawable[a] = ContextCompat.getDrawable(getParentActivity(), R.drawable.msg_premium_liststar).mutate();
                 }
             } else if (mode == NekoConfig.MEMBER_PREMIUM_INDICATOR_SCAM) {
                 try {
-                    premiumStarDrawable[a] = new ScamDrawable(11, 0);
+                    ScamDrawable sd = new ScamDrawable(11, 0);
+                    sd.setColor(getThemedColor(Theme.key_chats_draft));
+                    premiumStarDrawable[a] = sd;
                 } catch (Exception e) {
                     FileLog.e(e);
                     premiumStarDrawable[a] = ContextCompat.getDrawable(getParentActivity(), R.drawable.msg_premium_liststar).mutate();
@@ -11519,7 +11523,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             if (a == 1) {
                 color = dontApplyPeerColor(color);
             }
-            if (premiumStarDrawable[a] != null) {
+            if (premiumStarDrawable[a] != null && !(premiumStarDrawable[a] instanceof ScamDrawable)) {
                 premiumStarDrawable[a].setColorFilter(color, PorterDuff.Mode.MULTIPLY);
             }
             premiumCrossfadeDrawable[a] = new CrossfadeDrawable(premiumStarDrawable[a], ContextCompat.getDrawable(getParentActivity(), R.drawable.msg_premium_prolfilestar).mutate());

@@ -9100,7 +9100,7 @@ public class MessageObject {
             CharSequence blockText = text.subSequence(range.start, range.end);
             int blockMaxWidth = maxWidth;
             if (block.quote) {
-                blockMaxWidth -= dp(24);
+                blockMaxWidth -= dp(32);
             } else if (block.code) {
                 blockMaxWidth -= dp(15);
             }

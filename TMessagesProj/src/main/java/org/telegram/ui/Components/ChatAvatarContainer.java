@@ -1191,8 +1191,9 @@ public class ChatAvatarContainer extends FrameLayout implements FactorAnimator.T
                     emojiStatusDefaultDrawable = null;
                 } else if (mode == NekoConfig.MEMBER_PREMIUM_INDICATOR_FAKE) {
                     try {
-                        emojiStatusDefaultDrawable = new ScamDrawable(11, 1);
-                        emojiStatusDefaultDrawable.setColorFilter(new PorterDuffColorFilter(getThemedColor(Theme.key_profile_verifiedBackground), PorterDuff.Mode.MULTIPLY));
+                        ScamDrawable sd = new ScamDrawable(11, 1);
+                        sd.setColor(getThemedColor(Theme.key_chats_draft));
+                        emojiStatusDefaultDrawable = sd;
                     } catch (Exception e) {
                         FileLog.e(e);
                         emojiStatusDefaultDrawable = ContextCompat.getDrawable(ApplicationLoader.applicationContext, R.drawable.msg_premium_liststar).mutate();
@@ -1200,8 +1201,9 @@ public class ChatAvatarContainer extends FrameLayout implements FactorAnimator.T
                     }
                 } else if (mode == NekoConfig.MEMBER_PREMIUM_INDICATOR_SCAM) {
                     try {
-                        emojiStatusDefaultDrawable = new ScamDrawable(11, 0);
-                        emojiStatusDefaultDrawable.setColorFilter(new PorterDuffColorFilter(getThemedColor(Theme.key_profile_verifiedBackground), PorterDuff.Mode.MULTIPLY));
+                        ScamDrawable sd = new ScamDrawable(11, 0);
+                        sd.setColor(getThemedColor(Theme.key_chats_draft));
+                        emojiStatusDefaultDrawable = sd;
                     } catch (Exception e) {
                         FileLog.e(e);
                         emojiStatusDefaultDrawable = ContextCompat.getDrawable(ApplicationLoader.applicationContext, R.drawable.msg_premium_liststar).mutate();
