@@ -13914,9 +13914,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         if (currentMessageObject == null || !currentMessageObject.isOutOwner()) {
             return 0;
         }
-        int inset = dp(8);
+        int inset = dp(12);
         if (checkQuickEditVisible()) {
-            inset += dp(12);
+            inset += dp(16);
         }
         return inset;
     }
@@ -13932,21 +13932,21 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         if (currentMessageObject == null || !currentMessageObject.isOutOwner()) {
             return 0;
         }
-        return dp(12);
+        return dp(10);
     }
 
     private int getMessageTextRightInset() {
         if (currentMessageObject == null) {
             return 0;
         }
-        int inset = dp(12);
+        int inset = dp(10);
         if (drawTime && timeWidth > 0) {
             inset += timeWidth + signWidth + dp(12);
         } else {
-            inset += dp(8);
+            inset += dp(10);
         }
         if (currentMessageObject.isOutOwner()) {
-            inset += dp(14);
+            inset += dp(10);
         }
         return inset + getOutgoingTimeRightInset();
     }
@@ -16870,7 +16870,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         try {
             boolean singleLineText = currentMessageObject != null && currentMessageObject.textHeight(transitionParams) <= dp(20);
             if (singleLineText && currentMessageObject != null && currentMessageObject.textWidth > 0) {
-                int leftBoundary = getCurrentBackgroundLeft() + dp(currentMessageObject.isOutOwner() ? 6 : 12);
+                int leftBoundary = getCurrentBackgroundLeft() + dp(currentMessageObject.isOutOwner() ? 6 : (!mediaBackground && drawPinnedBottom ? 11 : 17)) + getExtraTextX();
                 if (textX < leftBoundary) {
                     textX = leftBoundary;
                 }
@@ -20762,17 +20762,12 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             } else {
                 currentBackgroundShadowDrawable = currentBackgroundDrawable.getShadowDrawable();
             }
-            // For outgoing messages, the avatar sits on the right edge. The bubble must be shifted
-            // left so the bubble right edge aligns with the avatar left edge (no overlap).
-            // - Regular messages: avatar is dp(42) wide and starts at (layoutWidth - dp(48)),
-            //   so the bubble must be shifted dp(48) to end at (layoutWidth - dp(48)).
-            // - Repost previews: avatar is dp(36) wide and starts at (layoutWidth - dp(51)),
-            //   so the bubble must be shifted dp(51) instead of dp(48) to avoid a dp(3) overlap.
-            // We also reserve extra room on the left so the quick-edit affordance stays visible.
-            backgroundDrawableLeft = layoutWidth - backgroundWidth - (isAvatarVisible ? dp(51) : 0) - (!mediaBackground ? 0 : dp(9)) - getOutgoingContentLeftInset();
+            // For outgoing messages, the avatar sits on the right edge. The bubble should stay
+            // close to the avatar without overlapping it, while also leaving room for the quick edit affordance.
+            int avatarOffset = isAvatarVisible ? dp(42) : 0;
+            backgroundDrawableLeft = layoutWidth - backgroundWidth - avatarOffset - (!mediaBackground ? dp(2) : dp(4)) - Math.min(getOutgoingContentLeftInset(), dp(6));
             if (currentMessageObject.isAnyKindOfSticker() && isAvatarVisible) {
-                // Shift outgoing stickers slightly left so the right-side avatar stays visible.
-                backgroundDrawableLeft -= dp(6);
+                backgroundDrawableLeft -= dp(1);
             }
             backgroundDrawableRight = backgroundWidth - (mediaBackground ? 0 : dp(3));
             if (currentMessagesGroup != null && !currentMessagesGroup.isDocuments) {
@@ -22265,15 +22260,12 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     public int getBackgroundDrawableLeft() {
         MessageObject messageObject = getMessageObject();
         if (messageObject != null && messageObject.isOutOwner()) {
-            int avatarMargin = isAvatarVisible ? dp(51) : 0;
-            if (messageObject.isAnyKindOfSticker() && isAvatarVisible) {
-                avatarMargin += dp(6);
-            }
-            int extraInset = getOutgoingContentLeftInset();
+            int avatarMargin = isAvatarVisible ? dp(42) : 0;
+            int extraInset = Math.min(getOutgoingContentLeftInset(), dp(6));
             if (isRoundVideo) {
-                return layoutWidth - backgroundWidth - avatarMargin - extraInset - (int) ((1f - getVideoTranscriptionProgress()) * dp(9));
+                return layoutWidth - backgroundWidth - avatarMargin - extraInset - (int) ((1f - getVideoTranscriptionProgress()) * dp(4));
             }
-            return layoutWidth - backgroundWidth - avatarMargin - extraInset - (!mediaBackground ? 0 : dp(9));
+            return layoutWidth - backgroundWidth - avatarMargin - extraInset - (!mediaBackground ? dp(2) : dp(4));
         } else {
             int r;
             boolean isUserDialog = DialogObject.isUserDialog(messageObject.getDialogId());
