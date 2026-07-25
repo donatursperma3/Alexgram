@@ -359,7 +359,7 @@ public final class SettingsBackupHelper {
     }
 
     private static int importUserConfigFromZip(byte[] zipBytes, String password) throws Exception {
-        int importCount = 0;
+        int lastImportedAccount = -1;
         try (ZipInputStream zipInput = new ZipInputStream(new BufferedInputStream(new java.io.ByteArrayInputStream(zipBytes)))) {
             ZipEntry entry;
             while ((entry = zipInput.getNextEntry()) != null) {
@@ -379,14 +379,13 @@ public final class SettingsBackupHelper {
                 }
                 String text = new String(entryBytes, java.nio.charset.StandardCharsets.UTF_8);
                 JsonObject root = GsonUtil.toJsonObject(text);
-                importUserConfig(root);
-                importCount++;
+                lastImportedAccount = importUserConfig(root);
             }
         }
-        if (importCount == 0) {
+        if (lastImportedAccount < 0) {
             throw new Exception("No account backup found in ZIP");
         }
-        return importCount;
+        return lastImportedAccount;
     }
 
     private static byte[] readAllBytes(InputStream inputStream) throws IOException {

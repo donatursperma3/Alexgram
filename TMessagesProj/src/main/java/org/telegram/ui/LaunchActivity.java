@@ -1397,7 +1397,10 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
 
     public void switchToAccount(int account, boolean removeAll,
             GenericProvider<Void, MainTabsActivity> dialogsActivityProvider) {
-        if (account == UserConfig.selectedAccount || !UserConfig.isValidAccount(account)) {
+        if (!UserConfig.isValidAccount(account)) {
+            return;
+        }
+        if (account == UserConfig.selectedAccount && !removeAll) {
             return;
         }
         switchingAccount = true;
