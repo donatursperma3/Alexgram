@@ -280,22 +280,32 @@ public final class SettingsBackupHelper {
 
     public static JsonObject backupUserConfig(int account) {
         JsonObject data = new JsonObject();
+        // Fix: Store type metadata to preserve int-vs-long distinction through JSON serialization.
+        // Without this, JSON loses type info and restore may use putLong for keys that need putInt,
+        // causing "java.lang.Long cannot be cast to java.lang.Integer" at runtime.
+        JsonObject types = new JsonObject();
         SharedPreferences preferences = UserConfig.getInstance(account).getPreferences();
         for (Map.Entry<String, ?> entry : preferences.getAll().entrySet()) {
             String key = entry.getKey();
             Object value = entry.getValue();
             if (value instanceof Boolean) {
                 data.addProperty(key, (Boolean) value);
+                types.addProperty(key, "boolean");
             } else if (value instanceof Float) {
                 data.addProperty(key, (Float) value);
+                types.addProperty(key, "float");
             } else if (value instanceof Long) {
                 data.addProperty(key, (Long) value);
+                types.addProperty(key, "long");
             } else if (value instanceof Double) {
                 data.addProperty(key, (Double) value);
+                types.addProperty(key, "float");
             } else if (value instanceof Integer) {
                 data.addProperty(key, (Integer) value);
+                types.addProperty(key, "int");
             } else if (value instanceof String) {
                 data.addProperty(key, (String) value);
+                types.addProperty(key, "string");
             } else if (value instanceof java.util.Set) {
                 JsonArray array = new JsonArray();
                 for (Object item : (java.util.Set<?>) value) {
@@ -304,8 +314,10 @@ public final class SettingsBackupHelper {
                     }
                 }
                 data.add(key, array);
+                types.addProperty(key, "stringset");
             } else if (value != null) {
                 data.addProperty(key, value.toString());
+                types.addProperty(key, "string");
             }
         }
         JsonObject result = new JsonObject();
@@ -313,6 +325,7 @@ public final class SettingsBackupHelper {
         result.addProperty("version", 1);
         result.addProperty("account", account);
         result.add("data", data);
+        result.add("__types__", types);
         return result;
     }
 
@@ -539,11 +552,16 @@ public final class SettingsBackupHelper {
         if (root.has("data") && root.get("data").isJsonObject()) {
             data = root.getAsJsonObject("data");
         }
+        // Fix: Pass type metadata to restore so int-vs-long is preserved correctly
+        JsonObject types = null;
+        if (root.has("__types__") && root.get("__types__").isJsonObject()) {
+            types = root.getAsJsonObject("__types__");
+        }
         int targetAccount = findNextAvailableAccount();
         if (targetAccount < 0) {
             throw new Exception("No free account slot available.");
         }
-        importUserConfigToAccount(targetAccount, data);
+        importUserConfigToAccount(targetAccount, data, types);
         return targetAccount;
     }
 
@@ -557,7 +575,7 @@ public final class SettingsBackupHelper {
     }
 
     @SuppressLint("ApplySharedPref")
-    private static void importUserConfigToAccount(int account, JsonObject data) {
+    private static void importUserConfigToAccount(int account, JsonObject data, JsonObject types) {
         SharedPreferences preferences = UserConfig.getInstance(account).getPreferences();
         SharedPreferences.Editor editor = preferences.edit();
         editor.clear();
@@ -568,27 +586,66 @@ public final class SettingsBackupHelper {
                 editor.remove(key);
             } else if (element.isJsonPrimitive()) {
                 JsonPrimitive primitive = element.getAsJsonPrimitive();
-                if (primitive.isBoolean()) {
-                    editor.putBoolean(key, primitive.getAsBoolean());
-                } else if (primitive.isNumber()) {
-                    String value = primitive.getAsString();
-                    if (value.contains(".")) {
-                        try {
-                            editor.putFloat(key, primitive.getAsFloat());
-                        } catch (NumberFormatException e) {
-                            editor.putString(key, value);
-                        }
-                    } else {
-                        try {
-                            editor.putLong(key, primitive.getAsLong());
-                        } catch (NumberFormatException e) {
+                // Fix: Use type metadata from backup to store values with the correct type.
+                // This prevents ClassCastException when UserConfig.loadConfig() calls
+                // getInt() on a value stored as Long, or getLong() on a value stored as Integer.
+                String typeHint = (types != null && types.has(key)) ? types.get(key).getAsString() : null;
+                if (typeHint != null) {
+                    // Type metadata available — use exact original type
+                    switch (typeHint) {
+                        case "boolean":
+                            editor.putBoolean(key, primitive.getAsBoolean());
+                            break;
+                        case "int":
                             editor.putInt(key, primitive.getAsInt());
-                        }
+                            break;
+                        case "long":
+                            editor.putLong(key, primitive.getAsLong());
+                            break;
+                        case "float":
+                            editor.putFloat(key, primitive.getAsFloat());
+                            break;
+                        case "string":
+                            editor.putString(key, primitive.getAsString());
+                            break;
+                        default:
+                            editor.putString(key, primitive.getAsString());
+                            break;
                     }
                 } else {
-                    editor.putString(key, primitive.getAsString());
+                    // Fallback for older backups without __types__ metadata
+                    if (primitive.isBoolean()) {
+                        editor.putBoolean(key, primitive.getAsBoolean());
+                    } else if (primitive.isNumber()) {
+                        String value = primitive.getAsString();
+                        if (value.contains(".")) {
+                            try {
+                                editor.putFloat(key, primitive.getAsFloat());
+                            } catch (NumberFormatException e) {
+                                editor.putString(key, value);
+                            }
+                        } else {
+                            // Heuristic: use putInt for values in int range, putLong otherwise.
+                            // This may still fail for keys that UserConfig reads with getLong()
+                            // but whose values happen to be in int range (e.g. 0).
+                            // New backups with __types__ avoid this problem entirely.
+                            try {
+                                long longValue = primitive.getAsLong();
+                                if (longValue >= Integer.MIN_VALUE && longValue <= Integer.MAX_VALUE) {
+                                    editor.putInt(key, (int) longValue);
+                                } else {
+                                    editor.putLong(key, longValue);
+                                }
+                            } catch (NumberFormatException e) {
+                                editor.putString(key, value);
+                            }
+                        }
+                    } else {
+                        editor.putString(key, primitive.getAsString());
+                    }
                 }
             } else if (element.isJsonArray()) {
+                // Fix: Handle StringSet type from type metadata or fallback
                 java.util.Set<String> set = new java.util.HashSet<>();
                 for (JsonElement item : element.getAsJsonArray()) {
                     if (item.isJsonPrimitive()) {
