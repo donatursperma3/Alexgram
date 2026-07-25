@@ -17118,7 +17118,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 right = end;
             }
             right -= dp(10 + (currentMessageObject.isOutOwner() && !mediaBackground && !drawPinnedBottom ? 6 : 0)) + getExtraTextX() + getMessageTextRightInset();
-            final float maxWidth = right - textX;
+            final float maxWidthRaw = right - textX;
+            final float bgRight = getBackgroundDrawableRight() + (transitionParams != null ? transitionParams.deltaRight : 0);
+            final float bgAvailable = bgRight - textX - dp(10 + (currentMessageObject.isOutOwner() && !mediaBackground && !drawPinnedBottom ? 6 : 0)) - getExtraTextX() - getMessageTextRightInset();
+            final float maxWidth = Math.min(maxWidthRaw, bgAvailable);
             int restore = Integer.MIN_VALUE;
             int oldAlpha = 0;
             int oldLinkAlpha = 0;
@@ -21819,7 +21822,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             right = end;
         }
         right -= dp(10 + (currentMessageObject.isOutOwner() && !mediaBackground && !drawPinnedBottom ? 6 : 0)) + getExtraTextX() + getMessageTextRightInset();
-        final float maxWidth = right - textX;
+        final float maxWidthRaw = right - textX;
+        final float bgRight = getBackgroundDrawableRight() + (transitionParams != null ? transitionParams.deltaRight : 0);
+        final float bgAvailable = bgRight - textX - dp(10 + (currentMessageObject.isOutOwner() && !mediaBackground && !drawPinnedBottom ? 6 : 0)) - getExtraTextX() - getMessageTextRightInset();
+        final float maxWidth = Math.min(maxWidthRaw, bgAvailable);
 
         for (int a = firstVisibleBlockNum; a <= lastVisibleBlockNum; a++) {
             if (a >= textLayoutBlocks.size()) {
