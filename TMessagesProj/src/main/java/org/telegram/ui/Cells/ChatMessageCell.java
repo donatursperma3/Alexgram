@@ -14004,7 +14004,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             }
             if (mediaBackground) {
                 if (currentMessageObject.isOutOwner()) {
-                    timeX = getCurrentBackgroundRight() - timeWidth - dp(44);
+                    // Fix: Add adequate padding for time & message ID text on outgoing messages
+                    timeX = getCurrentBackgroundRight() - timeWidth - dp(46);
                 } else {
                     timeX = backgroundWidth - dp(4) - timeWidth;
                     if (currentMessageObject.isAnyKindOfSticker()) {
@@ -14027,7 +14028,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 }
             } else {
                 if (currentMessageObject.isOutOwner()) {
-                    timeX = getCurrentBackgroundRight() - timeWidth - dp(44);
+                    // Fix: Add adequate padding for time & message ID text on outgoing messages
+                    timeX = getCurrentBackgroundRight() - timeWidth - dp(46);
                 } else {
                     timeX = backgroundWidth - dp(9) - timeWidth;
                     if (currentMessageObject.isAnyKindOfSticker()) {
@@ -25298,9 +25300,15 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         timeY -= dp(8.5f);
 
         float offsetX = currentMessageObject != null && currentMessageObject.isAnyKindOfSticker() ? dp(-STICKER_STATUS_OFFSET) : 0;
-        // Use bubble right edge instead of layoutWidth for outgoing messages,
-        // so status icons stay inside the bubble and don't overflow onto the avatar.
+        // Fix: Use bubble right edge for outgoing messages and synchronize status icon position with transition offsets
         int statusRightX = (currentMessageObject != null && currentMessageObject.isOutOwner()) ? getCurrentBackgroundRight() : layoutWidth;
+        if (currentMessageObject != null && currentMessageObject.isOutOwner()) {
+            if (transitionParams.shouldAnimateTimeX) {
+                statusRightX = (int) lerp(transitionParams.animateFromTimeX + timeWidth + dp(46), statusRightX, transitionParams.animateChangeProgress);
+            } else {
+                statusRightX += (int) (transitionParams.deltaRight + animationOffsetX);
+            }
+        }
         if (drawClock) {
             MsgClockDrawable drawable = Theme.chat_msgClockDrawable;
             int color;
