@@ -118,7 +118,7 @@ fun DashboardScreen(vm: DashboardViewModel = viewModel()) {
             // ── Live Activity ─────────────────────────────────────────────────
             item {
                 AnimatedIn(isVisible, 200) {
-                    SectionLabel("LIVE ACTIVITY", "Account message volume (14d)", Icons.AutoMirrored.Filled.ShowChart, NeonCyan)
+                    SectionLabel("LIVE ACTIVITY", "Account message volume (14d)", Icons.Filled.ShowChart, NeonCyan)
                 }
             }
             item {
@@ -463,7 +463,7 @@ fun AccountActivityPulseChart(history: List<xyz.nextalone.nagram.analytics.data.
             if (history.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.AutoMirrored.Filled.ShowChart, null, tint = c.textSecondary.copy(0.4f), modifier = Modifier.size(36.dp))
+                        Icon(Icons.Filled.ShowChart, null, tint = c.textSecondary.copy(0.4f), modifier = Modifier.size(36.dp))
                         Spacer(Modifier.height(6.dp))
                         Text("Start messaging to see your pulse", color = c.textSecondary, fontSize = 11.sp)
                     }
@@ -843,13 +843,13 @@ fun SessionInsightsCard(state: xyz.nextalone.nagram.analytics.ui.viewmodel.Dashb
             Text("All-Time Breakdown", color = c.textPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(14.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                InsightTile(Modifier.weight(1f), "Sent", si.totalSent.toString(), NeonCyan, Icons.AutoMirrored.Filled.Send)
+                InsightTile(Modifier.weight(1f), "Sent", si.totalSent.toString(), NeonCyan, Icons.Filled.Send)
                 InsightTile(Modifier.weight(1f), "Received", si.totalReceived.toString(), NeonPurple, Icons.Default.Inbox)
             }
             Spacer(Modifier.height(10.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 InsightTile(Modifier.weight(1f), "Media", si.totalMedia.toString(), NeonOrange, Icons.Default.Image)
-                InsightTile(Modifier.weight(1f), "Chats", si.uniqueChats.toString(), NeonGreen, Icons.AutoMirrored.Filled.Chat)
+                InsightTile(Modifier.weight(1f), "Chats", si.uniqueChats.toString(), NeonGreen, Icons.Filled.Chat)
             }
             if (si.totalTimeSeconds > 0) {
                 Spacer(Modifier.height(10.dp))
