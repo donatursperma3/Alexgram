@@ -267,9 +267,9 @@ public class AccountsSettingsActivity extends BaseNekoXSettingsActivity {
         try {
             int count = SettingsBackupHelper.importUserConfig(getParentActivity(), uri, password);
             if (count == 1) {
-                AlertUtil.showSimpleAlert(getParentActivity(), getString(R.string.AccountRestoreSuccess, 1));
+                AlertUtil.showSimpleAlert(getParentActivity(), getParentActivity().getString(R.string.AccountRestoreSuccess, 1));
             } else {
-                AlertUtil.showSimpleAlert(getParentActivity(), getString(R.string.AccountRestoreCountSuccess, count));
+                AlertUtil.showSimpleAlert(getParentActivity(), getParentActivity().getString(R.string.AccountRestoreCountSuccess, count));
             }
         } catch (SettingsBackupHelper.BackupPasswordRequiredException e) {
             promptPassword(getString(R.string.AccountDecryptPasswordTitle), getString(R.string.AccountBackupPasswordHint), pwd -> attemptImportAccountBackup(uri, pwd));
