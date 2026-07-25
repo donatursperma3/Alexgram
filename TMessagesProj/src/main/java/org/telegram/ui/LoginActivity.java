@@ -814,6 +814,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         // [Alexgram: Bot Login] - Start
         moreButtonView.addSubItem(5, R.drawable.msg_bot, getString(R.string.BotLoginBotToken));
         // [Alexgram: Bot Login] - End
+        moreButtonView.addSubItem(6, R.drawable.msg_archive, getString(R.string.RestoreAccountFromBackupFile));
         moreButtonView.setDelegate(id -> {
             if (id == 0) {
                 presentFragment(new ProxyListActivity());
@@ -839,6 +840,8 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             } else if (id == 5) {
                 setPage(VIEW_BOT_LOGIN, true, null, false);
             // [Alexgram: Bot Login] - End
+            } else if (id == 6) {
+                restoreAccountFromFile();
             }
         });
         moreButtonView.setSubMenuOpenSide(1);
@@ -1222,8 +1225,79 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         return false;
     }
 
+    private static final int REQUEST_CODE_RESTORE_ACCOUNT_FILE = 1025;
+
+    private void restoreAccountFromFile() {
+        try {
+            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            intent.setType("*/*");
+            intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"application/json", "application/zip"});
+            startActivityForResult(intent, REQUEST_CODE_RESTORE_ACCOUNT_FILE);
+        } catch (Exception e) {
+            tw.nekomimi.nekogram.utils.AlertUtil.showSimpleAlert(getParentActivity(), e);
+        }
+    }
+
+    private void attemptImportAccountBackup(Uri uri, String password) {
+        if (getParentActivity() == null) {
+            return;
+        }
+        try {
+            int targetAccount = tw.nekomimi.nekogram.helpers.SettingsBackupHelper.importUserConfig(getParentActivity(), uri, password);
+            UserConfig.getInstance(targetAccount).loadConfig();
+            UserConfig.selectedAccount = targetAccount;
+            UserConfig.getInstance(targetAccount).saveConfig(false);
+            if (getParentActivity() instanceof LaunchActivity) {
+                ((LaunchActivity) getParentActivity()).switchToAccount(targetAccount, true);
+            }
+        } catch (tw.nekomimi.nekogram.helpers.SettingsBackupHelper.BackupPasswordRequiredException e) {
+            promptRestorePassword(getString(R.string.AccountDecryptPasswordTitle), getString(R.string.AccountBackupPasswordHint), pwd -> attemptImportAccountBackup(uri, pwd));
+        } catch (tw.nekomimi.nekogram.helpers.SettingsBackupHelper.BackupPasswordInvalidException e) {
+            tw.nekomimi.nekogram.utils.AlertUtil.showSimpleAlert(getParentActivity(), new IllegalArgumentException(getString(R.string.AccountBackupPasswordInvalid)));
+        } catch (Exception e) {
+            tw.nekomimi.nekogram.utils.AlertUtil.showSimpleAlert(getParentActivity(), e);
+        }
+    }
+
+    private void promptRestorePassword(String title, String message, java.util.function.Consumer<String> callback) {
+        if (getParentActivity() == null) {
+            return;
+        }
+        LinearLayout layout = new LinearLayout(getParentActivity());
+        layout.setOrientation(LinearLayout.VERTICAL);
+        int padding = AndroidUtilities.dp(14);
+        layout.setPadding(padding, padding, padding, padding);
+
+        EditText passwordEdit = new EditText(getParentActivity());
+        passwordEdit.setHint(getString(R.string.AccountBackupPasswordHint));
+        passwordEdit.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        passwordEdit.setTransformationMethod(android.text.method.PasswordTransformationMethod.getInstance());
+        layout.addView(passwordEdit, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+
+        android.app.AlertDialog dialog = new android.app.AlertDialog.Builder(getParentActivity())
+                .setTitle(title)
+                .setMessage(message)
+                .setView(layout)
+                .setPositiveButton(getString(R.string.OK), (d, which) -> callback.accept(passwordEdit.getText().toString()))
+                .setNegativeButton(getString(R.string.Cancel), null)
+                .create();
+        dialog.show();
+    }
+
     @Override
     public void onActivityResultFragment(int requestCode, int resultCode, Intent data) {
+        if (requestCode == REQUEST_CODE_RESTORE_ACCOUNT_FILE && resultCode == Activity.RESULT_OK && data != null && data.getData() != null) {
+            Uri uri = data.getData();
+            if (getParentActivity() != null) {
+                try {
+                    getParentActivity().getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                } catch (Exception ignore) {
+                }
+            }
+            attemptImportAccountBackup(uri, null);
+            return;
+        }
         LoginActivityRegisterView registerView = (LoginActivityRegisterView) views[VIEW_REGISTER];
         if (registerView != null) {
             registerView.imageUpdater.onActivityResult(requestCode, resultCode, data);
