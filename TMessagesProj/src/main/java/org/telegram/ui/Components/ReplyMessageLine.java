@@ -418,7 +418,8 @@ public class ReplyMessageLine {
         if (messageObject.shouldDrawWithoutBackground()) {
             hasColor2 = false;
             hasColor3 = false;
-            color1 = color2 = color3 = Color.WHITE;
+            // Fix: Use dark/light theme contrast color for quote/reply lines without bubble background (e.g. channel posts)
+            color1 = color2 = color3 = dark ? Color.WHITE : Theme.getColor(Theme.key_chat_stickerReplyNameText, resourcesProvider);
             backgroundColor = Color.TRANSPARENT;
             nameColor = Theme.getColor(Theme.key_chat_stickerReplyNameText, resourcesProvider);
         } else if (messageObject.isOutOwner() || type == TYPE_CODE) {

@@ -68,9 +68,11 @@ public class DrawerUserCell extends FrameLayout implements NotificationCenter.No
         avatarDrawable = new AvatarDrawable();
         avatarDrawable.setTextSize(dp(20));
 
-        int avatarStart = AndroidUtilities.dp(32);
-        int textStart = AndroidUtilities.dp(90);
-        int checkBoxStart = AndroidUtilities.dp(55);
+        // Fix: Standardize drawer account list text alignment to 72dp grid to match DrawerActionCell
+        int avatarStart = AndroidUtilities.dp(16);
+        int textStart = AndroidUtilities.dp(72);
+        // Fix: Position account checkbox badge on bottom-right of avatar (36dp start)
+        int checkBoxStart = AndroidUtilities.dp(36);
 
         imageView = new BackupImageView(context);
         imageView.setRoundRadius(dp(18));
@@ -122,7 +124,7 @@ public class DrawerUserCell extends FrameLayout implements NotificationCenter.No
         addView(checkBox, LayoutHelper.createFrame(18, 18,
                 (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP,
                 LocaleController.isRTL ? 0 : checkBoxStart,
-                27,
+                24,
                 LocaleController.isRTL ? checkBoxStart : 0,
                 0));
 
@@ -281,14 +283,14 @@ public class DrawerUserCell extends FrameLayout implements NotificationCenter.No
         final int countTop = dp(12.5f);
         final int textWidth = (int) Math.ceil(Theme.dialogs_countTextPaint.measureText(text));
         final int countWidth = Math.max(dp(10), textWidth);
-        final int countRight = getMeasuredWidth() - dp(44);
+        final int countRight = getMeasuredWidth() - dp(18);
         final int x = countRight - countWidth - dp(14);
         rect.set(x, countTop, countRight, countTop + dp(23));
         canvas.drawRoundRect(rect, 11.5f * AndroidUtilities.density, 11.5f * AndroidUtilities.density, Theme.dialogs_countPaint);
 
         canvas.drawText(text, rect.left + (rect.width() - textWidth) / 2, countTop + dp(16), Theme.dialogs_countTextPaint);
 
-        textView.setRightPadding(countWidth + dp(52));
+        textView.setRightPadding(countWidth + dp(28));
     }
 
     private void drawSelectedAccountBackground(Canvas canvas) {
@@ -301,7 +303,7 @@ public class DrawerUserCell extends FrameLayout implements NotificationCenter.No
                 Theme.isCurrentThemeDark() ? 0.70f : 0.45f
         );
         selectedBackgroundPaint.setColor(Theme.blendOver(menuBackground, selectorOverlay));
-        rect.set(dp(22), dp(2), getMeasuredWidth() - dp(30), getMeasuredHeight() - dp(2));
+        rect.set(dp(8), dp(2), getMeasuredWidth() - dp(8), getMeasuredHeight() - dp(2));
         canvas.drawRoundRect(rect, dp(13), dp(13), selectedBackgroundPaint);
 
         avatarRingPaint.setStyle(Paint.Style.STROKE);

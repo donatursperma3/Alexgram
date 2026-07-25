@@ -7834,7 +7834,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                         backgroundWidth = Math.min(getParentWidth() - dp(50), dp(270));
                     }
                 } else {
-                    backgroundWidth = messageObject.textWidth + getExtraTextX() * 2 + (hasGamePreview || hasInvoicePreview ? dp(10) : 0);
+                    backgroundWidth = messageObject.textWidth + dp(22) + getExtraTextX() * 2 + (hasGamePreview || hasInvoicePreview ? dp(10) : 0);
                 }
                 if (messageObject.isSponsored()) {
                     totalHeight = dp(22.5f);
@@ -23298,7 +23298,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                         end -= getExtraTextX() + dp(8) + lerp(dp(isAvatarVisible ? 48 : 0), dp(ChatActivity.SIDE_MENU_WIDTH), sideMenuAlpha);
                         right = end;
                     }
-                    right -= dp(10 + (currentMessageObject.isOutOwner() && !mediaBackground && !drawPinnedBottom ? 6 : 0)) + getExtraTextX() + (currentMessageObject != null && currentMessageObject.isOutOwner() ? getOutgoingContentRightInset() : 0);
+                    // Fix: Align reply quote highlight box right bound smoothly with bubble inner padding for outgoing messages
+                    right -= dp(10) + getExtraTextX() + (currentMessageObject != null && currentMessageObject.isOutOwner() ? getOutgoingContentRightInset() : 0);
                     replySelectorRect.set(
                         (backgroundDrawableLeft + transitionParams.deltaLeft + dp(10 + (!currentMessageObject.isOutOwner() && !mediaBackground && !drawPinnedBottom ? 6 : 0)) + getExtraTextX()),
                         (replyStartY - dp((!mediaBackground && drawPinnedTop && !drawNameLayout ? 2 : 0)) - (drawForwardedName && forwardedNameLayout[0] != null && !drawNameLayout ? 2 : 0)),

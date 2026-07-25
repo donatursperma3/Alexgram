@@ -164,10 +164,12 @@
     <string name="MaxActiveAccountsWarning">You currently have %1$d active accounts. Setting the limit to %2$d will prevent you from adding new accounts until you log out of some.</string>
     <string name="AccountBackupHeader">Account Backup</string>
     <string name="BackupCurrentAccount">Backup current account</string>
-    <string name="BackupCurrentAccountZip">Export account as ZIP</string>
-    <string name="BackupCurrentAccountEncryptedZip">Export account as encrypted ZIP</string>
+    <string name="BackupCurrentAccountZip">Export current account as ZIP</string>
+    <string name="BackupCurrentAccountEncryptedZip">Export current account as encrypted ZIP</string>
+    <string name="BackupAllAccountsZip">Export all accounts as ZIP</string>
+    <string name="BackupAllAccountsEncryptedZip">Export all accounts as encrypted ZIP</string>
     <string name="AppendCurrentAccountToZip">Append current account to ZIP</string>
-    <string name="RestoreAccountFromBackupFile">Restore account from backup file</string>
+    <string name="RestoreAccountFromBackupFile">Restore and append accounts from backup file</string>
     <string name="AccountBackupPasswordTitle">Backup password</string>
     <string name="AccountDecryptPasswordTitle">Enter backup password</string>
     <string name="AccountBackupPasswordHint">Password for backup file</string>

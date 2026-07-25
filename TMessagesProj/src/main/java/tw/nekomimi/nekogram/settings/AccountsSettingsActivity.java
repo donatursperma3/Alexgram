@@ -98,6 +98,12 @@ public class AccountsSettingsActivity extends BaseNekoXSettingsActivity {
     private final AbstractConfigCell backupCurrentAccountEncryptedZipRow = cellGroup.appendCell(
             new ConfigCellText("BackupCurrentAccountEncryptedZip", this::backupCurrentAccountEncryptedZip));
 
+    private final AbstractConfigCell backupAllAccountsZipRow = cellGroup.appendCell(
+            new ConfigCellText("BackupAllAccountsZip", this::backupAllAccountsZip));
+
+    private final AbstractConfigCell backupAllAccountsEncryptedZipRow = cellGroup.appendCell(
+            new ConfigCellText("BackupAllAccountsEncryptedZip", this::backupAllAccountsEncryptedZip));
+
     private final AbstractConfigCell appendCurrentAccountToZipRow = cellGroup.appendCell(
             new ConfigCellText("AppendCurrentAccountToZip", this::appendCurrentAccountToZip));
 
@@ -182,6 +188,41 @@ public class AccountsSettingsActivity extends BaseNekoXSettingsActivity {
 
     private void backupCurrentAccountEncryptedZip() {
         backupAccountZip(true);
+    }
+
+    private void backupAllAccountsZip() {
+        backupAllAccounts(false);
+    }
+
+    private void backupAllAccountsEncryptedZip() {
+        backupAllAccounts(true);
+    }
+
+    private void backupAllAccounts(boolean encrypted) {
+        if (getParentActivity() == null) {
+            return;
+        }
+        if (encrypted) {
+            promptPassword(getString(R.string.AccountBackupPasswordTitle), getString(R.string.AccountBackupPasswordHint), password -> {
+                if (password == null || password.isEmpty()) {
+                    AlertUtil.showSimpleAlert(getParentActivity(), new IllegalArgumentException(getString(R.string.AccountBackupPasswordRequired)));
+                    return;
+                }
+                try {
+                    File backupFile = SettingsBackupHelper.backupAllAccountsZip(getParentActivity(), password);
+                    tw.nekomimi.nekogram.utils.ShareUtil.shareFile(getParentActivity(), backupFile);
+                } catch (Exception e) {
+                    AlertUtil.showSimpleAlert(getParentActivity(), e);
+                }
+            });
+        } else {
+            try {
+                File backupFile = SettingsBackupHelper.backupAllAccountsZip(getParentActivity(), null);
+                tw.nekomimi.nekogram.utils.ShareUtil.shareFile(getParentActivity(), backupFile);
+            } catch (Exception e) {
+                AlertUtil.showSimpleAlert(getParentActivity(), e);
+            }
+        }
     }
 
     private void backupAccountZip(boolean encrypted) {

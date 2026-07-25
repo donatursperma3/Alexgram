@@ -8561,7 +8561,7 @@ public class MessageObject {
             maxWidth = generatedWithMinSize - dp(45 + 15);
             if (sideMenuEnabled) {
                 maxWidth -= dp(64);
-            } else if (needDrawAvatarInternal() && !isOutOwner() && !messageOwner.isThreadMessage) {
+            } else if (needDrawAvatarInternal() && (!isOutOwner() || needDrawOutgoingAvatar()) && !messageOwner.isThreadMessage) {
                 maxWidth -= dp(52);
             }
         } else if (getMedia(messageOwner) instanceof TLRPC.TL_messageMediaWebPage && getMedia(messageOwner).webpage != null && "telegram_background".equals(getMedia(messageOwner).webpage.type)) {
@@ -8581,7 +8581,7 @@ public class MessageObject {
             maxWidth = generatedWithMinSize - dp(type == TYPE_ARTICLE ? 40 : 80);
             if (sideMenuEnabled) {
                 maxWidth -= dp(64);
-            } else if (needDrawAvatarInternal() && !isOutOwner() && !messageOwner.isThreadMessage) {
+            } else if (needDrawAvatarInternal() && (!isOutOwner() || needDrawOutgoingAvatar()) && !messageOwner.isThreadMessage) {
                 maxWidth -= dp(52);
             }
             if (needDrawShareButton() && (isSaved || !isOutOwner())) {
@@ -9322,7 +9322,7 @@ public class MessageObject {
             }
         }
 
-        hasWideCode = hasCode && textWidth > generatedWithMinSize - dp(80 + (needDrawAvatarInternal() && !isOutOwner() && !messageOwner.isThreadMessage ? 52 : 0));
+        hasWideCode = hasCode && textWidth > generatedWithMinSize - dp(80 + (needDrawAvatarInternal() && (!isOutOwner() || needDrawOutgoingAvatar()) && !messageOwner.isThreadMessage ? 52 : 0));
         factCheckText = null;
     }
 
@@ -9844,6 +9844,24 @@ public class MessageObject {
             channelSignatureProfiles = getDialogId() == UserObject.VERIFY;
         }
         return !isSponsored() && (isFromUser() || isFromGroup() || channelSignatureProfiles || eventId != 0 || messageOwner.fwd_from != null && messageOwner.fwd_from.saved_from_peer != null);
+    }
+
+    public boolean needDrawOutgoingAvatar() {
+        if (!isOutOwner()) {
+            return false;
+        }
+        long dialogId = getDialogId();
+        boolean isUserDialog = DialogObject.isUserDialog(dialogId);
+        boolean isChatDialog = DialogObject.isChatDialog(dialogId);
+        boolean isPersonalDialog = isUserDialog || dialogId == UserObject.REPLY_BOT;
+
+        if (isChatDialog) {
+            return NekoConfig.showOutgoingAvatarInGroupChat.Bool() && needDrawAvatarInternal();
+        }
+        if (isPersonalDialog) {
+            return NekoConfig.showOutgoingAvatarInPersonalChat.Bool() && needDrawAvatarInternal();
+        }
+        return needDrawAvatarInternal();
     }
 
     private boolean needDrawAvatarInternal() {

@@ -406,6 +406,38 @@ public final class SettingsBackupHelper {
         return cacheFile;
     }
 
+    // Fix: Export all activated accounts into a single plain or encrypted ZIP backup file
+    public static File backupAllAccountsZip(Context context, String password) throws Exception {
+        ArrayList<Integer> activeAccounts = new ArrayList<>();
+        for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+            if (AccountInstance.getInstance(a).getUserConfig().isClientActivated()) {
+                activeAccounts.add(a);
+            }
+        }
+        if (activeAccounts.isEmpty()) {
+            throw new Exception("No active accounts found to backup");
+        }
+        File cacheFile = new File(AndroidUtilities.getCacheDir(), String.format("alexgram-all-accounts-%d.zip", System.currentTimeMillis()));
+        try (FileOutputStream fos = new FileOutputStream(cacheFile);
+             BufferedOutputStream bos = new BufferedOutputStream(fos);
+             ZipOutputStream zos = new ZipOutputStream(bos)) {
+            for (int account : activeAccounts) {
+                JsonObject backupObject = backupUserConfig(account);
+                byte[] data = backupObject.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                String entryName = String.format("alexgram-account-%d.json", account);
+                if (password != null && !password.isEmpty()) {
+                    data = encryptBackupData(data, password);
+                    entryName += ".enc";
+                }
+                ZipEntry zipEntry = new ZipEntry(entryName);
+                zos.putNextEntry(zipEntry);
+                zos.write(data);
+                zos.closeEntry();
+            }
+        }
+        return cacheFile;
+    }
+
     public static File appendUserConfigToZip(Context context, int account, android.net.Uri uri, String password) throws Exception {
         if (context == null || uri == null) {
             throw new IllegalArgumentException("Invalid append parameters");
@@ -568,6 +600,10 @@ public final class SettingsBackupHelper {
         }
         editor.commit();
         UserConfig.getInstance(account).reloadConfig();
+        AndroidUtilities.runOnUIThread(() -> {
+            org.telegram.messenger.NotificationCenter.getGlobalInstance().postNotificationName(org.telegram.messenger.NotificationCenter.mainUserInfoChanged);
+            org.telegram.messenger.NotificationCenter.getInstance(account).postNotificationName(org.telegram.messenger.NotificationCenter.mainUserInfoChanged);
+        });
     }
 
     public static void backupSettings(Context context, Theme.ResourcesProvider resourceProvider) {
