@@ -10,6 +10,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.widget.LinearLayout;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
@@ -28,15 +29,33 @@ import org.telegram.ui.Cells.CheckBoxCell;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.LaunchActivity;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
+
+import javax.crypto.AEADBadTagException;
+import javax.crypto.Cipher;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 
 import kotlin.text.StringsKt;
+import org.telegram.messenger.Utilities;
 import tw.nekomimi.nekogram.DialogConfig;
 import tw.nekomimi.nekogram.NekoConfig;
 import tw.nekomimi.nekogram.utils.AlertUtil;
@@ -255,6 +274,298 @@ public final class SettingsBackupHelper {
             }
             editor.commit();
         }
+    }
+
+    public static JsonObject backupUserConfig(int account) {
+        JsonObject data = new JsonObject();
+        SharedPreferences preferences = UserConfig.getInstance(account).getPreferences();
+        for (Map.Entry<String, ?> entry : preferences.getAll().entrySet()) {
+            String key = entry.getKey();
+            Object value = entry.getValue();
+            if (value instanceof Boolean) {
+                data.addProperty(key, (Boolean) value);
+            } else if (value instanceof Float) {
+                data.addProperty(key, (Float) value);
+            } else if (value instanceof Long) {
+                data.addProperty(key, (Long) value);
+            } else if (value instanceof Double) {
+                data.addProperty(key, (Double) value);
+            } else if (value instanceof Integer) {
+                data.addProperty(key, (Integer) value);
+            } else if (value instanceof String) {
+                data.addProperty(key, (String) value);
+            } else if (value instanceof java.util.Set) {
+                JsonArray array = new JsonArray();
+                for (Object item : (java.util.Set<?>) value) {
+                    if (item != null) {
+                        array.add(item.toString());
+                    }
+                }
+                data.add(key, array);
+            } else if (value != null) {
+                data.addProperty(key, value.toString());
+            }
+        }
+        JsonObject result = new JsonObject();
+        result.addProperty("format", "AlexgramAccountBackup");
+        result.addProperty("version", 1);
+        result.addProperty("account", account);
+        result.add("data", data);
+        return result;
+    }
+
+    public static File backupUserConfig(Context context, int account) throws Exception {
+        JsonObject backupObject = backupUserConfig(account);
+        File cacheFile = new File(AndroidUtilities.getCacheDir(), String.format("alexgram-account-%d-%d.json", account, System.currentTimeMillis()));
+        FileUtil.writeUtf8String(backupObject.toString(), cacheFile);
+        return cacheFile;
+    }
+
+    public static int importUserConfig(Context context, android.net.Uri uri) throws Exception {
+        return importUserConfig(context, uri, null);
+    }
+
+    public static int importUserConfig(Context context, android.net.Uri uri, String password) throws Exception {
+        if (context == null || uri == null) {
+            throw new IllegalArgumentException("Invalid import parameters");
+        }
+        try (InputStream is = context.getContentResolver().openInputStream(uri)) {
+            if (is == null) {
+                throw new IOException("Unable to open file");
+            }
+            byte[] fileBytes = is.readAllBytes();
+            if (fileBytes.length >= 2 && fileBytes[0] == 'P' && fileBytes[1] == 'K') {
+                return importUserConfigFromZip(fileBytes, password);
+            }
+            String text = new String(fileBytes, java.nio.charset.StandardCharsets.UTF_8);
+            JsonObject root = GsonUtil.toJsonObject(text);
+            return importUserConfig(root);
+        }
+    }
+
+    private static int importUserConfigFromZip(byte[] zipBytes, String password) throws Exception {
+        int importCount = 0;
+        try (ZipInputStream zipInput = new ZipInputStream(new BufferedInputStream(new java.io.ByteArrayInputStream(zipBytes)))) {
+            ZipEntry entry;
+            while ((entry = zipInput.getNextEntry()) != null) {
+                if (entry.isDirectory()) {
+                    continue;
+                }
+                String name = entry.getName();
+                byte[] entryBytes = readAllBytes(zipInput);
+                if (name.endsWith(".json.enc")) {
+                    if (password == null) {
+                        throw new BackupPasswordRequiredException();
+                    }
+                    entryBytes = decryptBackupData(entryBytes, password);
+                }
+                if (!name.endsWith(".json") && !name.endsWith(".json.enc")) {
+                    continue;
+                }
+                String text = new String(entryBytes, java.nio.charset.StandardCharsets.UTF_8);
+                JsonObject root = GsonUtil.toJsonObject(text);
+                importUserConfig(root);
+                importCount++;
+            }
+        }
+        if (importCount == 0) {
+            throw new Exception("No account backup found in ZIP");
+        }
+        return importCount;
+    }
+
+    private static byte[] readAllBytes(InputStream inputStream) throws IOException {
+        java.io.ByteArrayOutputStream buffer = new java.io.ByteArrayOutputStream();
+        byte[] chunk = new byte[8192];
+        int read;
+        while ((read = inputStream.read(chunk)) != -1) {
+            buffer.write(chunk, 0, read);
+        }
+        return buffer.toByteArray();
+    }
+
+    public static File backupUserConfigZip(Context context, int account, String password) throws Exception {
+        JsonObject backupObject = backupUserConfig(account);
+        byte[] data = backupObject.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        String entryName = String.format("alexgram-account-%d-%d.json", account, System.currentTimeMillis());
+        if (password != null && !password.isEmpty()) {
+            data = encryptBackupData(data, password);
+            entryName += ".enc";
+        }
+        File cacheFile = new File(AndroidUtilities.getCacheDir(), String.format("alexgram-account-%d-%d.zip", account, System.currentTimeMillis()));
+        try (FileOutputStream fos = new FileOutputStream(cacheFile);
+             BufferedOutputStream bos = new BufferedOutputStream(fos);
+             ZipOutputStream zos = new ZipOutputStream(bos)) {
+            ZipEntry zipEntry = new ZipEntry(entryName);
+            zos.putNextEntry(zipEntry);
+            zos.write(data);
+            zos.closeEntry();
+        }
+        return cacheFile;
+    }
+
+    public static File appendUserConfigToZip(Context context, int account, android.net.Uri uri, String password) throws Exception {
+        if (context == null || uri == null) {
+            throw new IllegalArgumentException("Invalid append parameters");
+        }
+        try (InputStream is = context.getContentResolver().openInputStream(uri)) {
+            if (is == null) {
+                throw new IOException("Unable to open file");
+            }
+            byte[] existingZip = is.readAllBytes();
+            if (existingZip.length < 2 || existingZip[0] != 'P' || existingZip[1] != 'K') {
+                throw new IllegalArgumentException("Selected file is not a ZIP archive");
+            }
+            byte[] newEntryBytes = backupUserConfig(account).toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            String newEntryName = String.format("alexgram-account-%d-%d.json", account, System.currentTimeMillis());
+            if (password != null && !password.isEmpty()) {
+                newEntryBytes = encryptBackupData(newEntryBytes, password);
+                newEntryName += ".enc";
+            }
+            File cacheFile = new File(AndroidUtilities.getCacheDir(), String.format("alexgram-account-append-%d-%d.zip", account, System.currentTimeMillis()));
+            try (ZipInputStream zis = new ZipInputStream(new BufferedInputStream(new java.io.ByteArrayInputStream(existingZip)));
+                 FileOutputStream fos = new FileOutputStream(cacheFile);
+                 BufferedOutputStream bos = new BufferedOutputStream(fos);
+                 ZipOutputStream zos = new ZipOutputStream(bos)) {
+                ZipEntry entry;
+                byte[] buffer = new byte[8192];
+                while ((entry = zis.getNextEntry()) != null) {
+                    ZipEntry copyEntry = new ZipEntry(entry.getName());
+                    copyEntry.setTime(entry.getTime());
+                    zos.putNextEntry(copyEntry);
+                    int count;
+                    while ((count = zis.read(buffer)) != -1) {
+                        zos.write(buffer, 0, count);
+                    }
+                    zos.closeEntry();
+                    zis.closeEntry();
+                }
+                ZipEntry newEntry = new ZipEntry(newEntryName);
+                zos.putNextEntry(newEntry);
+                zos.write(newEntryBytes);
+                zos.closeEntry();
+            }
+            return cacheFile;
+        }
+    }
+
+    private static byte[] encryptBackupData(byte[] plaintext, String password) throws Exception {
+        SecureRandom random = new SecureRandom();
+        byte[] salt = new byte[16];
+        random.nextBytes(salt);
+        byte[] keyBytes = Utilities.computePBKDF2(password.getBytes(java.nio.charset.StandardCharsets.UTF_8), salt);
+        byte[] key = Arrays.copyOf(keyBytes, 32);
+        byte[] iv = new byte[12];
+        random.nextBytes(iv);
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+        cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key, "AES"), new GCMParameterSpec(128, iv));
+        byte[] ciphertext = cipher.doFinal(plaintext);
+        byte[] output = new byte[16 + 12 + ciphertext.length];
+        System.arraycopy(salt, 0, output, 0, 16);
+        System.arraycopy(iv, 0, output, 16, 12);
+        System.arraycopy(ciphertext, 0, output, 28, ciphertext.length);
+        return output;
+    }
+
+    private static byte[] decryptBackupData(byte[] encryptedData, String password) throws Exception {
+        if (encryptedData.length < 28) {
+            throw new BackupPasswordInvalidException();
+        }
+        byte[] salt = Arrays.copyOfRange(encryptedData, 0, 16);
+        byte[] iv = Arrays.copyOfRange(encryptedData, 16, 28);
+        byte[] ciphertext = Arrays.copyOfRange(encryptedData, 28, encryptedData.length);
+        byte[] keyBytes = Utilities.computePBKDF2(password.getBytes(java.nio.charset.StandardCharsets.UTF_8), salt);
+        byte[] key = Arrays.copyOf(keyBytes, 32);
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+        cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(key, "AES"), new GCMParameterSpec(128, iv));
+        try {
+            return cipher.doFinal(ciphertext);
+        } catch (AEADBadTagException e) {
+            throw new BackupPasswordInvalidException();
+        }
+    }
+
+    public static class BackupPasswordRequiredException extends Exception {
+        public BackupPasswordRequiredException() {
+            super("Password required for encrypted backup file");
+        }
+    }
+
+    public static class BackupPasswordInvalidException extends Exception {
+        public BackupPasswordInvalidException() {
+            super("Invalid password or corrupted backup file");
+        }
+    }
+
+    public static int importUserConfig(JsonObject root) throws Exception {
+        if (root == null) {
+            throw new IllegalArgumentException("Backup file is empty");
+        }
+        JsonObject data = root;
+        if (root.has("data") && root.get("data").isJsonObject()) {
+            data = root.getAsJsonObject("data");
+        }
+        int targetAccount = findNextAvailableAccount();
+        if (targetAccount < 0) {
+            throw new Exception("No free account slot available.");
+        }
+        importUserConfigToAccount(targetAccount, data);
+        return targetAccount;
+    }
+
+    private static int findNextAvailableAccount() {
+        for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+            if (!AccountInstance.getInstance(a).getUserConfig().isClientActivated()) {
+                return a;
+            }
+        }
+        return -1;
+    }
+
+    @SuppressLint("ApplySharedPref")
+    private static void importUserConfigToAccount(int account, JsonObject data) {
+        SharedPreferences preferences = UserConfig.getInstance(account).getPreferences();
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.clear();
+        for (Map.Entry<String, JsonElement> entry : data.entrySet()) {
+            String key = entry.getKey();
+            JsonElement element = entry.getValue();
+            if (element.isJsonNull()) {
+                editor.remove(key);
+            } else if (element.isJsonPrimitive()) {
+                JsonPrimitive primitive = element.getAsJsonPrimitive();
+                if (primitive.isBoolean()) {
+                    editor.putBoolean(key, primitive.getAsBoolean());
+                } else if (primitive.isNumber()) {
+                    String value = primitive.getAsString();
+                    if (value.contains(".")) {
+                        try {
+                            editor.putFloat(key, primitive.getAsFloat());
+                        } catch (NumberFormatException e) {
+                            editor.putString(key, value);
+                        }
+                    } else {
+                        try {
+                            editor.putLong(key, primitive.getAsLong());
+                        } catch (NumberFormatException e) {
+                            editor.putInt(key, primitive.getAsInt());
+                        }
+                    }
+                } else {
+                    editor.putString(key, primitive.getAsString());
+                }
+            } else if (element.isJsonArray()) {
+                java.util.Set<String> set = new java.util.HashSet<>();
+                for (JsonElement item : element.getAsJsonArray()) {
+                    if (item.isJsonPrimitive()) {
+                        set.add(item.getAsString());
+                    }
+                }
+                editor.putStringSet(key, set);
+            }
+        }
+        editor.commit();
+        UserConfig.getInstance(account).reloadConfig();
     }
 
     public static void backupSettings(Context context, Theme.ResourcesProvider resourceProvider) {

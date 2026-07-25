@@ -4,8 +4,21 @@ package tw.nekomimi.nekogram.settings;
 import static org.telegram.messenger.LocaleController.getString;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
+import android.text.InputType;
+import android.text.method.PasswordTransformationMethod;
 import android.view.View;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+
+import org.telegram.messenger.AndroidUtilities;
+
+import java.io.File;
+import java.util.function.Consumer;
 
 import org.telegram.messenger.R;
 import org.telegram.ui.Components.RecyclerListView;
@@ -18,13 +31,18 @@ import tw.nekomimi.nekogram.config.cell.ConfigCellHeader;
 import tw.nekomimi.nekogram.config.cell.ConfigCellNumberPicker;
 import tw.nekomimi.nekogram.config.cell.ConfigCellText;
 import tw.nekomimi.nekogram.config.cell.ConfigCellTextCheck;
+import tw.nekomimi.nekogram.helpers.AlertUtil;
 import tw.nekomimi.nekogram.helpers.HiddenAccountsController;
+import tw.nekomimi.nekogram.helpers.SettingsBackupHelper;
 import tw.nekomimi.nekogram.ui.HiddenAccountsPasscodeActivity;
 import xyz.nextalone.nagram.NaConfig;
 
 @SuppressLint("RtlHardcoded")
 @SuppressWarnings({"unused", "FieldCanBeLocal"})
 public class AccountsSettingsActivity extends BaseNekoXSettingsActivity {
+
+    private static final int REQUEST_CODE_RESTORE_ACCOUNT_FILE = 1025;
+    private static final int REQUEST_CODE_APPEND_ACCOUNT_FILE = 1026;
 
     private ListAdapter listAdapter;
 
@@ -67,6 +85,26 @@ public class AccountsSettingsActivity extends BaseNekoXSettingsActivity {
                     NaConfig.INSTANCE.getStartupActiveAccounts(), 1, 100));
 
     private final AbstractConfigCell dividerStartup = cellGroup.appendCell(new ConfigCellDivider());
+
+    private final AbstractConfigCell headerBackup = cellGroup.appendCell(
+            new ConfigCellHeader(getString(R.string.AccountBackupHeader)));
+
+    private final AbstractConfigCell backupCurrentAccountRow = cellGroup.appendCell(
+            new ConfigCellText("BackupCurrentAccount", this::backupCurrentAccount));
+
+    private final AbstractConfigCell backupCurrentAccountZipRow = cellGroup.appendCell(
+            new ConfigCellText("BackupCurrentAccountZip", this::backupCurrentAccountZip));
+
+    private final AbstractConfigCell backupCurrentAccountEncryptedZipRow = cellGroup.appendCell(
+            new ConfigCellText("BackupCurrentAccountEncryptedZip", this::backupCurrentAccountEncryptedZip));
+
+    private final AbstractConfigCell appendCurrentAccountToZipRow = cellGroup.appendCell(
+            new ConfigCellText("AppendCurrentAccountToZip", this::appendCurrentAccountToZip));
+
+    private final AbstractConfigCell restoreAccountRow = cellGroup.appendCell(
+            new ConfigCellText("RestoreAccountFromBackupFile", this::restoreAccountFromFile));
+
+    private final AbstractConfigCell dividerBackup = cellGroup.appendCell(new ConfigCellDivider());
 
     // [Alexgram: Hidden Accounts] - Start
     // Hidden Accounts section
@@ -121,6 +159,162 @@ public class AccountsSettingsActivity extends BaseNekoXSettingsActivity {
         };
 
         return superView;
+    }
+
+    private void backupCurrentAccount() {
+        try {
+            if (getParentActivity() == null) {
+                return;
+            }
+            int account = org.telegram.messenger.UserConfig.selectedAccount;
+            File backupFile = SettingsBackupHelper.backupUserConfig(getParentActivity(), account);
+            if (backupFile != null) {
+                tw.nekomimi.nekogram.utils.ShareUtil.shareFile(getParentActivity(), backupFile);
+            }
+        } catch (Exception e) {
+            AlertUtil.showSimpleAlert(getParentActivity(), e);
+        }
+    }
+
+    private void backupCurrentAccountZip() {
+        backupAccountZip(false);
+    }
+
+    private void backupCurrentAccountEncryptedZip() {
+        backupAccountZip(true);
+    }
+
+    private void backupAccountZip(boolean encrypted) {
+        if (getParentActivity() == null) {
+            return;
+        }
+        int account = org.telegram.messenger.UserConfig.selectedAccount;
+        if (encrypted) {
+            promptPassword(getString(R.string.AccountBackupPasswordTitle), getString(R.string.AccountBackupPasswordHint), password -> {
+                if (password == null || password.isEmpty()) {
+                    AlertUtil.showSimpleAlert(getParentActivity(), new IllegalArgumentException(getString(R.string.AccountBackupPasswordRequired)));
+                    return;
+                }
+                try {
+                    File backupFile = SettingsBackupHelper.backupUserConfigZip(getParentActivity(), account, password);
+                    tw.nekomimi.nekogram.utils.ShareUtil.shareFile(getParentActivity(), backupFile);
+                } catch (Exception e) {
+                    AlertUtil.showSimpleAlert(getParentActivity(), e);
+                }
+            });
+        } else {
+            try {
+                File backupFile = SettingsBackupHelper.backupUserConfigZip(getParentActivity(), account, null);
+                tw.nekomimi.nekogram.utils.ShareUtil.shareFile(getParentActivity(), backupFile);
+            } catch (Exception e) {
+                AlertUtil.showSimpleAlert(getParentActivity(), e);
+            }
+        }
+    }
+
+    private void appendCurrentAccountToZip() {
+        try {
+            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            intent.setType("application/zip");
+            startActivityForResult(intent, REQUEST_CODE_APPEND_ACCOUNT_FILE);
+        } catch (Exception e) {
+            AlertUtil.showSimpleAlert(getParentActivity(), e);
+        }
+    }
+
+    private void restoreAccountFromFile() {
+        try {
+            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            intent.setType("*/*");
+            intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"application/json", "application/zip"});
+            startActivityForResult(intent, REQUEST_CODE_RESTORE_ACCOUNT_FILE);
+        } catch (Exception e) {
+            AlertUtil.showSimpleAlert(getParentActivity(), e);
+        }
+    }
+
+    private void promptPassword(String title, String message, Consumer<String> callback) {
+        if (getParentActivity() == null) {
+            return;
+        }
+        LinearLayout layout = new LinearLayout(getParentActivity());
+        layout.setOrientation(LinearLayout.VERTICAL);
+        int padding = AndroidUtilities.dp(14);
+        layout.setPadding(padding, padding, padding, padding);
+
+        EditText passwordEdit = new EditText(getParentActivity());
+        passwordEdit.setHint(getString(R.string.AccountBackupPasswordHint));
+        passwordEdit.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        passwordEdit.setTransformationMethod(PasswordTransformationMethod.getInstance());
+        layout.addView(passwordEdit, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+
+        AlertDialog dialog = new AlertDialog.Builder(getParentActivity())
+                .setTitle(title)
+                .setMessage(message)
+                .setView(layout)
+                .setPositiveButton(getString(R.string.OK), (d, which) -> callback.accept(passwordEdit.getText().toString()))
+                .setNegativeButton(getString(R.string.Cancel), null)
+                .create();
+        dialog.show();
+    }
+
+    private void attemptImportAccountBackup(Uri uri, String password) {
+        if (getParentActivity() == null) {
+            return;
+        }
+        try {
+            int count = SettingsBackupHelper.importUserConfig(getParentActivity(), uri, password);
+            if (count == 1) {
+                AlertUtil.showSimpleAlert(getParentActivity(), getString(R.string.AccountRestoreSuccess, 1));
+            } else {
+                AlertUtil.showSimpleAlert(getParentActivity(), getString(R.string.AccountRestoreCountSuccess, count));
+            }
+        } catch (SettingsBackupHelper.BackupPasswordRequiredException e) {
+            promptPassword(getString(R.string.AccountDecryptPasswordTitle), getString(R.string.AccountBackupPasswordHint), pwd -> attemptImportAccountBackup(uri, pwd));
+        } catch (SettingsBackupHelper.BackupPasswordInvalidException e) {
+            AlertUtil.showSimpleAlert(getParentActivity(), new IllegalArgumentException(getString(R.string.AccountBackupPasswordInvalid)));
+        } catch (Exception e) {
+            AlertUtil.showSimpleAlert(getParentActivity(), e);
+        }
+    }
+
+    private void attemptAppendAccountBackup(Uri uri, String password) {
+        if (getParentActivity() == null) {
+            return;
+        }
+        try {
+            int account = org.telegram.messenger.UserConfig.selectedAccount;
+            File backupFile = SettingsBackupHelper.appendUserConfigToZip(getParentActivity(), account, uri, password);
+            tw.nekomimi.nekogram.utils.ShareUtil.shareFile(getParentActivity(), backupFile);
+        } catch (SettingsBackupHelper.BackupPasswordRequiredException e) {
+            promptPassword(getString(R.string.AccountDecryptPasswordTitle), getString(R.string.AccountBackupPasswordHint), pwd -> attemptAppendAccountBackup(uri, pwd));
+        } catch (SettingsBackupHelper.BackupPasswordInvalidException e) {
+            AlertUtil.showSimpleAlert(getParentActivity(), new IllegalArgumentException(getString(R.string.AccountBackupPasswordInvalid)));
+        } catch (Exception e) {
+            AlertUtil.showSimpleAlert(getParentActivity(), e);
+        }
+    }
+
+    @Override
+    public void onActivityResultFragment(int requestCode, int resultCode, Intent data) {
+        if ((requestCode == REQUEST_CODE_RESTORE_ACCOUNT_FILE || requestCode == REQUEST_CODE_APPEND_ACCOUNT_FILE)
+                && resultCode == Activity.RESULT_OK && data != null && data.getData() != null) {
+            Uri uri = data.getData();
+            if (getParentActivity() != null) {
+                try {
+                    getParentActivity().getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                } catch (Exception ignore) {
+                }
+            }
+            if (requestCode == REQUEST_CODE_RESTORE_ACCOUNT_FILE) {
+                attemptImportAccountBackup(uri, null);
+            } else {
+                attemptAppendAccountBackup(uri, null);
+            }
+        }
+        super.onActivityResultFragment(requestCode, resultCode, data);
     }
 
     // [Alexgram: Hidden Accounts] - Start

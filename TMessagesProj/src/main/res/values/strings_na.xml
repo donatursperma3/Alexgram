@@ -162,6 +162,19 @@
     <string name="StartupActiveAccountsInfo">Controls how many accounts are fully initialized when the app opens. Lower values mean faster launch and less battery use. Other accounts load on demand when you switch to them.</string>
     <string name="LimitReachedAccountsNa">Sorry, you can\'t add more than **%1$d** accounts. You can increase this limit (up to 100) in **A-Settings → Accounts**.</string>
     <string name="MaxActiveAccountsWarning">You currently have %1$d active accounts. Setting the limit to %2$d will prevent you from adding new accounts until you log out of some.</string>
+    <string name="AccountBackupHeader">Account Backup</string>
+    <string name="BackupCurrentAccount">Backup current account</string>
+    <string name="BackupCurrentAccountZip">Export account as ZIP</string>
+    <string name="BackupCurrentAccountEncryptedZip">Export account as encrypted ZIP</string>
+    <string name="AppendCurrentAccountToZip">Append current account to ZIP</string>
+    <string name="RestoreAccountFromBackupFile">Restore account from backup file</string>
+    <string name="AccountBackupPasswordTitle">Backup password</string>
+    <string name="AccountDecryptPasswordTitle">Enter backup password</string>
+    <string name="AccountBackupPasswordHint">Password for backup file</string>
+    <string name="AccountBackupPasswordRequired">A password is required to create an encrypted backup.</string>
+    <string name="AccountBackupPasswordInvalid">Invalid password or corrupted backup file.</string>
+    <string name="AccountRestoreSuccess">Restored account to slot %1$d.</string>
+    <string name="AccountRestoreCountSuccess">Restored %1$d account(s) from archive.</string>
     <!-- [Alexgram: Accounts Settings] - End -->
     <!-- [Alexgram: Hidden Accounts] - Start -->
     <string name="HiddenAccountsTitle">Hidden Accounts</string>

@@ -417,12 +417,21 @@ public class UserConfig extends BaseController {
                     currentUser = TLRPC.User.TLdeserialize(data, data.readInt32(false), false);
                     data.cleanup();
                 }
+            } else {
+                currentUser = null;
             }
             if (currentUser != null) {
                 checkPremiumSelf(null, currentUser);
                 clientUserId = currentUser.id;
             }
             configLoaded = true;
+        }
+    }
+
+    public void reloadConfig() {
+        synchronized (sync) {
+            configLoaded = false;
+            loadConfig();
         }
     }
 
