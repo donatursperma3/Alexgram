@@ -342,38 +342,38 @@ public class UserConfig extends BaseController {
             }
             SharedPreferences preferences = getPreferences();
             if (currentAccount == 0) {
-                selectedAccount = preferences.getInt("selectedAccount", 0);
+                selectedAccount = AndroidUtilities.getPrefIntOrLongInt(preferences, "selectedAccount", 0);
             }
             registeredForPush = preferences.getBoolean("registeredForPush", false);
-            lastSendMessageId = preferences.getInt("lastSendMessageId", -210000);
-            contactsSavedCount = preferences.getInt("contactsSavedCount", 0);
-            lastBroadcastId = preferences.getInt("lastBroadcastId", -1);
-            lastContactsSyncTime = preferences.getInt("lastContactsSyncTime", (int) (System.currentTimeMillis() / 1000) - 23 * 60 * 60);
-            lastHintsSyncTime = preferences.getInt("lastHintsSyncTime", (int) (System.currentTimeMillis() / 1000) - 25 * 60 * 60);
+            lastSendMessageId = AndroidUtilities.getPrefIntOrLongInt(preferences, "lastSendMessageId", -210000);
+            contactsSavedCount = AndroidUtilities.getPrefIntOrLongInt(preferences, "contactsSavedCount", 0);
+            lastBroadcastId = AndroidUtilities.getPrefIntOrLongInt(preferences, "lastBroadcastId", -1);
+            lastContactsSyncTime = AndroidUtilities.getPrefIntOrLongInt(preferences, "lastContactsSyncTime", (int) (System.currentTimeMillis() / 1000) - 23 * 60 * 60);
+            lastHintsSyncTime = AndroidUtilities.getPrefIntOrLongInt(preferences, "lastHintsSyncTime", (int) (System.currentTimeMillis() / 1000) - 25 * 60 * 60);
             draftsLoaded = preferences.getBoolean("draftsLoaded", false);
             unreadDialogsLoaded = preferences.getBoolean("unreadDialogsLoaded", false);
             contactsReimported = preferences.getBoolean("contactsReimported", false);
-            ratingLoadTime = preferences.getInt("ratingLoadTime", 0);
-            botRatingLoadTime = preferences.getInt("botRatingLoadTime", 0);
-            botGuestRatingLoadTime = preferences.getInt("botGuestRatingLoadTime", 0);
-            webappRatingLoadTime = preferences.getInt("webappRatingLoadTime", 0);
-            loginTime = preferences.getInt("loginTime", currentAccount);
+            ratingLoadTime = AndroidUtilities.getPrefIntOrLongInt(preferences, "ratingLoadTime", 0);
+            botRatingLoadTime = AndroidUtilities.getPrefIntOrLongInt(preferences, "botRatingLoadTime", 0);
+            botGuestRatingLoadTime = AndroidUtilities.getPrefIntOrLongInt(preferences, "botGuestRatingLoadTime", 0);
+            webappRatingLoadTime = AndroidUtilities.getPrefIntOrLongInt(preferences, "webappRatingLoadTime", 0);
+            loginTime = AndroidUtilities.getPrefIntOrLongInt(preferences, "loginTime", currentAccount);
             syncContacts = preferences.getBoolean("syncContacts", true);
             showCallsTab = preferences.getBoolean("showCallsTab", false);
             suggestContacts = preferences.getBoolean("suggestContacts", true);
             hasSecureData = preferences.getBoolean("hasSecureData", false);
             notificationsSettingsLoaded = preferences.getBoolean("notificationsSettingsLoaded4", false);
             notificationsSignUpSettingsLoaded = preferences.getBoolean("notificationsSignUpSettingsLoaded", false);
-            autoDownloadConfigLoadTime = preferences.getLong("autoDownloadConfigLoadTime", 0);
+            autoDownloadConfigLoadTime = AndroidUtilities.getPrefIntOrLong(preferences, "autoDownloadConfigLoadTime", 0);
             hasValidDialogLoadIds = preferences.contains("2dialogsLoadOffsetId") || preferences.getBoolean("hasValidDialogLoadIds", false);
-            sharingMyLocationUntil = preferences.getInt("sharingMyLocationUntil", 0);
-            lastMyLocationShareTime = preferences.getInt("lastMyLocationShareTime", 0);
+            sharingMyLocationUntil = AndroidUtilities.getPrefIntOrLongInt(preferences, "sharingMyLocationUntil", 0);
+            lastMyLocationShareTime = AndroidUtilities.getPrefIntOrLongInt(preferences, "lastMyLocationShareTime", 0);
             filtersLoaded = preferences.getBoolean("filtersLoaded", false);
             premiumGiftsStickerPack = preferences.getString("premiumGiftsStickerPack", null);
-            lastUpdatedPremiumGiftsStickerPack = preferences.getLong("lastUpdatedPremiumGiftsStickerPack", 0);
+            lastUpdatedPremiumGiftsStickerPack = AndroidUtilities.getPrefIntOrLong(preferences, "lastUpdatedPremiumGiftsStickerPack", 0);
 
             genericAnimationsStickerPack = preferences.getString("genericAnimationsStickerPack", null);
-            lastUpdatedGenericAnimations = preferences.getLong("lastUpdatedGenericAnimations", 0);
+            lastUpdatedGenericAnimations = AndroidUtilities.getPrefIntOrLong(preferences, "lastUpdatedGenericAnimations", 0);
 
 
             try {
@@ -390,13 +390,13 @@ public class UserConfig extends BaseController {
                 FileLog.e(e);
             }
 
-            migrateOffsetId = preferences.getInt("6migrateOffsetId", 0);
+            migrateOffsetId = AndroidUtilities.getPrefIntOrLongInt(preferences, "6migrateOffsetId", 0);
             if (migrateOffsetId != -1) {
-                migrateOffsetDate = preferences.getInt("6migrateOffsetDate", 0);
+                migrateOffsetDate = AndroidUtilities.getPrefIntOrLongInt(preferences, "6migrateOffsetDate", 0);
                 migrateOffsetUserId = AndroidUtilities.getPrefIntOrLong(preferences, "6migrateOffsetUserId", 0);
                 migrateOffsetChatId = AndroidUtilities.getPrefIntOrLong(preferences, "6migrateOffsetChatId", 0);
                 migrateOffsetChannelId = AndroidUtilities.getPrefIntOrLong(preferences, "6migrateOffsetChannelId", 0);
-                migrateOffsetAccess = preferences.getLong("6migrateOffsetAccess", 0);
+                migrateOffsetAccess = AndroidUtilities.getPrefIntOrLong(preferences, "6migrateOffsetAccess", 0);
             }
 
             String string = preferences.getString("tmpPassword", null);

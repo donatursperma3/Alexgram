@@ -6096,6 +6096,14 @@ public class AndroidUtilities {
         }
     }
 
+    public static int getPrefIntOrLongInt(SharedPreferences preferences, String key, int defaultValue) {
+        try {
+            return preferences.getInt(key, defaultValue);
+        } catch (Exception e) {
+            return (int) preferences.getLong(key, defaultValue);
+        }
+    }
+
     public static Bitmap getScaledBitmap(float w, float h, String path, String streamPath, int streamOffset) {
         FileInputStream stream = null;
         try {

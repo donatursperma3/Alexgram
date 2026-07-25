@@ -33,6 +33,7 @@ public class DrawerAddCell extends FrameLayout {
 
         imageView = new ImageView(context);
         imageView.setScaleType(ImageView.ScaleType.CENTER);
+        addView(imageView, LayoutHelper.createFrame(30, 30, Gravity.LEFT | Gravity.CENTER_VERTICAL, 31, 0, 0, 0));
 
         textView = new TextView(context);
         textView.setTextColor(Theme.getColor(Theme.key_chats_menuItemText));
