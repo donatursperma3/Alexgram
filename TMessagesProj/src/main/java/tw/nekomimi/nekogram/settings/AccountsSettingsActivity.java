@@ -31,10 +31,10 @@ import tw.nekomimi.nekogram.config.cell.ConfigCellHeader;
 import tw.nekomimi.nekogram.config.cell.ConfigCellNumberPicker;
 import tw.nekomimi.nekogram.config.cell.ConfigCellText;
 import tw.nekomimi.nekogram.config.cell.ConfigCellTextCheck;
-import tw.nekomimi.nekogram.helpers.AlertUtil;
+import tw.nekomimi.nekogram.ui.HiddenAccountsPasscodeActivity;
+import tw.nekomimi.nekogram.utils.AlertUtil;
 import tw.nekomimi.nekogram.helpers.HiddenAccountsController;
 import tw.nekomimi.nekogram.helpers.SettingsBackupHelper;
-import tw.nekomimi.nekogram.ui.HiddenAccountsPasscodeActivity;
 import xyz.nextalone.nagram.NaConfig;
 
 @SuppressLint("RtlHardcoded")

@@ -67,9 +67,18 @@ public class DrawerUserCell extends FrameLayout implements NotificationCenter.No
         avatarDrawable = new AvatarDrawable();
         avatarDrawable.setTextSize(dp(20));
 
+        int avatarStart = AndroidUtilities.dp(32);
+        int textStart = AndroidUtilities.dp(90);
+        int checkBoxStart = AndroidUtilities.dp(55);
+
         imageView = new BackupImageView(context);
         imageView.setRoundRadius(dp(18));
-        addView(imageView, LayoutHelper.createFrame(36, 36, Gravity.LEFT | Gravity.TOP, 28, 6, 0, 0));
+        addView(imageView, LayoutHelper.createFrame(36, 36,
+                (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP,
+                LocaleController.isRTL ? 0 : avatarStart,
+                6,
+                LocaleController.isRTL ? avatarStart : 0,
+                0));
 
         textView = new SimpleTextView(context);
         textView.setPadding(0, dp(4), 0, dp(4));
@@ -77,18 +86,28 @@ public class DrawerUserCell extends FrameLayout implements NotificationCenter.No
         textView.setTextSize(15);
         textView.setTypeface(AndroidUtilities.bold());
         textView.setMaxLines(1);
-        textView.setGravity(Gravity.LEFT | Gravity.TOP);
+        textView.setGravity((LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP);
         textView.setEllipsizeByGradient(24);
-        addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.TOP, 86, 4, 14, 0));
+        addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT,
+                (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP,
+                LocaleController.isRTL ? 0 : textStart,
+                4,
+                LocaleController.isRTL ? textStart : 14,
+                0));
 
         subtitleTextView = new SimpleTextView(context);
         subtitleTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText2));
         subtitleTextView.setTextSize(12);
         subtitleTextView.setMaxLines(1);
-        subtitleTextView.setGravity(Gravity.LEFT | Gravity.TOP);
+        subtitleTextView.setGravity((LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP);
         subtitleTextView.setEllipsizeByGradient(24);
         subtitleTextView.setVisibility(GONE);
-        addView(subtitleTextView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.TOP, 86, 31, 14, 0));
+        addView(subtitleTextView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT,
+                (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP,
+                LocaleController.isRTL ? 0 : textStart,
+                31,
+                LocaleController.isRTL ? textStart : 14,
+                0));
 
         botVerification = new AnimatedEmojiDrawable.SwapAnimatedEmojiDrawable(textView, dp(18));
         status = new AnimatedEmojiDrawable.SwapAnimatedEmojiDrawable(textView, dp(20));
@@ -99,7 +118,12 @@ public class DrawerUserCell extends FrameLayout implements NotificationCenter.No
         checkBox.setCheckScale(0.9f);
         checkBox.setInnerRadDiff(dp(1.5f));
         checkBox.setColorKeysOverrides(Theme.key_chats_unreadCounterText, Theme.key_chats_unreadCounter, Theme.key_chats_menuBackground);
-        addView(checkBox, LayoutHelper.createFrame(18, 18, Gravity.LEFT | Gravity.TOP, 51, 27, 0, 0));
+        addView(checkBox, LayoutHelper.createFrame(18, 18,
+                (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP,
+                LocaleController.isRTL ? 0 : checkBoxStart,
+                27,
+                LocaleController.isRTL ? checkBoxStart : 0,
+                0));
 
         setWillNotDraw(false);
     }
