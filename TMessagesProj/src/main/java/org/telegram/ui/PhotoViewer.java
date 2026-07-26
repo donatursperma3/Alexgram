@@ -6396,75 +6396,6 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                 }
             }
 
-    private boolean canCopyFileRef() {
-        if (!tw.nekomimi.nekogram.NekoConfig.showCopyFileRef.Bool()) {
-            return false;
-        }
-        if (currentMessageObject != null) {
-            if (currentMessageObject.getDocument() instanceof TLRPC.TL_document) {
-                return true;
-            }
-            if (currentMessageObject.messageOwner != null && currentMessageObject.messageOwner.media != null && currentMessageObject.messageOwner.media.photo instanceof TLRPC.TL_photo) {
-                return true;
-            }
-        } else if (avatarsDialogId != 0) {
-            if (currentIndex >= 0 && currentIndex < avatarsArr.size()) {
-                TLRPC.Photo photo = avatarsArr.get(currentIndex);
-                if (photo instanceof TLRPC.TL_photo) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    private void copyFileReference() {
-        if (!canCopyFileRef()) {
-            BulletinFactory.of(containerView, resourcesProvider)
-                    .createErrorBulletin(getString(R.string.CopyFileRefFailed))
-                    .show();
-            return;
-        }
-
-        try {
-            ChatActivity.fileRefClipboard.clear();
-            if (currentMessageObject != null) {
-                TLRPC.Document doc = currentMessageObject.getDocument();
-                if (doc instanceof TLRPC.TL_document) {
-                    ChatActivity.fileRefClipboard.add(new ChatActivity.FileRefClipboardItem((TLRPC.TL_document) doc, currentMessageObject));
-                } else if (currentMessageObject.messageOwner != null && currentMessageObject.messageOwner.media != null && currentMessageObject.messageOwner.media.photo instanceof TLRPC.TL_photo) {
-                    ChatActivity.fileRefClipboard.add(new ChatActivity.FileRefClipboardItem((TLRPC.TL_photo) currentMessageObject.messageOwner.media.photo, currentMessageObject));
-                }
-            } else if (avatarsDialogId != 0) {
-                TLRPC.Photo photo = (currentIndex >= 0 && currentIndex < avatarsArr.size()) ? avatarsArr.get(currentIndex) : null;
-                Object parentObject = null;
-                if (avatarsDialogId > 0) {
-                    parentObject = MessagesController.getInstance(currentAccount).getUser(avatarsDialogId);
-                } else if (avatarsDialogId < 0) {
-                    parentObject = MessagesController.getInstance(currentAccount).getChat(-avatarsDialogId);
-                }
-                if (photo instanceof TLRPC.TL_photo && parentObject != null) {
-                    ChatActivity.fileRefClipboard.add(new ChatActivity.FileRefClipboardItem((TLRPC.TL_photo) photo, parentObject));
-                }
-            }
-
-            if (ChatActivity.fileRefClipboard.isEmpty()) {
-                BulletinFactory.of(containerView, resourcesProvider)
-                        .createErrorBulletin(getString(R.string.CopyFileRefFailed))
-                        .show();
-            } else {
-                BulletinFactory.of(containerView, resourcesProvider)
-                        .createSimpleBulletin(R.raw.info, LocaleController.formatString("CopyFileRefDone", R.string.CopyFileRefDone, ChatActivity.fileRefClipboard.size()))
-                        .show();
-            }
-        } catch (Throwable throwable) {
-            FileLog.e(throwable);
-            BulletinFactory.of(containerView, resourcesProvider)
-                    .createErrorBulletin(getString(R.string.CopyFileRefFailed))
-                    .show();
-        }
-    }
-
             @Override
             public boolean canOpenMenu() {
                 if (currentMessageObject != null || currentSecureDocument != null) {
@@ -24878,5 +24809,74 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         Bitmap bitmap = centerImage != null ? centerImage.getBitmap() : null;
         boolean enabled = !centerImageIsVideo && AndroidUtil.hasGainmap(bitmap);
         setWindowHdrColorMode(enabled);
+    }
+
+    private boolean canCopyFileRef() {
+        if (!tw.nekomimi.nekogram.NekoConfig.showCopyFileRef.Bool()) {
+            return false;
+        }
+        if (currentMessageObject != null) {
+            if (currentMessageObject.getDocument() instanceof TLRPC.TL_document) {
+                return true;
+            }
+            if (currentMessageObject.messageOwner != null && currentMessageObject.messageOwner.media != null && currentMessageObject.messageOwner.media.photo instanceof TLRPC.TL_photo) {
+                return true;
+            }
+        } else if (avatarsDialogId != 0) {
+            if (currentIndex >= 0 && currentIndex < avatarsArr.size()) {
+                TLRPC.Photo photo = avatarsArr.get(currentIndex);
+                if (photo instanceof TLRPC.TL_photo) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private void copyFileReference() {
+        if (!canCopyFileRef()) {
+            BulletinFactory.of(containerView, resourcesProvider)
+                    .createErrorBulletin(getString(R.string.CopyFileRefFailed))
+                    .show();
+            return;
+        }
+
+        try {
+            ChatActivity.fileRefClipboard.clear();
+            if (currentMessageObject != null) {
+                TLRPC.Document doc = currentMessageObject.getDocument();
+                if (doc instanceof TLRPC.TL_document) {
+                    ChatActivity.fileRefClipboard.add(new ChatActivity.FileRefClipboardItem((TLRPC.TL_document) doc, currentMessageObject));
+                } else if (currentMessageObject.messageOwner != null && currentMessageObject.messageOwner.media != null && currentMessageObject.messageOwner.media.photo instanceof TLRPC.TL_photo) {
+                    ChatActivity.fileRefClipboard.add(new ChatActivity.FileRefClipboardItem((TLRPC.TL_photo) currentMessageObject.messageOwner.media.photo, currentMessageObject));
+                }
+            } else if (avatarsDialogId != 0) {
+                TLRPC.Photo photo = (currentIndex >= 0 && currentIndex < avatarsArr.size()) ? avatarsArr.get(currentIndex) : null;
+                Object parentObject = null;
+                if (avatarsDialogId > 0) {
+                    parentObject = MessagesController.getInstance(currentAccount).getUser(avatarsDialogId);
+                } else if (avatarsDialogId < 0) {
+                    parentObject = MessagesController.getInstance(currentAccount).getChat(-avatarsDialogId);
+                }
+                if (photo instanceof TLRPC.TL_photo && parentObject != null) {
+                    ChatActivity.fileRefClipboard.add(new ChatActivity.FileRefClipboardItem((TLRPC.TL_photo) photo, parentObject));
+                }
+            }
+
+            if (ChatActivity.fileRefClipboard.isEmpty()) {
+                BulletinFactory.of(containerView, resourcesProvider)
+                        .createErrorBulletin(getString(R.string.CopyFileRefFailed))
+                        .show();
+            } else {
+                BulletinFactory.of(containerView, resourcesProvider)
+                        .createSimpleBulletin(R.raw.info, LocaleController.formatString("CopyFileRefDone", R.string.CopyFileRefDone, ChatActivity.fileRefClipboard.size()))
+                        .show();
+            }
+        } catch (Throwable throwable) {
+            FileLog.e(throwable);
+            BulletinFactory.of(containerView, resourcesProvider)
+                    .createErrorBulletin(getString(R.string.CopyFileRefFailed))
+                    .show();
+        }
     }
 }

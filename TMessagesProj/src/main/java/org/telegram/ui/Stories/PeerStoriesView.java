@@ -8512,7 +8512,7 @@ public class PeerStoriesView extends SizeNotifierFrameLayout implements Notifica
         if (storyItem == null || storyItem.media == null) {
             return false;
         }
-        if (storyItem.media.document instanceof TLRPC.TL_document) {
+        if (storyItem.media.getDocument() instanceof TLRPC.TL_document) {
             return true;
         }
         if (storyItem.media.photo instanceof TLRPC.TL_photo) {
@@ -8539,8 +8539,9 @@ public class PeerStoriesView extends SizeNotifierFrameLayout implements Notifica
 
         try {
             ChatActivity.fileRefClipboard.clear();
-            if (storyItem.media.document instanceof TLRPC.TL_document) {
-                ChatActivity.fileRefClipboard.add(new ChatActivity.FileRefClipboardItem((TLRPC.TL_document) storyItem.media.document, storyItem));
+            TLRPC.Document document = storyItem.media.getDocument();
+            if (document instanceof TLRPC.TL_document) {
+                ChatActivity.fileRefClipboard.add(new ChatActivity.FileRefClipboardItem((TLRPC.TL_document) document, storyItem));
             } else if (storyItem.media.photo instanceof TLRPC.TL_photo) {
                 ChatActivity.fileRefClipboard.add(new ChatActivity.FileRefClipboardItem((TLRPC.TL_photo) storyItem.media.photo, storyItem));
             }

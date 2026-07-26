@@ -723,7 +723,13 @@ public class FileRefController extends BaseController {
         }
         if (requester.args[0] instanceof TL_stories.TL_storyItem) {
             TL_stories.TL_storyItem storyItem = (TL_stories.TL_storyItem) requester.args[0];
-            storyItem.media.document.file_reference = file_reference;
+            if (storyItem.media != null) {
+                if (storyItem.media.document != null) {
+                    storyItem.media.document.file_reference = file_reference;
+                } else if (storyItem.media.photo != null) {
+                    storyItem.media.photo.file_reference = file_reference;
+                }
+            }
             return true;
         } else if (requester.args[0] instanceof TLRPC.TL_inputSingleMedia) {
             TLRPC.TL_messages_sendMultiMedia multiMedia = (TLRPC.TL_messages_sendMultiMedia) requester.args[1];
@@ -1859,7 +1865,13 @@ public class FileRefController extends BaseController {
     private boolean updateFileReferenceFromCache(byte[] file_reference, TLRPC.InputFileLocation locationReplacement, TLRPC.InputFileLocation location, String locationKey, Object... args) {
         if (args[0] instanceof TL_stories.TL_storyItem) {
             TL_stories.TL_storyItem storyItem = (TL_stories.TL_storyItem) args[0];
-            storyItem.media.document.file_reference = file_reference;
+            if (storyItem.media != null) {
+                if (storyItem.media.document != null) {
+                    storyItem.media.document.file_reference = file_reference;
+                } else if (storyItem.media.photo != null) {
+                    storyItem.media.photo.file_reference = file_reference;
+                }
+            }
             return true;
         } else if (args[0] instanceof TLRPC.TL_inputSingleMedia) {
             return false;

@@ -280,9 +280,13 @@ public final class SettingsBackupHelper {
     }
 
     public static JsonObject backupUserConfig(int account) {
+        UserConfig userConfig = UserConfig.getInstance(account);
+        if (!userConfig.isConfigLoaded()) {
+            userConfig.loadConfig();
+        }
         JsonObject data = new JsonObject();
         JsonObject types = new JsonObject();
-        SharedPreferences preferences = UserConfig.getInstance(account).getPreferences();
+        SharedPreferences preferences = userConfig.getPreferences();
         spToJson(preferences, data, types);
 
         JsonObject mainData = new JsonObject();
@@ -515,24 +519,31 @@ public final class SettingsBackupHelper {
                     String prefix = name.substring(0, name.indexOf('/') + 1);
                     String rest = name.substring(name.indexOf('/') + 1);
                     ZipPackage pkg = packages.computeIfAbsent(prefix, k -> new ZipPackage());
-                    if (rest.equals("config.json") || rest.equals("config.json.enc")) {
-                        pkg.configName = rest;
+                    String fileNameOnly = rest.contains("/") ? rest.substring(rest.lastIndexOf('/') + 1) : rest;
+                    if (fileNameOnly.equals("config.json") || fileNameOnly.equals("config.json.enc") || fileNameOnly.equals("userconfig.json") || fileNameOnly.equals("settings.json")) {
+                        pkg.configName = fileNameOnly;
                         pkg.configBytes = entryBytes;
-                    } else if (rest.startsWith("files/")) {
-                        String fileRelPath = rest.substring("files/".length());
+                    } else {
+                        String fileRelPath = rest.startsWith("files/") ? rest.substring("files/".length()) : rest;
                         pkg.filesMap.put(fileRelPath, entryBytes);
                     }
                 } else {
                     // Legacy flat entries inside ZIP
-                    if (name.endsWith(".json.enc")) {
+                    if (name.endsWith(".json.enc") || name.endsWith(".enc")) {
                         if (password == null) throw new BackupPasswordRequiredException();
-                        entryBytes = decryptBackupData(entryBytes, password);
+                        try {
+                            entryBytes = decryptBackupData(entryBytes, password);
+                        } catch (Exception e) {
+                            throw new BackupPasswordInvalidException();
+                        }
                     }
-                    if (name.endsWith(".json") || name.endsWith(".json.enc")) {
+                    if (name.endsWith(".json") || name.endsWith(".json.enc") || name.endsWith(".enc")) {
                         String text = new String(entryBytes, java.nio.charset.StandardCharsets.UTF_8);
                         JsonObject root = GsonUtil.toJsonObject(text);
-                        importUserConfig(root);
-                        legacyCount++;
+                        if (root != null) {
+                            importUserConfig(root);
+                            legacyCount++;
+                        }
                     }
                 }
             }
@@ -769,6 +780,16 @@ public final class SettingsBackupHelper {
             data = root.getAsJsonObject("data");
         }
 
+        if (data.has("3clientUserId")) {
+            try {
+                return data.get("3clientUserId").getAsLong();
+            } catch (Exception ignore) {}
+        }
+        if (data.has("3clientUserId_long")) {
+            try {
+                return data.get("3clientUserId_long").getAsLong();
+            } catch (Exception ignore) {}
+        }
         if (data.has("clientUserId")) {
             try {
                 return data.get("clientUserId").getAsLong();
@@ -777,6 +798,11 @@ public final class SettingsBackupHelper {
         if (data.has("clientUserId_long")) {
             try {
                 return data.get("clientUserId_long").getAsLong();
+            } catch (Exception ignore) {}
+        }
+        if (data.has("user_id")) {
+            try {
+                return data.get("user_id").getAsLong();
             } catch (Exception ignore) {}
         }
 
