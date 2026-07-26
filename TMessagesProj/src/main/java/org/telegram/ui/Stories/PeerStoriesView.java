@@ -8527,6 +8527,9 @@ public class PeerStoriesView extends SizeNotifierFrameLayout implements Notifica
         }
 
         TL_stories.StoryItem storyItem = currentStory.storyItem;
+        if (storyItem != null && storyItem.dialogId == 0) {
+            storyItem.dialogId = getCurrentPeer();
+        }
         if (!canCopyStoryFileRef(storyItem)) {
             BulletinFactory.of(storyContainer, resourcesProvider)
                     .createErrorBulletin(getString(R.string.CopyFileRefFailed))

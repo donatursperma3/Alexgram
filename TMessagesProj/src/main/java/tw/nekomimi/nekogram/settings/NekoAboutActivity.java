@@ -18,7 +18,9 @@ import tw.nekomimi.nekogram.DatacenterActivity;
 public class NekoAboutActivity extends BaseNekoSettingsActivity {
 
     private int axChannelRow;
+    private int axGroupRow;
     private int axSourceCodeRow;
+    private int axShadowRow;
     private int xChannelRow;
     private int desktopChannelRow;
     private int channelTipsRow;
@@ -30,7 +32,9 @@ public class NekoAboutActivity extends BaseNekoSettingsActivity {
         super.updateRows();
 
         axChannelRow = addRow();
+        axGroupRow = addRow();
         axSourceCodeRow = addRow();
+        axShadowRow = addRow();
         xChannelRow = addRow();
         desktopChannelRow = addRow();
         channelTipsRow = addRow();
@@ -46,6 +50,8 @@ public class NekoAboutActivity extends BaseNekoSettingsActivity {
     @Override
     protected void onItemClick(View view, int position, float x, float y) {
         if (position == axChannelRow) {
+            MessagesController.getInstance(currentAccount).openByUserName("AlphaXProject", NekoAboutActivity.this, 1);
+        } else if (position == axGroupRow) {
             MessagesController.getInstance(currentAccount).openByUserName("AlphaXProject", NekoAboutActivity.this, 1);
         } else if (position == axSourceCodeRow) {
             Browser.openUrl(getParentActivity(), "https://t.me/AlphaXProject");
@@ -80,8 +86,10 @@ public class NekoAboutActivity extends BaseNekoSettingsActivity {
                 TextSettingsCell textCell = (TextSettingsCell) holder.itemView;
                 if (position == axChannelRow) {
                     textCell.setTextAndValue("Alexgram AX Channel", "@AlphaXproject", true);
+                } else if (position == axGroupRow) {
+                    textCell.setTextAndValue("Alexgram AX Group", "@AlphaXproject", true);
                 } else if (position == axSourceCodeRow) {
-                    textCell.setTextAndValue("Source Code", "https://t.me/AlphaXProject", true);
+                    textCell.setTextAndValue("Source Code", "Github", false);
                 } else if (position == xChannelRow) {
                     textCell.setTextAndValue("Alexgram Channel", "@AlexgramApp", true);
                 } else if (position == desktopChannelRow) {
@@ -98,6 +106,9 @@ public class NekoAboutActivity extends BaseNekoSettingsActivity {
 
         @Override
         public int getItemViewType(int position) {
+            if (position == axShadowRow) {
+                return TYPE_SHADOW;
+            }
             return TYPE_SETTINGS;
         }
     }
