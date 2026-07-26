@@ -83,4 +83,13 @@ object FileUtil {
 
     }
 
+    @JvmStatic
+    fun readBytes(file: File): ByteArray = file.readBytes()
+
+    @JvmStatic
+    fun writeBytes(bytes: ByteArray, save: File) {
+        initFile(save)
+        save.writeBytes(bytes)
+    }
+
 }
