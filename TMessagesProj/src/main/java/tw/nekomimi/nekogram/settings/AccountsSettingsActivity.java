@@ -307,10 +307,15 @@ public class AccountsSettingsActivity extends BaseNekoXSettingsActivity {
         }
         try {
             int count = SettingsBackupHelper.importUserConfig(getParentActivity(), uri, password);
-            if (count == 1) {
-                AlertUtil.showSimpleAlert(getParentActivity(), getParentActivity().getString(R.string.AccountRestoreSuccess, 1));
-            } else {
-                AlertUtil.showSimpleAlert(getParentActivity(), getParentActivity().getString(R.string.AccountRestoreCountSuccess, count));
+            if (count >= 1) {
+                String successMsg = (count == 1)
+                        ? getParentActivity().getString(R.string.AccountRestoreSuccess, 1)
+                        : getParentActivity().getString(R.string.AccountRestoreCountSuccess, count);
+                org.telegram.ui.ActionBar.AlertDialog restartDialog = new org.telegram.ui.ActionBar.AlertDialog(getParentActivity(), 0);
+                restartDialog.setTitle(getString(R.string.NagramX));
+                restartDialog.setMessage(successMsg + "\n\n" + getString(R.string.RestartAppToTakeEffect));
+                restartDialog.setPositiveButton(getString(R.string.OK), (__, ___) -> tw.nekomimi.nekogram.helpers.AppRestartHelper.triggerRebirth(getParentActivity(), new Intent(getParentActivity(), org.telegram.ui.LaunchActivity.class)));
+                restartDialog.show();
             }
         } catch (SettingsBackupHelper.BackupPasswordRequiredException e) {
             promptPassword(getString(R.string.AccountDecryptPasswordTitle), getString(R.string.AccountBackupPasswordHint), pwd -> attemptImportAccountBackup(uri, pwd));

@@ -280,11 +280,36 @@ public final class SettingsBackupHelper {
 
     public static JsonObject backupUserConfig(int account) {
         JsonObject data = new JsonObject();
-        // Fix: Store type metadata to preserve int-vs-long distinction through JSON serialization.
-        // Without this, JSON loses type info and restore may use putLong for keys that need putInt,
-        // causing "java.lang.Long cannot be cast to java.lang.Integer" at runtime.
         JsonObject types = new JsonObject();
         SharedPreferences preferences = UserConfig.getInstance(account).getPreferences();
+        spToJson(preferences, data, types);
+
+        JsonObject mainData = new JsonObject();
+        JsonObject mainTypes = new JsonObject();
+        SharedPreferences mainPref = getMainPreferences(account);
+        spToJson(mainPref, mainData, mainTypes);
+
+        JsonObject result = new JsonObject();
+        result.addProperty("format", "AlexgramAccountBackup");
+        result.addProperty("version", 2);
+        result.addProperty("account", account);
+        result.add("data", data);
+        result.add("__types__", types);
+        result.add("mainconfig", mainData);
+        result.add("__mainconfig_types__", mainTypes);
+        return result;
+    }
+
+    private static SharedPreferences getMainPreferences(int account) {
+        if (account == 0) {
+            return ApplicationLoader.applicationContext.getSharedPreferences("mainconfig", Activity.MODE_PRIVATE);
+        } else {
+            return ApplicationLoader.applicationContext.getSharedPreferences("mainconfig" + account, Activity.MODE_PRIVATE);
+        }
+    }
+
+    private static void spToJson(SharedPreferences preferences, JsonObject data, JsonObject types) {
+        if (preferences == null) return;
         for (Map.Entry<String, ?> entry : preferences.getAll().entrySet()) {
             String key = entry.getKey();
             Object value = entry.getValue();
@@ -320,13 +345,80 @@ public final class SettingsBackupHelper {
                 types.addProperty(key, "string");
             }
         }
-        JsonObject result = new JsonObject();
-        result.addProperty("format", "AlexgramAccountBackup");
-        result.addProperty("version", 1);
-        result.addProperty("account", account);
-        result.add("data", data);
-        result.add("__types__", types);
-        return result;
+    }
+
+    public static ArrayList<File> getAccountFiles(int account) {
+        ArrayList<File> filesList = new ArrayList<>();
+        File dir;
+        if (account == 0) {
+            dir = ApplicationLoader.getFilesDirFixed();
+            File[] files = dir.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    if (file.isFile()) {
+                        String name = file.getName();
+                        if (name.startsWith("tgnet") || name.startsWith("cache4") || name.endsWith(".db") || name.endsWith(".dat")) {
+                            filesList.add(file);
+                        }
+                    }
+                }
+            }
+        } else {
+            dir = new File(ApplicationLoader.getFilesDirFixed(), "account" + account);
+            if (dir.exists() && dir.isDirectory()) {
+                addDirectoryFiles(dir, filesList);
+            }
+        }
+        return filesList;
+    }
+
+    private static void addDirectoryFiles(File currentDir, ArrayList<File> filesList) {
+        File[] files = currentDir.listFiles();
+        if (files != null) {
+            for (File file : files) {
+                if (file.isFile()) {
+                    filesList.add(file);
+                } else if (file.isDirectory()) {
+                    addDirectoryFiles(file, filesList);
+                }
+            }
+        }
+    }
+
+    private static void backupAccountPackageToZip(int account, ZipOutputStream zos, String entryPrefix, String password) throws Exception {
+        JsonObject backupObject = backupUserConfig(account);
+        byte[] jsonBytes = backupObject.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        String configEntryName = entryPrefix + "config.json";
+        if (password != null && !password.isEmpty()) {
+            jsonBytes = encryptBackupData(jsonBytes, password);
+            configEntryName += ".enc";
+        }
+        ZipEntry configZipEntry = new ZipEntry(configEntryName);
+        zos.putNextEntry(configZipEntry);
+        zos.write(jsonBytes);
+        zos.closeEntry();
+
+        ArrayList<File> filesList = getAccountFiles(account);
+        File baseDir = (account == 0) ? ApplicationLoader.getFilesDirFixed() : new File(ApplicationLoader.getFilesDirFixed(), "account" + account);
+        for (File file : filesList) {
+            String relativePath;
+            if (account == 0) {
+                relativePath = file.getName();
+            } else {
+                relativePath = baseDir.toURI().relativize(file.toURI()).getPath();
+            }
+            byte[] fileBytes = FileUtil.readBytes(file);
+            if (fileBytes == null) continue;
+            String fileEntryName = entryPrefix + "files/" + relativePath;
+            if (password != null && !password.isEmpty()) {
+                fileBytes = encryptBackupData(fileBytes, password);
+                fileEntryName += ".enc";
+            }
+            ZipEntry zipEntry = new ZipEntry(fileEntryName);
+            zos.putNextEntry(zipEntry);
+            zos.write(fileBytes);
+            zos.closeEntry();
+        }
     }
 
     public static File backupUserConfig(Context context, int account) throws Exception {
@@ -358,8 +450,16 @@ public final class SettingsBackupHelper {
         }
     }
 
+    private static class ZipPackage {
+        String configName;
+        byte[] configBytes;
+        java.util.Map<String, byte[]> filesMap = new java.util.HashMap<>();
+    }
+
     private static int importUserConfigFromZip(byte[] zipBytes, String password) throws Exception {
-        int lastImportedAccount = -1;
+        java.util.Map<String, ZipPackage> packages = new java.util.LinkedHashMap<>();
+        int legacyCount = 0;
+
         try (ZipInputStream zipInput = new ZipInputStream(new BufferedInputStream(new java.io.ByteArrayInputStream(zipBytes)))) {
             ZipEntry entry;
             while ((entry = zipInput.getNextEntry()) != null) {
@@ -368,24 +468,76 @@ public final class SettingsBackupHelper {
                 }
                 String name = entry.getName();
                 byte[] entryBytes = readAllBytes(zipInput);
-                if (name.endsWith(".json.enc")) {
-                    if (password == null) {
-                        throw new BackupPasswordRequiredException();
+
+                if (name.contains("/")) {
+                    String prefix = name.substring(0, name.indexOf('/') + 1);
+                    String rest = name.substring(name.indexOf('/') + 1);
+                    ZipPackage pkg = packages.computeIfAbsent(prefix, k -> new ZipPackage());
+                    if (rest.equals("config.json") || rest.equals("config.json.enc")) {
+                        pkg.configName = rest;
+                        pkg.configBytes = entryBytes;
+                    } else if (rest.startsWith("files/")) {
+                        String fileRelPath = rest.substring("files/".length());
+                        pkg.filesMap.put(fileRelPath, entryBytes);
                     }
-                    entryBytes = decryptBackupData(entryBytes, password);
+                } else {
+                    // Legacy flat entries inside ZIP
+                    if (name.endsWith(".json.enc")) {
+                        if (password == null) throw new BackupPasswordRequiredException();
+                        entryBytes = decryptBackupData(entryBytes, password);
+                    }
+                    if (name.endsWith(".json") || name.endsWith(".json.enc")) {
+                        String text = new String(entryBytes, java.nio.charset.StandardCharsets.UTF_8);
+                        JsonObject root = GsonUtil.toJsonObject(text);
+                        importUserConfig(root);
+                        legacyCount++;
+                    }
                 }
-                if (!name.endsWith(".json") && !name.endsWith(".json.enc")) {
-                    continue;
-                }
-                String text = new String(entryBytes, java.nio.charset.StandardCharsets.UTF_8);
-                JsonObject root = GsonUtil.toJsonObject(text);
-                lastImportedAccount = importUserConfig(root);
             }
         }
-        if (lastImportedAccount < 0) {
+
+        if (packages.isEmpty() && legacyCount == 0) {
             throw new Exception("No account backup found in ZIP");
         }
-        return lastImportedAccount;
+
+        int importedCount = legacyCount;
+        for (ZipPackage pkg : packages.values()) {
+            if (pkg.configBytes == null) continue;
+            byte[] configBytes = pkg.configBytes;
+            if (pkg.configName != null && pkg.configName.endsWith(".enc")) {
+                if (password == null) throw new BackupPasswordRequiredException();
+                configBytes = decryptBackupData(configBytes, password);
+            }
+            String text = new String(configBytes, java.nio.charset.StandardCharsets.UTF_8);
+            JsonObject root = GsonUtil.toJsonObject(text);
+
+            int targetAccount = findNextAvailableAccount();
+            if (targetAccount < 0) {
+                throw new Exception("No free account slot available.");
+            }
+
+            File targetDir = (targetAccount == 0) ? ApplicationLoader.getFilesDirFixed() : new File(ApplicationLoader.getFilesDirFixed(), "account" + targetAccount);
+            targetDir.mkdirs();
+
+            for (Map.Entry<String, byte[]> fileEntry : pkg.filesMap.entrySet()) {
+                String fileName = fileEntry.getKey();
+                byte[] fBytes = fileEntry.getValue();
+                if (fileName.endsWith(".enc")) {
+                    if (password == null) throw new BackupPasswordRequiredException();
+                    fBytes = decryptBackupData(fBytes, password);
+                    fileName = fileName.substring(0, fileName.length() - ".enc".length());
+                }
+                File destFile = new File(targetDir, fileName);
+                File parent = destFile.getParentFile();
+                if (parent != null) parent.mkdirs();
+                FileUtil.writeBytes(fBytes, destFile);
+            }
+
+            importUserConfigToAccount(targetAccount, root);
+            importedCount++;
+        }
+
+        return importedCount;
     }
 
     private static byte[] readAllBytes(InputStream inputStream) throws IOException {
@@ -399,26 +551,15 @@ public final class SettingsBackupHelper {
     }
 
     public static File backupUserConfigZip(Context context, int account, String password) throws Exception {
-        JsonObject backupObject = backupUserConfig(account);
-        byte[] data = backupObject.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
-        String entryName = String.format("alexgram-account-%d-%d.json", account, System.currentTimeMillis());
-        if (password != null && !password.isEmpty()) {
-            data = encryptBackupData(data, password);
-            entryName += ".enc";
-        }
         File cacheFile = new File(AndroidUtilities.getCacheDir(), String.format("alexgram-account-%d-%d.zip", account, System.currentTimeMillis()));
         try (FileOutputStream fos = new FileOutputStream(cacheFile);
              BufferedOutputStream bos = new BufferedOutputStream(fos);
              ZipOutputStream zos = new ZipOutputStream(bos)) {
-            ZipEntry zipEntry = new ZipEntry(entryName);
-            zos.putNextEntry(zipEntry);
-            zos.write(data);
-            zos.closeEntry();
+            backupAccountPackageToZip(account, zos, String.format("account_%d/", account), password);
         }
         return cacheFile;
     }
 
-    // Fix: Export all activated accounts into a single plain or encrypted ZIP backup file
     public static File backupAllAccountsZip(Context context, String password) throws Exception {
         ArrayList<Integer> activeAccounts = new ArrayList<>();
         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
@@ -434,17 +575,7 @@ public final class SettingsBackupHelper {
              BufferedOutputStream bos = new BufferedOutputStream(fos);
              ZipOutputStream zos = new ZipOutputStream(bos)) {
             for (int account : activeAccounts) {
-                JsonObject backupObject = backupUserConfig(account);
-                byte[] data = backupObject.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
-                String entryName = String.format("alexgram-account-%d.json", account);
-                if (password != null && !password.isEmpty()) {
-                    data = encryptBackupData(data, password);
-                    entryName += ".enc";
-                }
-                ZipEntry zipEntry = new ZipEntry(entryName);
-                zos.putNextEntry(zipEntry);
-                zos.write(data);
-                zos.closeEntry();
+                backupAccountPackageToZip(account, zos, String.format("account_%d/", account), password);
             }
         }
         return cacheFile;
@@ -461,12 +592,6 @@ public final class SettingsBackupHelper {
             byte[] existingZip = is.readAllBytes();
             if (existingZip.length < 2 || existingZip[0] != 'P' || existingZip[1] != 'K') {
                 throw new IllegalArgumentException("Selected file is not a ZIP archive");
-            }
-            byte[] newEntryBytes = backupUserConfig(account).toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
-            String newEntryName = String.format("alexgram-account-%d-%d.json", account, System.currentTimeMillis());
-            if (password != null && !password.isEmpty()) {
-                newEntryBytes = encryptBackupData(newEntryBytes, password);
-                newEntryName += ".enc";
             }
             File cacheFile = new File(AndroidUtilities.getCacheDir(), String.format("alexgram-account-append-%d-%d.zip", account, System.currentTimeMillis()));
             try (ZipInputStream zis = new ZipInputStream(new BufferedInputStream(new java.io.ByteArrayInputStream(existingZip)));
@@ -486,10 +611,7 @@ public final class SettingsBackupHelper {
                     zos.closeEntry();
                     zis.closeEntry();
                 }
-                ZipEntry newEntry = new ZipEntry(newEntryName);
-                zos.putNextEntry(newEntry);
-                zos.write(newEntryBytes);
-                zos.closeEntry();
+                backupAccountPackageToZip(account, zos, String.format("account_%d_%d/", account, System.currentTimeMillis()), password);
             }
             return cacheFile;
         }
@@ -547,20 +669,11 @@ public final class SettingsBackupHelper {
         if (root == null) {
             throw new IllegalArgumentException("Backup file is empty");
         }
-        JsonObject data = root;
-        if (root.has("data") && root.get("data").isJsonObject()) {
-            data = root.getAsJsonObject("data");
-        }
-        // Fix: Pass type metadata to restore so int-vs-long is preserved correctly
-        JsonObject types = null;
-        if (root.has("__types__") && root.get("__types__").isJsonObject()) {
-            types = root.getAsJsonObject("__types__");
-        }
         int targetAccount = findNextAvailableAccount();
         if (targetAccount < 0) {
             throw new Exception("No free account slot available.");
         }
-        importUserConfigToAccount(targetAccount, data, types);
+        importUserConfigToAccount(targetAccount, root);
         return targetAccount;
     }
 
@@ -574,8 +687,37 @@ public final class SettingsBackupHelper {
     }
 
     @SuppressLint("ApplySharedPref")
-    private static void importUserConfigToAccount(int account, JsonObject data, JsonObject types) {
+    private static void importUserConfigToAccount(int account, JsonObject root) {
+        JsonObject data = root;
+        if (root.has("data") && root.get("data").isJsonObject()) {
+            data = root.getAsJsonObject("data");
+        }
+        JsonObject types = null;
+        if (root.has("__types__") && root.get("__types__").isJsonObject()) {
+            types = root.getAsJsonObject("__types__");
+        }
+
         SharedPreferences preferences = UserConfig.getInstance(account).getPreferences();
+        writePreferences(preferences, data, types);
+
+        if (root.has("mainconfig") && root.get("mainconfig").isJsonObject()) {
+            JsonObject mainData = root.getAsJsonObject("mainconfig");
+            JsonObject mainTypes = root.has("__mainconfig_types__") && root.get("__mainconfig_types__").isJsonObject()
+                    ? root.getAsJsonObject("__mainconfig_types__") : null;
+            SharedPreferences mainPreferences = getMainPreferences(account);
+            writePreferences(mainPreferences, mainData, mainTypes);
+        }
+
+        UserConfig.getInstance(account).reloadConfig();
+        AndroidUtilities.runOnUIThread(() -> {
+            org.telegram.messenger.NotificationCenter.getGlobalInstance().postNotificationName(org.telegram.messenger.NotificationCenter.mainUserInfoChanged);
+            org.telegram.messenger.NotificationCenter.getInstance(account).postNotificationName(org.telegram.messenger.NotificationCenter.mainUserInfoChanged);
+        });
+    }
+
+    @SuppressLint("ApplySharedPref")
+    private static void writePreferences(SharedPreferences preferences, JsonObject data, JsonObject types) {
+        if (preferences == null || data == null) return;
         SharedPreferences.Editor editor = preferences.edit();
         editor.clear();
         for (Map.Entry<String, JsonElement> entry : data.entrySet()) {
@@ -585,12 +727,8 @@ public final class SettingsBackupHelper {
                 editor.remove(key);
             } else if (element.isJsonPrimitive()) {
                 JsonPrimitive primitive = element.getAsJsonPrimitive();
-                // Fix: Use type metadata from backup to store values with the correct type.
-                // This prevents ClassCastException when UserConfig.loadConfig() calls
-                // getInt() on a value stored as Long, or getLong() on a value stored as Integer.
                 String typeHint = (types != null && types.has(key)) ? types.get(key).getAsString() : null;
                 if (typeHint != null) {
-                    // Type metadata available — use exact original type
                     switch (typeHint) {
                         case "boolean":
                             editor.putBoolean(key, primitive.getAsBoolean());
@@ -605,14 +743,11 @@ public final class SettingsBackupHelper {
                             editor.putFloat(key, primitive.getAsFloat());
                             break;
                         case "string":
-                            editor.putString(key, primitive.getAsString());
-                            break;
                         default:
                             editor.putString(key, primitive.getAsString());
                             break;
                     }
                 } else {
-                    // Fallback for older backups without __types__ metadata
                     if (primitive.isBoolean()) {
                         editor.putBoolean(key, primitive.getAsBoolean());
                     } else if (primitive.isNumber()) {
@@ -624,10 +759,6 @@ public final class SettingsBackupHelper {
                                 editor.putString(key, value);
                             }
                         } else {
-                            // Heuristic: use putInt for values in int range, putLong otherwise.
-                            // This may still fail for keys that UserConfig reads with getLong()
-                            // but whose values happen to be in int range (e.g. 0).
-                            // New backups with __types__ avoid this problem entirely.
                             try {
                                 long longValue = primitive.getAsLong();
                                 if (longValue >= Integer.MIN_VALUE && longValue <= Integer.MAX_VALUE) {
@@ -644,7 +775,6 @@ public final class SettingsBackupHelper {
                     }
                 }
             } else if (element.isJsonArray()) {
-                // Fix: Handle StringSet type from type metadata or fallback
                 java.util.Set<String> set = new java.util.HashSet<>();
                 for (JsonElement item : element.getAsJsonArray()) {
                     if (item.isJsonPrimitive()) {
@@ -655,11 +785,6 @@ public final class SettingsBackupHelper {
             }
         }
         editor.commit();
-        UserConfig.getInstance(account).reloadConfig();
-        AndroidUtilities.runOnUIThread(() -> {
-            org.telegram.messenger.NotificationCenter.getGlobalInstance().postNotificationName(org.telegram.messenger.NotificationCenter.mainUserInfoChanged);
-            org.telegram.messenger.NotificationCenter.getInstance(account).postNotificationName(org.telegram.messenger.NotificationCenter.mainUserInfoChanged);
-        });
     }
 
     public static void backupSettings(Context context, Theme.ResourcesProvider resourceProvider) {
