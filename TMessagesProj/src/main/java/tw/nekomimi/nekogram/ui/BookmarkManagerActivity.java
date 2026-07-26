@@ -90,7 +90,7 @@ public class BookmarkManagerActivity extends BaseFragment {
     private static final int TAB_USERS = 3;
     private static final int TAB_BOTS = 4;
     private static final int ACTION_BAR_BLUR_ALPHA = 178;
-    private static final int TABS_CONTAINER_HEIGHT_DP = 50;
+    private static final int TABS_CONTAINER_HEIGHT_DP = 40;
     private final ArrayList<BookmarkChatItem> allItems = new ArrayList<>();
     private final CubicBezierInterpolator interpolator = CubicBezierInterpolator.EASE_OUT_QUINT;
     private TextView emptyView;
@@ -236,7 +236,7 @@ public class BookmarkManagerActivity extends BaseFragment {
 
         tabsContainer = new SearchTabsAndFiltersLayout(context);
         // reduce vertical padding to tighten gap between action bar and tabs
-        tabsContainer.setPadding(0, dp(4), 0, dp(4));
+        tabsContainer.setPadding(0, dp(2), 0, dp(2));
 
         tabsView = new ViewPagerFixed.TabsView(context, false, ViewPagerFixed.SELECTOR_TYPE_BUBBLE_STYLE, resourceProvider);
         tabsView.setIndicatorAnimation(320, CubicBezierInterpolator.EASE_OUT_QUINT);
