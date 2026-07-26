@@ -2294,6 +2294,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     // [Alexgram: Ambient Mode] - Start
     private final static int gallery_menu_ambient = 206;
     // [Alexgram: Ambient Mode] - End
+    private final static int gallery_menu_copy_file_ref = 207;
 
     private static DecelerateInterpolator decelerateInterpolator;
     private static Paint progressPaint;
@@ -6303,6 +6304,8 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                             showDownloadAlert();
                         }
                     });
+                } else if (id == gallery_menu_copy_file_ref) {
+                    copyFileReference();
                 } else if (id == gallery_menu_set_photo) {
                     File f = null;
                     if (currentMessageObject != null) {
@@ -6392,6 +6395,75 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     // [Alexgram: Ambient Mode] - End
                 }
             }
+
+    private boolean canCopyFileRef() {
+        if (!tw.nekomimi.nekogram.NekoConfig.showCopyFileRef.Bool()) {
+            return false;
+        }
+        if (currentMessageObject != null) {
+            if (currentMessageObject.getDocument() instanceof TLRPC.TL_document) {
+                return true;
+            }
+            if (currentMessageObject.messageOwner != null && currentMessageObject.messageOwner.media != null && currentMessageObject.messageOwner.media.photo instanceof TLRPC.TL_photo) {
+                return true;
+            }
+        } else if (avatarsDialogId != 0) {
+            if (currentIndex >= 0 && currentIndex < avatarsArr.size()) {
+                TLRPC.Photo photo = avatarsArr.get(currentIndex);
+                if (photo instanceof TLRPC.TL_photo) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private void copyFileReference() {
+        if (!canCopyFileRef()) {
+            BulletinFactory.of(containerView, resourcesProvider)
+                    .createErrorBulletin(getString(R.string.CopyFileRefFailed))
+                    .show();
+            return;
+        }
+
+        try {
+            ChatActivity.fileRefClipboard.clear();
+            if (currentMessageObject != null) {
+                TLRPC.Document doc = currentMessageObject.getDocument();
+                if (doc instanceof TLRPC.TL_document) {
+                    ChatActivity.fileRefClipboard.add(new ChatActivity.FileRefClipboardItem((TLRPC.TL_document) doc, currentMessageObject));
+                } else if (currentMessageObject.messageOwner != null && currentMessageObject.messageOwner.media != null && currentMessageObject.messageOwner.media.photo instanceof TLRPC.TL_photo) {
+                    ChatActivity.fileRefClipboard.add(new ChatActivity.FileRefClipboardItem((TLRPC.TL_photo) currentMessageObject.messageOwner.media.photo, currentMessageObject));
+                }
+            } else if (avatarsDialogId != 0) {
+                TLRPC.Photo photo = (currentIndex >= 0 && currentIndex < avatarsArr.size()) ? avatarsArr.get(currentIndex) : null;
+                Object parentObject = null;
+                if (avatarsDialogId > 0) {
+                    parentObject = MessagesController.getInstance(currentAccount).getUser(avatarsDialogId);
+                } else if (avatarsDialogId < 0) {
+                    parentObject = MessagesController.getInstance(currentAccount).getChat(-avatarsDialogId);
+                }
+                if (photo instanceof TLRPC.TL_photo && parentObject != null) {
+                    ChatActivity.fileRefClipboard.add(new ChatActivity.FileRefClipboardItem((TLRPC.TL_photo) photo, parentObject));
+                }
+            }
+
+            if (ChatActivity.fileRefClipboard.isEmpty()) {
+                BulletinFactory.of(containerView, resourcesProvider)
+                        .createErrorBulletin(getString(R.string.CopyFileRefFailed))
+                        .show();
+            } else {
+                BulletinFactory.of(containerView, resourcesProvider)
+                        .createSimpleBulletin(R.raw.info, LocaleController.formatString("CopyFileRefDone", R.string.CopyFileRefDone, ChatActivity.fileRefClipboard.size()))
+                        .show();
+            }
+        } catch (Throwable throwable) {
+            FileLog.e(throwable);
+            BulletinFactory.of(containerView, resourcesProvider)
+                    .createErrorBulletin(getString(R.string.CopyFileRefFailed))
+                    .show();
+        }
+    }
 
             @Override
             public boolean canOpenMenu() {
@@ -6555,6 +6627,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
 
         if (NaConfig.INSTANCE.getMediaViewerMenuItemCopyPhoto().Bool()) menuItem.addSubItem(gallery_menu_copy, R.drawable.msg_copy_photo, getString(R.string.CopyPhoto)).setColors(0xfffafafa, 0xfffafafa);
         if (NaConfig.INSTANCE.getMediaViewerMenuItemCopyFrame().Bool()) menuItem.addSubItem(gallery_menu_copy_frame, R.drawable.msg_copy_photo, getString(R.string.CopyVideoFrame)).setColors(0xfffafafa, 0xfffafafa);
+        if (tw.nekomimi.nekogram.NekoConfig.showCopyFileRef.Bool()) menuItem.addSubItem(gallery_menu_copy_file_ref, R.drawable.msg_copy, getString(R.string.CopyFileRef)).setColors(0xfffafafa, 0xfffafafa);
 
         // [Alexgram: Ambient Mode] - Start
         if (ambientOnDrawable == null) {
@@ -15645,6 +15718,11 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     menuItem.showSubItem(gallery_menu_copy_frame);
                     menuItem.hideSubItem(gallery_menu_copy);
                     menuItem.hideSubItem(gallery_menu_set_photo);
+                    if (canCopyFileRef()) {
+                        menuItem.showSubItem(gallery_menu_copy_file_ref);
+                    } else {
+                        menuItem.hideSubItem(gallery_menu_copy_file_ref);
+                    }
                     menuItem.checkHideMenuItem();
                 } else {
                     speedItem.setVisibility(View.GONE);
@@ -15654,6 +15732,11 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     menuItem.showSubItem(gallery_menu_copy);
                     menuItem.showSubItem(gallery_menu_set_photo);
                     menuItem.hideSubItem(gallery_menu_copy_frame);
+                    if (canCopyFileRef()) {
+                        menuItem.showSubItem(gallery_menu_copy_file_ref);
+                    } else {
+                        menuItem.hideSubItem(gallery_menu_copy_file_ref);
+                    }
                     menuItem.checkHideMenuItem();
                     final boolean pipItemVisible = pipItem.getVisibility() == View.VISIBLE;
                     final boolean shouldMasksItemBeVisible = newMessageObject.hasAttachedStickers() && !DialogObject.isEncryptedDialog(newMessageObject.getDialogId());
@@ -15930,6 +16013,11 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             } else {
                 menuItem.hideSubItem(gallery_menu_copy);
                 menuItem.hideSubItem(gallery_menu_set_photo);
+            }
+            if (canCopyFileRef()) {
+                menuItem.showSubItem(gallery_menu_copy_file_ref);
+            } else {
+                menuItem.hideSubItem(gallery_menu_copy_file_ref);
             }
             menuItem.showSubItem(gallery_menu_scan);
             allowShare = !noforwards;
