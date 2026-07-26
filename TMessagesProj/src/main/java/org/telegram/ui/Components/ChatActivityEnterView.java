@@ -14830,18 +14830,48 @@ public class ChatActivityEnterView extends FrameLayout implements
         builder.setTitle(LocaleController.getString("PasteFileRef", R.string.PasteFileRef));
         builder.setMessage(LocaleController.formatString("PasteFileRefConfirm", R.string.PasteFileRefConfirm, org.telegram.ui.ChatActivity.fileRefClipboard.size()));
         builder.setPositiveButton(LocaleController.getString("Send", R.string.Send), (dialogInterface, i) -> {
+            int protectedCount = 0;
+            int failedCount = 0;
             for (org.telegram.ui.ChatActivity.FileRefClipboardItem item : org.telegram.ui.ChatActivity.fileRefClipboard) {
-                if (item.document != null) {
-                    SendMessagesHelper.SendMessageParams params = SendMessagesHelper.SendMessageParams.of(
-                        item.document, null, null, dialog_id, replyingMessageObject, getThreadMessage(), null, null, null, null, true, 0, 0, 0, item.parentObject, null, false
-                    );
-                    SendMessagesHelper.getInstance(currentAccount).sendMessage(params);
-                } else if (item.photo != null) {
-                    SendMessagesHelper.SendMessageParams params = SendMessagesHelper.SendMessageParams.of(
-                        item.photo, null, dialog_id, replyingMessageObject, getThreadMessage(), null, null, null, null, true, 0, 0, 0, item.parentObject, false, false
-                    );
-                    SendMessagesHelper.getInstance(currentAccount).sendMessage(params);
+                if (item == null) {
+                    continue;
                 }
+                if (item.parentObject instanceof TL_stories.StoryItem && ((TL_stories.StoryItem) item.parentObject).noforwards) {
+                    protectedCount++;
+                    continue;
+                }
+                if (item.parentObject instanceof MessageObject) {
+                    MessageObject messageObject = (MessageObject) item.parentObject;
+                    if (messageObject.messageOwner != null && messageObject.messageOwner.noforwards) {
+                        protectedCount++;
+                        continue;
+                    }
+                }
+                try {
+                    if (item.document != null) {
+                        SendMessagesHelper.SendMessageParams params = SendMessagesHelper.SendMessageParams.of(
+                            item.document, null, null, dialog_id, replyingMessageObject, getThreadMessage(), null, null, null, null, true, 0, 0, 0, item.parentObject, null, false
+                        );
+                        SendMessagesHelper.getInstance(currentAccount).sendMessage(params);
+                    } else if (item.photo != null) {
+                        SendMessagesHelper.SendMessageParams params = SendMessagesHelper.SendMessageParams.of(
+                            item.photo, null, dialog_id, replyingMessageObject, getThreadMessage(), null, null, null, null, true, 0, 0, 0, item.parentObject, false, false
+                        );
+                        SendMessagesHelper.getInstance(currentAccount).sendMessage(params);
+                    }
+                } catch (Throwable t) {
+                    failedCount++;
+                    FileLog.e(t);
+                }
+            }
+            if (protectedCount > 0) {
+                BulletinFactory.of(ChatActivityEnterView.this, resourcesProvider)
+                    .createErrorBulletin(LocaleController.getString("DisableSharingInfoHeader2", R.string.DisableSharingInfoHeader2))
+                    .show();
+            } else if (failedCount > 0) {
+                BulletinFactory.of(ChatActivityEnterView.this, resourcesProvider)
+                    .createErrorBulletin(LocaleController.getString("CopyFileRefFailed", R.string.CopyFileRefFailed))
+                    .show();
             }
         });
         builder.setNegativeButton(LocaleController.getString("PasteFileRefPasteText", R.string.PasteFileRefPasteText), (dialogInterface, i) -> {

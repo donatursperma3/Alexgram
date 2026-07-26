@@ -24816,6 +24816,9 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             return false;
         }
         if (currentMessageObject != null) {
+            if (currentMessageObject.messageOwner != null && currentMessageObject.messageOwner.noforwards) {
+                return false;
+            }
             if (currentMessageObject.getDocument() instanceof TLRPC.TL_document) {
                 return true;
             }

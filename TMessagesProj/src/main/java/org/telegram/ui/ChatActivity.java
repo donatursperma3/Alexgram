@@ -39063,6 +39063,7 @@ public class ChatActivity extends BaseFragment implements
 
 	private boolean canCopyFileRef(MessageObject msg) {
 		if (msg == null) return false;
+		if (msg.messageOwner != null && msg.messageOwner.noforwards) return false;
 		if (msg.getDocument() instanceof TLRPC.TL_document) return true;
 		if (msg.messageOwner != null && msg.messageOwner.media != null && msg.messageOwner.media.photo instanceof TLRPC.TL_photo) return true;
 		return false;

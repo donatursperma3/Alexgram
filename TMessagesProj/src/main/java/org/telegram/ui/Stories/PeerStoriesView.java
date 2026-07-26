@@ -8509,7 +8509,7 @@ public class PeerStoriesView extends SizeNotifierFrameLayout implements Notifica
     }
 
     private boolean canCopyStoryFileRef(TL_stories.StoryItem storyItem) {
-        if (storyItem == null || storyItem.media == null) {
+        if (storyItem == null || storyItem.media == null || storyItem.noforwards) {
             return false;
         }
         if (storyItem.media.getDocument() instanceof TLRPC.TL_document) {
