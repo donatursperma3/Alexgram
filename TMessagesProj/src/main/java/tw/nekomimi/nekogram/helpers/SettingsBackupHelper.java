@@ -386,7 +386,16 @@ public final class SettingsBackupHelper {
         }
     }
 
+    public interface ProgressListener {
+        void onProgress(int percent, String statusText);
+    }
+
     private static void backupAccountPackageToZip(int account, ZipOutputStream zos, String entryPrefix, String password) throws Exception {
+        backupAccountPackageToZip(account, zos, entryPrefix, password, null, 0, 100);
+    }
+
+    private static void backupAccountPackageToZip(int account, ZipOutputStream zos, String entryPrefix, String password, ProgressListener listener, int startPercent, int endPercent) throws Exception {
+        if (listener != null) listener.onProgress(startPercent, "Saving account configuration...");
         JsonObject backupObject = backupUserConfig(account);
         byte[] jsonBytes = backupObject.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
         String configEntryName = entryPrefix + "config.json";
@@ -401,7 +410,11 @@ public final class SettingsBackupHelper {
 
         ArrayList<File> filesList = getAccountFiles(account);
         File baseDir = (account == 0) ? ApplicationLoader.getFilesDirFixed() : new File(ApplicationLoader.getFilesDirFixed(), "account" + account);
-        for (File file : filesList) {
+        int fileCount = filesList.size();
+        for (int i = 0; i < fileCount; i++) {
+            File file = filesList.get(i);
+            int stepPercent = startPercent + (int) (((i + 1) / (float) Math.max(1, fileCount)) * (endPercent - startPercent));
+            if (listener != null) listener.onProgress(stepPercent, "Packing " + file.getName() + "...");
             String relativePath;
             if (account == 0) {
                 relativePath = file.getName();
@@ -444,24 +457,33 @@ public final class SettingsBackupHelper {
     }
 
     public static int importUserConfig(Context context, android.net.Uri uri) throws Exception {
-        return importUserConfig(context, uri, null);
+        return importUserConfig(context, uri, null, null);
     }
 
     public static int importUserConfig(Context context, android.net.Uri uri, String password) throws Exception {
+        return importUserConfig(context, uri, password, null);
+    }
+
+    public static int importUserConfig(Context context, android.net.Uri uri, String password, ProgressListener listener) throws Exception {
         if (context == null || uri == null) {
             throw new IllegalArgumentException("Invalid import parameters");
         }
+        if (listener != null) listener.onProgress(5, "Reading backup file...");
         try (InputStream is = context.getContentResolver().openInputStream(uri)) {
             if (is == null) {
                 throw new IOException("Unable to open file");
             }
             byte[] fileBytes = is.readAllBytes();
             if (fileBytes.length >= 2 && fileBytes[0] == 'P' && fileBytes[1] == 'K') {
-                return importUserConfigFromZip(fileBytes, password);
+                return importUserConfigFromZip(fileBytes, password, listener);
             }
+            if (listener != null) listener.onProgress(40, "Parsing account JSON...");
             String text = new String(fileBytes, java.nio.charset.StandardCharsets.UTF_8);
             JsonObject root = GsonUtil.toJsonObject(text);
-            return importUserConfig(root);
+            if (listener != null) listener.onProgress(80, "Restoring configuration...");
+            int res = importUserConfig(root);
+            if (listener != null) listener.onProgress(100, "Restore complete.");
+            return 1;
         }
     }
 
@@ -472,9 +494,14 @@ public final class SettingsBackupHelper {
     }
 
     private static int importUserConfigFromZip(byte[] zipBytes, String password) throws Exception {
+        return importUserConfigFromZip(zipBytes, password, null);
+    }
+
+    private static int importUserConfigFromZip(byte[] zipBytes, String password, ProgressListener listener) throws Exception {
         java.util.Map<String, ZipPackage> packages = new java.util.LinkedHashMap<>();
         int legacyCount = 0;
 
+        if (listener != null) listener.onProgress(10, "Extracting ZIP archive entries...");
         try (ZipInputStream zipInput = new ZipInputStream(new BufferedInputStream(new java.io.ByteArrayInputStream(zipBytes)))) {
             ZipEntry entry;
             while ((entry = zipInput.getNextEntry()) != null) {
@@ -516,8 +543,15 @@ public final class SettingsBackupHelper {
         }
 
         int importedCount = legacyCount;
+        int totalPkgs = packages.size();
+        int pkgIndex = 0;
         for (ZipPackage pkg : packages.values()) {
             if (pkg.configBytes == null) continue;
+            pkgIndex++;
+            int pkgStartP = 20 + (int) (((pkgIndex - 1) / (float) Math.max(1, totalPkgs)) * 75);
+            int pkgEndP = 20 + (int) ((pkgIndex / (float) Math.max(1, totalPkgs)) * 75);
+            if (listener != null) listener.onProgress(pkgStartP, String.format("Restoring account %d of %d...", pkgIndex, totalPkgs));
+
             byte[] configBytes = pkg.configBytes;
             if (pkg.configName != null && pkg.configName.endsWith(".enc")) {
                 if (password == null) throw new BackupPasswordRequiredException();
@@ -526,7 +560,7 @@ public final class SettingsBackupHelper {
             String text = new String(configBytes, java.nio.charset.StandardCharsets.UTF_8);
             JsonObject root = GsonUtil.toJsonObject(text);
 
-            int targetAccount = findNextAvailableAccount();
+            int targetAccount = findTargetAccountSlot(root);
             if (targetAccount < 0) {
                 throw new Exception("No free account slot available.");
             }
@@ -534,7 +568,13 @@ public final class SettingsBackupHelper {
             File targetDir = (targetAccount == 0) ? ApplicationLoader.getFilesDirFixed() : new File(ApplicationLoader.getFilesDirFixed(), "account" + targetAccount);
             targetDir.mkdirs();
 
+            int totalFiles = pkg.filesMap.size();
+            int fileIndex = 0;
             for (Map.Entry<String, byte[]> fileEntry : pkg.filesMap.entrySet()) {
+                fileIndex++;
+                int filePercent = pkgStartP + (int) ((fileIndex / (float) Math.max(1, totalFiles)) * (pkgEndP - pkgStartP));
+                if (listener != null) listener.onProgress(filePercent, "Restoring " + fileEntry.getKey() + "...");
+
                 String fileName = fileEntry.getKey();
                 byte[] fBytes = fileEntry.getValue();
                 if (fileName.endsWith(".enc")) {
@@ -558,6 +598,7 @@ public final class SettingsBackupHelper {
             importedCount++;
         }
 
+        if (listener != null) listener.onProgress(100, "Restore complete.");
         return importedCount;
     }
 
@@ -572,16 +613,27 @@ public final class SettingsBackupHelper {
     }
 
     public static File backupUserConfigZip(Context context, int account, String password) throws Exception {
+        return backupUserConfigZip(context, account, password, null);
+    }
+
+    public static File backupUserConfigZip(Context context, int account, String password, ProgressListener listener) throws Exception {
+        if (listener != null) listener.onProgress(5, "Preparing account files...");
         File cacheFile = new File(AndroidUtilities.getCacheDir(), String.format("alexgram-account-%d-%d.zip", account, System.currentTimeMillis()));
         try (FileOutputStream fos = new FileOutputStream(cacheFile);
              BufferedOutputStream bos = new BufferedOutputStream(fos);
              ZipOutputStream zos = new ZipOutputStream(bos)) {
-            backupAccountPackageToZip(account, zos, String.format("account_%d/", account), password);
+            backupAccountPackageToZip(account, zos, String.format("account_%d/", account), password, listener, 10, 95);
         }
+        if (listener != null) listener.onProgress(100, "Backup complete.");
         return cacheFile;
     }
 
     public static File backupAllAccountsZip(Context context, String password) throws Exception {
+        return backupAllAccountsZip(context, password, null);
+    }
+
+    public static File backupAllAccountsZip(Context context, String password, ProgressListener listener) throws Exception {
+        if (listener != null) listener.onProgress(5, "Scanning active accounts...");
         ArrayList<Integer> activeAccounts = new ArrayList<>();
         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
             if (AccountInstance.getInstance(a).getUserConfig().isClientActivated()) {
@@ -595,17 +647,31 @@ public final class SettingsBackupHelper {
         try (FileOutputStream fos = new FileOutputStream(cacheFile);
              BufferedOutputStream bos = new BufferedOutputStream(fos);
              ZipOutputStream zos = new ZipOutputStream(bos)) {
-            for (int account : activeAccounts) {
-                backupAccountPackageToZip(account, zos, String.format("account_%d/", account), password);
+            int total = activeAccounts.size();
+            for (int i = 0; i < total; i++) {
+                int account = activeAccounts.get(i);
+                int startP = 10 + (int) ((i / (float) total) * 85);
+                int endP = 10 + (int) (((i + 1) / (float) total) * 85);
+                if (listener != null) listener.onProgress(startP, String.format("Backing up account %d of %d...", (i + 1), total));
+                backupAccountPackageToZip(account, zos, String.format("account_%d/", account), password, listener, startP, endP);
             }
         }
+        if (listener != null) listener.onProgress(100, "Backup complete.");
         return cacheFile;
     }
 
     public static File appendUserConfigToZip(Context context, int account, android.net.Uri uri, String password) throws Exception {
+        return appendUserConfigToZip(context, account, uri, password, null);
+    }
+
+    public static File appendUserConfigToZip(Context context, int account, android.net.Uri uri, String password, ProgressListener listener) throws Exception {
         if (context == null || uri == null) {
             throw new IllegalArgumentException("Invalid append parameters");
         }
+        if (listener != null) listener.onProgress(5, "Opening target ZIP file...");
+        long accountUserId = UserConfig.getInstance(account).getClientUserId();
+        String newPrefix = String.format("account_%d/", accountUserId != 0 ? accountUserId : account);
+
         try (InputStream is = context.getContentResolver().openInputStream(uri)) {
             if (is == null) {
                 throw new IOException("Unable to open file");
@@ -614,6 +680,7 @@ public final class SettingsBackupHelper {
             if (existingZip.length < 2 || existingZip[0] != 'P' || existingZip[1] != 'K') {
                 throw new IllegalArgumentException("Selected file is not a ZIP archive");
             }
+            if (listener != null) listener.onProgress(25, "Processing existing entries...");
             File cacheFile = new File(AndroidUtilities.getCacheDir(), String.format("alexgram-account-append-%d-%d.zip", account, System.currentTimeMillis()));
             try (ZipInputStream zis = new ZipInputStream(new BufferedInputStream(new java.io.ByteArrayInputStream(existingZip)));
                  FileOutputStream fos = new FileOutputStream(cacheFile);
@@ -622,7 +689,12 @@ public final class SettingsBackupHelper {
                 ZipEntry entry;
                 byte[] buffer = new byte[8192];
                 while ((entry = zis.getNextEntry()) != null) {
-                    ZipEntry copyEntry = new ZipEntry(entry.getName());
+                    String entryName = entry.getName();
+                    if (entryName.startsWith(newPrefix) || entryName.startsWith(String.format("account_%d/", account))) {
+                        zis.closeEntry();
+                        continue;
+                    }
+                    ZipEntry copyEntry = new ZipEntry(entryName);
                     copyEntry.setTime(entry.getTime());
                     zos.putNextEntry(copyEntry);
                     int count;
@@ -632,8 +704,10 @@ public final class SettingsBackupHelper {
                     zos.closeEntry();
                     zis.closeEntry();
                 }
-                backupAccountPackageToZip(account, zos, String.format("account_%d_%d/", account, System.currentTimeMillis()), password);
+                if (listener != null) listener.onProgress(60, "Appending current account data...");
+                backupAccountPackageToZip(account, zos, newPrefix, password, listener, 60, 95);
             }
+            if (listener != null) listener.onProgress(100, "Append complete.");
             return cacheFile;
         }
     }
@@ -686,11 +760,72 @@ public final class SettingsBackupHelper {
         }
     }
 
+    public static long getUserIdFromBackup(JsonObject root) {
+        if (root == null) {
+            return 0L;
+        }
+        JsonObject data = root;
+        if (root.has("data") && root.get("data").isJsonObject()) {
+            data = root.getAsJsonObject("data");
+        }
+
+        if (data.has("clientUserId")) {
+            try {
+                return data.get("clientUserId").getAsLong();
+            } catch (Exception ignore) {}
+        }
+        if (data.has("clientUserId_long")) {
+            try {
+                return data.get("clientUserId_long").getAsLong();
+            } catch (Exception ignore) {}
+        }
+
+        if (data.has("user")) {
+            try {
+                JsonElement userElem = data.get("user");
+                if (userElem.isJsonPrimitive()) {
+                    String userBase64 = userElem.getAsString();
+                    if (userBase64 != null && !userBase64.isEmpty()) {
+                        byte[] bytes = android.util.Base64.decode(userBase64, android.util.Base64.DEFAULT);
+                        if (bytes != null && bytes.length > 0) {
+                            org.telegram.tgnet.SerializedData sData = new org.telegram.tgnet.SerializedData(bytes);
+                            org.telegram.tgnet.TLRPC.User user = org.telegram.tgnet.TLRPC.User.TLdeserialize(sData, sData.readInt32(false), false);
+                            sData.cleanup();
+                            if (user != null && user.id != 0) {
+                                return user.id;
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
+        }
+        return 0L;
+    }
+
+    private static int findTargetAccountSlot(JsonObject root) {
+        long backupUserId = getUserIdFromBackup(root);
+        if (backupUserId != 0L) {
+            for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+                UserConfig userConfig = UserConfig.getInstance(a);
+                if (!userConfig.isConfigLoaded()) {
+                    userConfig.loadConfig();
+                }
+                if (userConfig.isClientActivated() && userConfig.getClientUserId() == backupUserId) {
+                    FileLog.d("SettingsBackupHelper: Account " + backupUserId + " already active at slot " + a + ". Target slot " + a + " to prevent duplicate.");
+                    return a;
+                }
+            }
+        }
+        return findNextAvailableAccount();
+    }
+
     public static int importUserConfig(JsonObject root) throws Exception {
         if (root == null) {
             throw new IllegalArgumentException("Backup file is empty");
         }
-        int targetAccount = findNextAvailableAccount();
+        int targetAccount = findTargetAccountSlot(root);
         if (targetAccount < 0) {
             throw new Exception("No free account slot available.");
         }

@@ -198,6 +198,67 @@ public class AccountsSettingsActivity extends BaseNekoXSettingsActivity {
         backupAllAccounts(true);
     }
 
+    private interface AsyncAction<T> {
+        T run(SettingsBackupHelper.ProgressListener listener) throws Exception;
+    }
+
+    private <T> void runAsyncBackupTask(String initialMessage, AsyncAction<T> action, Consumer<T> onSuccess) {
+        if (getParentActivity() == null) {
+            return;
+        }
+        org.telegram.ui.ActionBar.AlertDialog progressDialog = new org.telegram.ui.ActionBar.AlertDialog(getParentActivity(), 3);
+        progressDialog.setMessage(initialMessage + " (0%)");
+        progressDialog.setCanceledOnTouchOutside(false);
+        progressDialog.setCancelable(false);
+        progressDialog.show();
+
+        org.telegram.messenger.Utilities.globalQueue.postRunnable(() -> {
+            try {
+                T result = action.run((percent, statusText) -> AndroidUtilities.runOnUIThread(() -> {
+                    if (progressDialog.isShowing()) {
+                        progressDialog.setMessage(statusText + " (" + percent + "%)");
+                    }
+                }));
+                AndroidUtilities.runOnUIThread(() -> {
+                    try {
+                        if (progressDialog.isShowing()) {
+                            progressDialog.dismiss();
+                        }
+                    } catch (Exception ignore) {
+                    }
+                    if (onSuccess != null && getParentActivity() != null) {
+                        onSuccess.accept(result);
+                    }
+                });
+            } catch (Exception e) {
+                org.telegram.messenger.FileLog.e(e);
+                AndroidUtilities.runOnUIThread(() -> {
+                    try {
+                        if (progressDialog.isShowing()) {
+                            progressDialog.dismiss();
+                        }
+                    } catch (Exception ignore) {
+                    }
+                    if (getParentActivity() != null) {
+                        if (e instanceof SettingsBackupHelper.BackupPasswordRequiredException) {
+                            promptPassword(getString(R.string.AccountDecryptPasswordTitle), getString(R.string.AccountBackupPasswordHint), pwd -> {
+                                if (pwd == null || pwd.isEmpty()) {
+                                    AlertUtil.showSimpleAlert(getParentActivity(), new IllegalArgumentException(getString(R.string.AccountBackupPasswordRequired)));
+                                    return;
+                                }
+                                runAsyncBackupTask(initialMessage, listener -> action.run(listener), onSuccess);
+                            });
+                        } else if (e instanceof SettingsBackupHelper.BackupPasswordInvalidException) {
+                            AlertUtil.showSimpleAlert(getParentActivity(), new IllegalArgumentException(getString(R.string.AccountBackupPasswordInvalid)));
+                        } else {
+                            AlertUtil.showSimpleAlert(getParentActivity(), e);
+                        }
+                    }
+                });
+            }
+        });
+    }
+
     private void backupAllAccounts(boolean encrypted) {
         if (getParentActivity() == null) {
             return;
@@ -208,20 +269,18 @@ public class AccountsSettingsActivity extends BaseNekoXSettingsActivity {
                     AlertUtil.showSimpleAlert(getParentActivity(), new IllegalArgumentException(getString(R.string.AccountBackupPasswordRequired)));
                     return;
                 }
-                try {
-                    File backupFile = SettingsBackupHelper.backupAllAccountsZip(getParentActivity(), password);
-                    tw.nekomimi.nekogram.utils.ShareUtil.shareFile(getParentActivity(), backupFile);
-                } catch (Exception e) {
-                    AlertUtil.showSimpleAlert(getParentActivity(), e);
-                }
+                runAsyncBackupTask("Backing up all accounts...", listener -> SettingsBackupHelper.backupAllAccountsZip(getParentActivity(), password, listener), backupFile -> {
+                    if (backupFile != null) {
+                        tw.nekomimi.nekogram.utils.ShareUtil.shareFile(getParentActivity(), backupFile);
+                    }
+                });
             });
         } else {
-            try {
-                File backupFile = SettingsBackupHelper.backupAllAccountsZip(getParentActivity(), null);
-                tw.nekomimi.nekogram.utils.ShareUtil.shareFile(getParentActivity(), backupFile);
-            } catch (Exception e) {
-                AlertUtil.showSimpleAlert(getParentActivity(), e);
-            }
+            runAsyncBackupTask("Backing up all accounts...", listener -> SettingsBackupHelper.backupAllAccountsZip(getParentActivity(), null, listener), backupFile -> {
+                if (backupFile != null) {
+                    tw.nekomimi.nekogram.utils.ShareUtil.shareFile(getParentActivity(), backupFile);
+                }
+            });
         }
     }
 
@@ -236,20 +295,18 @@ public class AccountsSettingsActivity extends BaseNekoXSettingsActivity {
                     AlertUtil.showSimpleAlert(getParentActivity(), new IllegalArgumentException(getString(R.string.AccountBackupPasswordRequired)));
                     return;
                 }
-                try {
-                    File backupFile = SettingsBackupHelper.backupUserConfigZip(getParentActivity(), account, password);
-                    tw.nekomimi.nekogram.utils.ShareUtil.shareFile(getParentActivity(), backupFile);
-                } catch (Exception e) {
-                    AlertUtil.showSimpleAlert(getParentActivity(), e);
-                }
+                runAsyncBackupTask("Backing up account...", listener -> SettingsBackupHelper.backupUserConfigZip(getParentActivity(), account, password, listener), backupFile -> {
+                    if (backupFile != null) {
+                        tw.nekomimi.nekogram.utils.ShareUtil.shareFile(getParentActivity(), backupFile);
+                    }
+                });
             });
         } else {
-            try {
-                File backupFile = SettingsBackupHelper.backupUserConfigZip(getParentActivity(), account, null);
-                tw.nekomimi.nekogram.utils.ShareUtil.shareFile(getParentActivity(), backupFile);
-            } catch (Exception e) {
-                AlertUtil.showSimpleAlert(getParentActivity(), e);
-            }
+            runAsyncBackupTask("Backing up account...", listener -> SettingsBackupHelper.backupUserConfigZip(getParentActivity(), account, null, listener), backupFile -> {
+                if (backupFile != null) {
+                    tw.nekomimi.nekogram.utils.ShareUtil.shareFile(getParentActivity(), backupFile);
+                }
+            });
         }
     }
 
@@ -305,9 +362,8 @@ public class AccountsSettingsActivity extends BaseNekoXSettingsActivity {
         if (getParentActivity() == null) {
             return;
         }
-        try {
-            int count = SettingsBackupHelper.importUserConfig(getParentActivity(), uri, password);
-            if (count >= 1) {
+        runAsyncBackupTask("Restoring account backup...", listener -> SettingsBackupHelper.importUserConfig(getParentActivity(), uri, password, listener), count -> {
+            if (count != null && count >= 1) {
                 String successMsg = (count == 1)
                         ? getParentActivity().getString(R.string.AccountRestoreSuccess, 1)
                         : getParentActivity().getString(R.string.AccountRestoreCountSuccess, count);
@@ -317,30 +373,19 @@ public class AccountsSettingsActivity extends BaseNekoXSettingsActivity {
                 restartDialog.setPositiveButton(getString(R.string.OK), (__, ___) -> tw.nekomimi.nekogram.helpers.AppRestartHelper.triggerRebirth(getParentActivity(), new Intent(getParentActivity(), org.telegram.ui.LaunchActivity.class)));
                 restartDialog.show();
             }
-        } catch (SettingsBackupHelper.BackupPasswordRequiredException e) {
-            promptPassword(getString(R.string.AccountDecryptPasswordTitle), getString(R.string.AccountBackupPasswordHint), pwd -> attemptImportAccountBackup(uri, pwd));
-        } catch (SettingsBackupHelper.BackupPasswordInvalidException e) {
-            AlertUtil.showSimpleAlert(getParentActivity(), new IllegalArgumentException(getString(R.string.AccountBackupPasswordInvalid)));
-        } catch (Exception e) {
-            AlertUtil.showSimpleAlert(getParentActivity(), e);
-        }
+        });
     }
 
     private void attemptAppendAccountBackup(Uri uri, String password) {
         if (getParentActivity() == null) {
             return;
         }
-        try {
-            int account = org.telegram.messenger.UserConfig.selectedAccount;
-            File backupFile = SettingsBackupHelper.appendUserConfigToZip(getParentActivity(), account, uri, password);
-            tw.nekomimi.nekogram.utils.ShareUtil.shareFile(getParentActivity(), backupFile);
-        } catch (SettingsBackupHelper.BackupPasswordRequiredException e) {
-            promptPassword(getString(R.string.AccountDecryptPasswordTitle), getString(R.string.AccountBackupPasswordHint), pwd -> attemptAppendAccountBackup(uri, pwd));
-        } catch (SettingsBackupHelper.BackupPasswordInvalidException e) {
-            AlertUtil.showSimpleAlert(getParentActivity(), new IllegalArgumentException(getString(R.string.AccountBackupPasswordInvalid)));
-        } catch (Exception e) {
-            AlertUtil.showSimpleAlert(getParentActivity(), e);
-        }
+        int account = org.telegram.messenger.UserConfig.selectedAccount;
+        runAsyncBackupTask("Appending account to backup...", listener -> SettingsBackupHelper.appendUserConfigToZip(getParentActivity(), account, uri, password, listener), backupFile -> {
+            if (backupFile != null) {
+                tw.nekomimi.nekogram.utils.ShareUtil.shareFile(getParentActivity(), backupFile);
+            }
+        });
     }
 
     @Override
