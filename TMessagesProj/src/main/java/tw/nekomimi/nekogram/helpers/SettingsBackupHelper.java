@@ -21,6 +21,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
+import org.telegram.messenger.FileLog;
 import org.telegram.messenger.AccountInstance;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.R;
@@ -407,7 +408,21 @@ public final class SettingsBackupHelper {
             } else {
                 relativePath = baseDir.toURI().relativize(file.toURI()).getPath();
             }
-            byte[] fileBytes = FileUtil.readBytes(file);
+            byte[] fileBytes;
+            try {
+                java.io.FileInputStream fis = new java.io.FileInputStream(file);
+                java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+                byte[] buf = new byte[8192];
+                int read;
+                while ((read = fis.read(buf)) != -1) {
+                    bos.write(buf, 0, read);
+                }
+                fis.close();
+                fileBytes = bos.toByteArray();
+            } catch (Exception e) {
+                FileLog.e(e);
+                continue;
+            }
             if (fileBytes == null) continue;
             String fileEntryName = entryPrefix + "files/" + relativePath;
             if (password != null && !password.isEmpty()) {
@@ -530,7 +545,13 @@ public final class SettingsBackupHelper {
                 File destFile = new File(targetDir, fileName);
                 File parent = destFile.getParentFile();
                 if (parent != null) parent.mkdirs();
-                FileUtil.writeBytes(fBytes, destFile);
+                try {
+                    java.io.FileOutputStream fos = new java.io.FileOutputStream(destFile);
+                    fos.write(fBytes);
+                    fos.close();
+                } catch (Exception e) {
+                    FileLog.e(e);
+                }
             }
 
             importUserConfigToAccount(targetAccount, root);

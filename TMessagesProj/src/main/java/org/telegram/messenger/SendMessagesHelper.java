@@ -2506,6 +2506,60 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         return 0f;
     }
 
+    private float getConfiguredBatchForwardDelaySeconds() {
+        if (!NekoConfig.batchForwardAutoDelay.Bool()) {
+            return 0f;
+        }
+        try {
+            int preset = NekoConfig.batchForwardDelayPreset.Int();
+            FileLog.d("BatchForwardDelay: preset=" + preset);
+            if (preset == NekoConfig.BATCH_FORWARD_DELAY_PRESET_01S) {
+                return 0.1f;
+            }
+            if (preset == NekoConfig.BATCH_FORWARD_DELAY_PRESET_015S) {
+                return 0.15f;
+            }
+            if (preset == NekoConfig.BATCH_FORWARD_DELAY_PRESET_025S) {
+                return 0.25f;
+            }
+            if (preset == NekoConfig.BATCH_FORWARD_DELAY_PRESET_05S) {
+                return 0.5f;
+            }
+            if (preset == NekoConfig.BATCH_FORWARD_DELAY_PRESET_1S) {
+                return 1.0f;
+            }
+            if (preset == NekoConfig.BATCH_FORWARD_DELAY_PRESET_MANUAL) {
+                String rawValue = NekoConfig.batchForwardDelayManualSeconds.String();
+                FileLog.d("BatchForwardDelay: manual rawValue=" + rawValue);
+                if (TextUtils.isEmpty(rawValue)) {
+                    return 0f;
+                }
+                String normalized = rawValue.trim().replace(',', '.');
+                FileLog.d("BatchForwardDelay: manual normalized=" + normalized);
+                float parsed = Float.parseFloat(normalized);
+                FileLog.d("BatchForwardDelay: manual parsed=" + parsed);
+                return parsed > 0f ? parsed : 0f;
+            }
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+        return 0f;
+    }
+
+    private int getConfiguredBatchForwardSize() {
+        try {
+            String rawValue = NekoConfig.batchForwardSize.String();
+            if (TextUtils.isEmpty(rawValue)) {
+                return 5;
+            }
+            int parsed = Integer.parseInt(rawValue.trim());
+            return parsed > 0 ? parsed : 5;
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+        return 5;
+    }
+
     private void scheduleBulkForwardWithDelay(
             ArrayList<MessageObject> messages,
             final long peer,
@@ -2520,9 +2574,10 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
             final long monoForumPeerId,
             final MessageSuggestionParams suggestionParams,
             final int index,
-            final long delayMs
+            final long delayMs,
+            final int sentInBatch
     ) {
-        FileLog.d("BulkForwardDelay: scheduleBulkForwardWithDelay index=" + index + ", delayMs=" + delayMs + ", total messages=" + messages.size());
+        FileLog.d("BulkForwardDelay: scheduleBulkForwardWithDelay index=" + index + ", delayMs=" + delayMs + ", sentInBatch=" + sentInBatch + ", total messages=" + messages.size());
         if (messages == null || messages.isEmpty() || index >= messages.size()) {
             return;
         }
@@ -2546,6 +2601,13 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         }
         FileLog.d("BulkForwardDelay: Batch size=" + batch.size() + ", nextIndex=" + nextIndex);
         final int finalNextIndex = nextIndex;
+        final int newSentInBatch = sentInBatch + batch.size();
+
+        // Calculate batch delay parameters
+        final float batchDelaySeconds = getConfiguredBatchForwardDelaySeconds();
+        final int batchSize = getConfiguredBatchForwardSize();
+        final boolean batchDelayEnabled = NekoConfig.batchForwardAutoDelay.Bool() && batchDelaySeconds > 0f && batchSize > 0;
+
         final Runnable sendStep = () -> {
             FileLog.d("BulkForwardDelay: Sending batch, index=" + index);
             try {
@@ -2554,8 +2616,20 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                 FileLog.e(e);
             }
             if (finalNextIndex < messages.size()) {
-                FileLog.d("BulkForwardDelay: Scheduling next batch in " + delayMs + "ms, index=" + finalNextIndex);
-                AndroidUtilities.runOnUIThread(() -> scheduleBulkForwardWithDelay(messages, peer, forwardFromMyName, hideCaption, notify, scheduleDate, scheduleRepeatPeriod, replyToTopMsg, videoTimestamp, payStars, monoForumPeerId, suggestionParams, finalNextIndex, delayMs), delayMs);
+                // Check if batch delay should be applied
+                long nextDelayMs = delayMs;
+                int nextSentInBatch = newSentInBatch;
+                if (batchDelayEnabled && newSentInBatch >= batchSize) {
+                    // Batch threshold reached, apply batch delay
+                    long batchDelayMs = Math.max(0L, (long) (batchDelaySeconds * 1000f));
+                    nextDelayMs = Math.max(delayMs, batchDelayMs);
+                    nextSentInBatch = 0; // Reset counter
+                    FileLog.d("BatchForwardDelay: Batch threshold reached (" + newSentInBatch + ">=" + batchSize + "), applying batch delay=" + nextDelayMs + "ms");
+                }
+                final long finalNextDelayMs = nextDelayMs;
+                final int finalNextSentInBatch = nextSentInBatch;
+                FileLog.d("BulkForwardDelay: Scheduling next in " + finalNextDelayMs + "ms, index=" + finalNextIndex + ", sentInBatch=" + finalNextSentInBatch);
+                AndroidUtilities.runOnUIThread(() -> scheduleBulkForwardWithDelay(messages, peer, forwardFromMyName, hideCaption, notify, scheduleDate, scheduleRepeatPeriod, replyToTopMsg, videoTimestamp, payStars, monoForumPeerId, suggestionParams, finalNextIndex, delayMs, finalNextSentInBatch), finalNextDelayMs);
             }
         };
         if (index == 0) {
@@ -2614,10 +2688,11 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         if (shouldApplyBulkForwardDelay(messages, forwardFromMyName)) {
             try {
                 float delaySeconds = getConfiguredBulkForwardDelaySeconds();
-                if (delaySeconds > 0f) {
+                float batchDelaySeconds = getConfiguredBatchForwardDelaySeconds();
+                if (delaySeconds > 0f || batchDelaySeconds > 0f) {
                     long delayMs = Math.max(0L, (long) (delaySeconds * 1000f));
-                    FileLog.d("Bulk forward delay enabled: count=" + messages.size() + " delayMs=" + delayMs);
-                    scheduleBulkForwardWithDelay(messages, peer, forwardFromMyName, hideCaption, notify, scheduleDate, scheduleRepeatPeriod, replyToTopMsg, video_timestamp, payStars, monoForumPeerId, suggestionParams, 0, delayMs);
+                    FileLog.d("Bulk forward delay enabled: count=" + messages.size() + " perMsgDelayMs=" + delayMs + " batchDelaySeconds=" + batchDelaySeconds);
+                    scheduleBulkForwardWithDelay(messages, peer, forwardFromMyName, hideCaption, notify, scheduleDate, scheduleRepeatPeriod, replyToTopMsg, video_timestamp, payStars, monoForumPeerId, suggestionParams, 0, delayMs, 0);
                     return 0;
                 }
             } catch (Exception e) {
