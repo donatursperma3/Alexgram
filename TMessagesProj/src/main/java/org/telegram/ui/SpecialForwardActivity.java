@@ -1840,7 +1840,6 @@ public class SpecialForwardActivity extends ChatActivity {
             org.telegram.messenger.MessagesController.getInstance(currentAccount).loadDialogs(1, 0, 200, true);
             org.telegram.messenger.NotificationCenter.getInstance(currentAccount).addObserver(this, org.telegram.messenger.NotificationCenter.dialogsNeedReload);
 
-            // Initialize standard tabs
             CategoryTab tabAll = new CategoryTab();
             tabAll.id = 0;
             tabAll.title = LocaleController.getString("FilterAllChatsShort", R.string.FilterAllChatsShort);
@@ -1848,54 +1847,30 @@ public class SpecialForwardActivity extends ChatActivity {
             tabAll.iconRes = R.drawable.filter_all_solar;
             tabs.add(tabAll);
 
-            CategoryTab tabFav = new CategoryTab();
-            tabFav.id = -1;
-            tabFav.title = LocaleController.getString("ArchiveHintHeader3", R.string.ArchiveHintHeader3);
-            if (TextUtils.isEmpty(tabFav.title)) tabFav.title = "Pinned";
-            tabFav.iconRes = R.drawable.filter_favorite_solar;
-            tabs.add(tabFav);
+            CategoryTab tabPinned = new CategoryTab();
+            tabPinned.id = -1;
+            tabPinned.title = LocaleController.getString("ArchiveHintHeader3", R.string.ArchiveHintHeader3);
+            if (TextUtils.isEmpty(tabPinned.title)) tabPinned.title = "Pinned";
+            tabPinned.iconRes = R.drawable.filter_favorite_solar;
+            tabs.add(tabPinned);
 
-            CategoryTab tabPm = new CategoryTab();
-            tabPm.id = -2;
-            tabPm.title = LocaleController.getString("TabsByTypePersonal", R.string.TabsByTypePersonal);
-            if (TextUtils.isEmpty(tabPm.title)) tabPm.title = "Personal";
-            tabPm.iconRes = R.drawable.filter_private_solar;
-            tabs.add(tabPm);
-
-            CategoryTab tabContacts = new CategoryTab();
-            tabContacts.id = -3;
-            tabContacts.title = LocaleController.getString("FilterContacts", R.string.FilterContacts);
-            if (TextUtils.isEmpty(tabContacts.title)) tabContacts.title = "Contacts";
-            tabContacts.iconRes = R.drawable.msg_contacts_solar;
-            tabs.add(tabContacts);
-
-            CategoryTab tabGroup = new CategoryTab();
-            tabGroup.id = -4;
-            tabGroup.title = LocaleController.getString("FilterGroups", R.string.FilterGroups);
-            if (TextUtils.isEmpty(tabGroup.title)) tabGroup.title = "Groups";
-            tabGroup.iconRes = R.drawable.filter_groups_solar;
-            tabs.add(tabGroup);
-
-            CategoryTab tabChannel = new CategoryTab();
-            tabChannel.id = -5;
-            tabChannel.title = LocaleController.getString("FilterChannels", R.string.FilterChannels);
-            if (TextUtils.isEmpty(tabChannel.title)) tabChannel.title = "Channels";
-            tabChannel.iconRes = R.drawable.filter_channel_solar;
-            tabs.add(tabChannel);
-
-            CategoryTab tabBot = new CategoryTab();
-            tabBot.id = -6;
-            tabBot.title = LocaleController.getString("FilterBots", R.string.FilterBots);
-            if (TextUtils.isEmpty(tabBot.title)) tabBot.title = "Bots";
-            tabBot.iconRes = R.drawable.filter_bots_solar;
-            tabs.add(tabBot);
-
-            // Add custom folders
+            boolean tabsByTypeEnabled = tw.nekomimi.nekogram.tabs.TabsByTypeSettings.getInstance().isEnabledInMain();
+            boolean hideFolders = tw.nekomimi.nekogram.tabs.TabsByTypeSettings.getInstance().isHideFolders();
             ArrayList<org.telegram.messenger.MessagesController.DialogFilter> dialogFilters = org.telegram.messenger.MessagesController.getInstance(currentAccount).getDialogFilters();
             if (dialogFilters != null) {
                 for (int i = 0; i < dialogFilters.size(); i++) {
                     org.telegram.messenger.MessagesController.DialogFilter filter = dialogFilters.get(i);
-                    if (filter == null || filter.id == 0 || filter.isDefault()) {
+                    if (filter == null || filter.isDefault()) {
+                        continue;
+                    }
+                    boolean isVirtual = tw.nekomimi.nekogram.tabs.TabsByTypeManager.isVirtualFilter(filter);
+                    if (isVirtual && (filter.flags & org.telegram.messenger.MessagesController.DIALOG_FILTER_FLAG_ONLY_ARCHIVED) != 0) {
+                        continue;
+                    }
+                    if (isVirtual && !tabsByTypeEnabled) {
+                        continue;
+                    }
+                    if (hideFolders && !isVirtual) {
                         continue;
                     }
                     CategoryTab tabFilter = new CategoryTab();
@@ -1903,7 +1878,7 @@ public class SpecialForwardActivity extends ChatActivity {
                     tabFilter.title = filter.name;
                     tabFilter.emoticon = filter.emoticon;
                     tabFilter.filter = filter;
-                    if (tw.nekomimi.nekogram.tabs.TabsByTypeManager.isVirtualFilter(filter)) {
+                    if (isVirtual) {
                         tw.nekomimi.nekogram.tabs.TabsByTypeEntry entry = tw.nekomimi.nekogram.tabs.TabsByTypeManager.getTabFromFilter(filter);
                         tabFilter.iconRes = entry != null ? entry.iconResId : R.drawable.msg_folders;
                     } else {
@@ -2231,9 +2206,12 @@ public class SpecialForwardActivity extends ChatActivity {
                 return;
             }
             CategoryTab activeTab = tabs.get(activeCategoryIndex);
-            
-            // If Contacts category is active and search query is empty, show all contacts
-            if (activeTab.id == -3 && TextUtils.isEmpty(searchQuery)) {
+            org.telegram.messenger.MessagesController.DialogFilter activeFilter = activeTab.filter;
+            boolean hasFilter = activeFilter != null;
+            boolean isPinnedTab = activeTab.id == -1;
+            boolean isLegacyContactsOnly = !isPinnedTab && !hasFilter && activeTab.id == -3;
+
+            if (isLegacyContactsOnly && TextUtils.isEmpty(searchQuery)) {
                 ArrayList<TLRPC.TL_contact> contactsList = org.telegram.messenger.ContactsController.getInstance(currentAccount).contacts;
                 for (TLRPC.TL_contact contact : contactsList) {
                     TLRPC.Dialog fakeDialog = new TLRPC.TL_dialog();
@@ -2252,9 +2230,10 @@ public class SpecialForwardActivity extends ChatActivity {
                 }
                 return;
             }
-            
+
             ArrayList<TLRPC.Dialog> dialogList = new ArrayList<>();
             org.telegram.messenger.MessagesController messagesController = org.telegram.messenger.MessagesController.getInstance(currentAccount);
+            org.telegram.messenger.AccountInstance accountInstance = org.telegram.messenger.AccountInstance.getInstance(currentAccount);
             for (int a = 0; a < messagesController.dialogs_dict.size(); a++) {
                 TLRPC.Dialog d = messagesController.dialogs_dict.valueAt(a);
                 if (d != null) {
@@ -2283,39 +2262,22 @@ public class SpecialForwardActivity extends ChatActivity {
                     }
                 }
                 
-                if (activeTab.id == -1) { // Pinned
+                if (hasFilter) {
+                    if (!activeFilter.includesDialog(accountInstance, dialogId, dialog)) continue;
+                } else if (isPinnedTab) {
                     if (!dialog.pinned) continue;
-                } else if (activeTab.id == -2) { // Personal (PMs)
-                    if (!DialogObject.isUserDialog(dialogId)) continue;
-                    TLRPC.User user = org.telegram.messenger.MessagesController.getInstance(currentAccount).getUser(dialogId);
-                    if (user == null || user.bot) continue;
-                } else if (activeTab.id == -3) { // Contacts (with search query)
+                } else if (isLegacyContactsOnly) {
                     if (!DialogObject.isUserDialog(dialogId)) continue;
                     if (!org.telegram.messenger.ContactsController.getInstance(currentAccount).isContact(dialogId)) continue;
-                } else if (activeTab.id == -4) { // Groups (combined: chat & megagroup)
-                    if (!DialogObject.isChatDialog(dialogId)) continue;
-                    TLRPC.Chat chat = org.telegram.messenger.MessagesController.getInstance(currentAccount).getChat(-dialogId);
-                    if (chat == null || (ChatObject.isChannel(chat) && !chat.megagroup)) continue;
-                } else if (activeTab.id == -5) { // Channels
-                    if (!DialogObject.isChatDialog(dialogId)) continue;
-                    TLRPC.Chat chat = org.telegram.messenger.MessagesController.getInstance(currentAccount).getChat(-dialogId);
-                    if (chat == null || !ChatObject.isChannel(chat) || chat.megagroup) continue;
-                } else if (activeTab.id == -6) { // Bots
-                    if (!DialogObject.isUserDialog(dialogId)) continue;
-                    TLRPC.User user = org.telegram.messenger.MessagesController.getInstance(currentAccount).getUser(dialogId);
-                    if (user == null || !user.bot) continue;
-                } else if ((activeTab.id > 0 || tw.nekomimi.nekogram.tabs.TabsByTypeManager.isVirtualFilter(activeTab.filter)) && activeTab.filter != null) { // Custom folder & Tabs by type
-                    if (!activeTab.filter.includesDialog(org.telegram.messenger.AccountInstance.getInstance(currentAccount), dialogId, dialog)) continue;
                 }
                 
                 filteredDialogs.add(dialog);
             }
 
-            // Add explicitly folder-included chats (alwaysShow & pinnedDialogs) that might not be in dialogs_dict/allDialogs
-            if ((activeTab.id > 0 || tw.nekomimi.nekogram.tabs.TabsByTypeManager.isVirtualFilter(activeTab.filter)) && activeTab.filter != null) {
-                ArrayList<Long> folderIds = new ArrayList<>(activeTab.filter.alwaysShow);
-                for (int a = 0; a < activeTab.filter.pinnedDialogs.size(); a++) {
-                    long did = activeTab.filter.pinnedDialogs.keyAt(a);
+            if (hasFilter) {
+                ArrayList<Long> folderIds = new ArrayList<>(activeFilter.alwaysShow);
+                for (int a = 0; a < activeFilter.pinnedDialogs.size(); a++) {
+                    long did = activeFilter.pinnedDialogs.keyAt(a);
                     if (!folderIds.contains(did)) {
                         folderIds.add(did);
                     }
@@ -2360,15 +2322,13 @@ public class SpecialForwardActivity extends ChatActivity {
                 }
             }
             
-            // Also search in contacts if searching
             if (!TextUtils.isEmpty(searchQuery)) {
                 ArrayList<TLRPC.TL_contact> contactsList = org.telegram.messenger.ContactsController.getInstance(currentAccount).contacts;
                 for (TLRPC.TL_contact contact : contactsList) {
                     TLRPC.User user = org.telegram.messenger.MessagesController.getInstance(currentAccount).getUser(contact.user_id);
                     if (user != null) {
                         String title = (user.first_name + " " + user.last_name).toLowerCase();
-                        if (title.contains(searchQuery)) {
-                            // Check if already in filteredDialogs
+                        if (title.contains(searchQuery) && idPassesFilter(user.id, activeFilter, hasFilter, isPinnedTab, isLegacyContactsOnly, accountInstance)) {
                             boolean exists = false;
                             for (TLRPC.Dialog d : filteredDialogs) {
                                     if (d.id == user.id) {
@@ -2394,34 +2354,7 @@ public class SpecialForwardActivity extends ChatActivity {
                     } else if (obj instanceof TLRPC.Chat) {
                         id = -((TLRPC.Chat) obj).id;
                     }
-                    if (id != 0) {
-                        if (activeTab.id == -1) {
-                            continue;
-                        } else if (activeTab.id == -2) {
-                            if (!DialogObject.isUserDialog(id)) continue;
-                            TLRPC.User user = org.telegram.messenger.MessagesController.getInstance(currentAccount).getUser(id);
-                            if (user == null || user.bot) continue;
-                        } else if (activeTab.id == -3) {
-                            if (!DialogObject.isUserDialog(id)) continue;
-                            if (!org.telegram.messenger.ContactsController.getInstance(currentAccount).isContact(id)) continue;
-                        } else if (activeTab.id == -4) {
-                            if (!DialogObject.isChatDialog(id)) continue;
-                            TLRPC.Chat chat = org.telegram.messenger.MessagesController.getInstance(currentAccount).getChat(-id);
-                            if (chat == null || (ChatObject.isChannel(chat) && !chat.megagroup)) continue;
-                        } else if (activeTab.id == -5) {
-                            if (!DialogObject.isChatDialog(id)) continue;
-                            TLRPC.Chat chat = org.telegram.messenger.MessagesController.getInstance(currentAccount).getChat(-id);
-                            if (chat == null || !ChatObject.isChannel(chat) || chat.megagroup) continue;
-                        } else if (activeTab.id == -6) {
-                            if (!DialogObject.isUserDialog(id)) continue;
-                            TLRPC.User user = org.telegram.messenger.MessagesController.getInstance(currentAccount).getUser(id);
-                            if (user == null || !user.bot) continue;
-                        } else if ((activeTab.id > 0 || tw.nekomimi.nekogram.tabs.TabsByTypeManager.isVirtualFilter(activeTab.filter)) && activeTab.filter != null) {
-                            TLRPC.Dialog tempDialog = new TLRPC.TL_dialog();
-                            tempDialog.id = id;
-                            if (!activeTab.filter.includesDialog(org.telegram.messenger.AccountInstance.getInstance(currentAccount), id, tempDialog)) continue;
-                        }
-
+                    if (id != 0 && idPassesFilter(id, activeFilter, hasFilter, isPinnedTab, isLegacyContactsOnly, accountInstance)) {
                         boolean exists = false;
                         for (int b = 0; b < filteredDialogs.size(); b++) {
                             if (filteredDialogs.get(b).id == id) {
@@ -2446,34 +2379,7 @@ public class SpecialForwardActivity extends ChatActivity {
                     } else if (obj instanceof TLRPC.Chat) {
                         id = -((TLRPC.Chat) obj).id;
                     }
-                    if (id != 0) {
-                        if (activeTab.id == -1) {
-                            continue;
-                        } else if (activeTab.id == -2) {
-                            if (!DialogObject.isUserDialog(id)) continue;
-                            TLRPC.User user = org.telegram.messenger.MessagesController.getInstance(currentAccount).getUser(id);
-                            if (user == null || user.bot) continue;
-                        } else if (activeTab.id == -3) {
-                            if (!DialogObject.isUserDialog(id)) continue;
-                            if (!org.telegram.messenger.ContactsController.getInstance(currentAccount).isContact(id)) continue;
-                        } else if (activeTab.id == -4) {
-                            if (!DialogObject.isChatDialog(id)) continue;
-                            TLRPC.Chat chat = org.telegram.messenger.MessagesController.getInstance(currentAccount).getChat(-id);
-                            if (chat == null || (ChatObject.isChannel(chat) && !chat.megagroup)) continue;
-                        } else if (activeTab.id == -5) {
-                            if (!DialogObject.isChatDialog(id)) continue;
-                            TLRPC.Chat chat = org.telegram.messenger.MessagesController.getInstance(currentAccount).getChat(-id);
-                            if (chat == null || !ChatObject.isChannel(chat) || chat.megagroup) continue;
-                        } else if (activeTab.id == -6) {
-                            if (!DialogObject.isUserDialog(id)) continue;
-                            TLRPC.User user = org.telegram.messenger.MessagesController.getInstance(currentAccount).getUser(id);
-                            if (user == null || !user.bot) continue;
-                        } else if ((activeTab.id > 0 || tw.nekomimi.nekogram.tabs.TabsByTypeManager.isVirtualFilter(activeTab.filter)) && activeTab.filter != null) {
-                            TLRPC.Dialog tempDialog = new TLRPC.TL_dialog();
-                            tempDialog.id = id;
-                            if (!activeTab.filter.includesDialog(org.telegram.messenger.AccountInstance.getInstance(currentAccount), id, tempDialog)) continue;
-                        }
-
+                    if (id != 0 && idPassesFilter(id, activeFilter, hasFilter, isPinnedTab, isLegacyContactsOnly, accountInstance)) {
                         boolean exists = false;
                         for (int b = 0; b < filteredDialogs.size(); b++) {
                             if (filteredDialogs.get(b).id == id) {
@@ -2490,28 +2396,27 @@ public class SpecialForwardActivity extends ChatActivity {
                 }
             }
 
-            // Auto sort dialogs: pinned first, then by last message/draft date descending
-            if (activeTab.id != -3) { // skip sorting contacts which are already sorted alphabetically
+            if (!isLegacyContactsOnly) {
                 java.util.Collections.sort(filteredDialogs, (dialog1, dialog2) -> {
                     boolean pinned1 = dialog1.pinned;
                     boolean pinned2 = dialog2.pinned;
-                    
-                    if (activeTab.filter != null) {
-                        pinned1 = activeTab.filter.pinnedDialogs.indexOfKey(dialog1.id) >= 0;
-                        pinned2 = activeTab.filter.pinnedDialogs.indexOfKey(dialog2.id) >= 0;
+
+                    if (hasFilter) {
+                        pinned1 = activeFilter.pinnedDialogs.indexOfKey(dialog1.id) >= 0;
+                        pinned2 = activeFilter.pinnedDialogs.indexOfKey(dialog2.id) >= 0;
                     }
-                    
+
                     if (pinned1 != pinned2) {
                         return pinned1 ? -1 : 1;
                     } else if (pinned1) {
-                        if (activeTab.filter != null) {
-                            int index1 = activeTab.filter.pinnedDialogs.get(dialog1.id);
-                            int index2 = activeTab.filter.pinnedDialogs.get(dialog2.id);
+                        if (hasFilter) {
+                            int index1 = activeFilter.pinnedDialogs.get(dialog1.id);
+                            int index2 = activeFilter.pinnedDialogs.get(dialog2.id);
                             return Integer.compare(index1, index2);
                         }
                         return Integer.compare(dialog2.pinnedNum, dialog1.pinnedNum);
                     }
-                    
+
                     long date1 = getDialogDate(dialog1);
                     long date2 = getDialogDate(dialog2);
                     return Long.compare(date2, date1);
@@ -2521,6 +2426,24 @@ public class SpecialForwardActivity extends ChatActivity {
             if (adapter != null) {
                 adapter.notifyDataSetChanged();
             }
+        }
+
+        private boolean idPassesFilter(long id, org.telegram.messenger.MessagesController.DialogFilter activeFilter, boolean hasFilter, boolean isPinnedTab, boolean isLegacyContactsOnly, org.telegram.messenger.AccountInstance accountInstance) {
+            if (hasFilter) {
+                TLRPC.Dialog tempDialog = new TLRPC.TL_dialog();
+                tempDialog.id = id;
+                return activeFilter.includesDialog(accountInstance, id, tempDialog);
+            }
+            if (isPinnedTab) {
+                return false;
+            }
+            if (isLegacyContactsOnly) {
+                if (!DialogObject.isUserDialog(id)) {
+                    return false;
+                }
+                return org.telegram.messenger.ContactsController.getInstance(currentAccount).isContact(id);
+            }
+            return true;
         }
         
         private class ShareAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
