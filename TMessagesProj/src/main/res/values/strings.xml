@@ -3230,6 +3230,8 @@
     <string name="ShowSharedMediaGifSize">Show GIF size in shared media</string>
     <string name="ShowProtectedContentInSharedMedia">Show protected content indicator in shared media</string>
     <string name="ShowProtectedContentInSharedMediaInfo">Display a protected badge when media cannot be forwarded.</string>
+    <string name="ShowBookmarkIndicatorInSharedMedia">Show bookmark indicator in shared media</string>
+    <string name="ShowBookmarkIndicatorInSharedMediaInfo">Display a bookmark badge on bookmarked items in shared media.</string>
     <string name="ShowProtectedContentLabel">Protected content label</string>
     <string name="ShowProtectedContentLabelInfo">Set the text or emoji shown for protected/shared content.</string>
     <string name="ProtectedContent">🔒 Protected</string>

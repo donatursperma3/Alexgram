@@ -10,6 +10,7 @@ package org.telegram.ui.Cells;
 
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.drawable.Drawable;
@@ -29,6 +30,8 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import androidx.core.content.ContextCompat;
+
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.DownloadController;
 import org.telegram.messenger.FileLoader;
@@ -44,6 +47,10 @@ import org.telegram.messenger.Utilities;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.AnimatedEmojiSpan;
+import tw.nekomimi.nekogram.NekoConfig;
+import tw.nekomimi.nekogram.helpers.SharedMediaBookmarkIndicatorHelper;
+import xyz.nextalone.nagram.NaConfig;
+import xyz.nextalone.nagram.helper.BookmarksHelper;
 import org.telegram.ui.Components.BackupImageView;
 import org.telegram.ui.Components.CheckBox2;
 import org.telegram.ui.Components.CubicBezierInterpolator;
@@ -75,6 +82,8 @@ public class SharedDocumentCell extends FrameLayout implements DownloadControlle
     private boolean drawDownloadIcon = true;
 
     private boolean needDivider;
+    private boolean showBookmarkIndicator;
+    private Drawable bookmarkIndicatorDrawable;
 
     private int currentAccount = UserConfig.selectedAccount;
     private int TAG;
@@ -387,6 +396,11 @@ public class SharedDocumentCell extends FrameLayout implements DownloadControlle
         boolean animated = message != null && messageObject != null && message.getId() != messageObject.getId();
         needDivider = divider;
         message = messageObject;
+        showBookmarkIndicator = SharedMediaBookmarkIndicatorHelper.shouldShowBookmarkIndicator(
+                NaConfig.INSTANCE.getShowAddToBookmark().Bool(),
+                NekoConfig.showBookmarkIndicatorInSharedMedia.Bool(),
+                messageObject != null && BookmarksHelper.isBookmarked(currentAccount, messageObject.getDialogId(), messageObject.getId())
+        );
         loaded = false;
         loading = false;
         if (!animated) {
@@ -727,6 +741,10 @@ public class SharedDocumentCell extends FrameLayout implements DownloadControlle
             drawDivider(canvas);
         }
 
+        if (showBookmarkIndicator) {
+            drawBookmarkIndicator(canvas);
+        }
+
         if (showReorderIcon || showReorderIconProgress != 0) {
             if (showReorderIcon && showReorderIconProgress != 1f) {
                 showReorderIconProgress += 16 / 150f;
@@ -746,6 +764,27 @@ public class SharedDocumentCell extends FrameLayout implements DownloadControlle
             Theme.dialogs_reorderDrawable.draw(canvas);
             canvas.restore();
         }
+    }
+
+    private void drawBookmarkIndicator(Canvas canvas) {
+        if (!showBookmarkIndicator) {
+            return;
+        }
+        if (bookmarkIndicatorDrawable == null) {
+            bookmarkIndicatorDrawable = ContextCompat.getDrawable(getContext(), R.drawable.msg_fave_solar_12);
+            if (bookmarkIndicatorDrawable != null) {
+                bookmarkIndicatorDrawable = bookmarkIndicatorDrawable.mutate();
+            }
+        }
+        if (bookmarkIndicatorDrawable == null) {
+            return;
+        }
+        int size = AndroidUtilities.dp(16);
+        int x = getMeasuredWidth() - size - AndroidUtilities.dp(8);
+        int y = AndroidUtilities.dp(8);
+        bookmarkIndicatorDrawable.setBounds(x, y, x + size, y + size);
+        bookmarkIndicatorDrawable.setColorFilter(new PorterDuffColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN));
+        bookmarkIndicatorDrawable.draw(canvas);
     }
 
     private void drawDivider(Canvas canvas) {

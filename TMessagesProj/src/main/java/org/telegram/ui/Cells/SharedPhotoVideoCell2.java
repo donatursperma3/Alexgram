@@ -54,6 +54,9 @@ import org.telegram.messenger.Utilities;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.Theme;
 import tw.nekomimi.nekogram.NekoConfig;
+import tw.nekomimi.nekogram.helpers.SharedMediaBookmarkIndicatorHelper;
+import xyz.nextalone.nagram.NaConfig;
+import xyz.nextalone.nagram.helper.BookmarksHelper;
 import org.telegram.ui.AvatarSpan;
 import org.telegram.ui.Components.AnimatedFloat;
 import org.telegram.ui.Components.AnimatedTextView;
@@ -109,6 +112,7 @@ public class SharedPhotoVideoCell2 extends FrameLayout {
     private Text authorText;
     private String sharedMediaSizeText;
     private StaticLayout sharedMediaSizeLayout;
+    private Drawable bookmarkIndicatorDrawable;
 
     CheckBoxBase checkBoxBase;
     SharedResources sharedResources;
@@ -800,6 +804,7 @@ public class SharedPhotoVideoCell2 extends FrameLayout {
         }
         drawDuration(canvas, bounds, customsAlpha);
         drawSize(canvas, bounds, customsAlpha);
+        drawBookmarkIndicator(canvas, bounds, customsAlpha);
         drawViews(canvas, bounds, customsAlpha);
         if (!isSearchingHashtag) {
             drawPrivacy(canvas, bounds, customsAlpha);
@@ -1040,6 +1045,43 @@ public class SharedPhotoVideoCell2 extends FrameLayout {
         final int padding = viewsWidth > 0 && durationWidth > 0 ? dp(8) : 0;
         final int totalWidth = viewsWidth + padding + durationWidth;
         return totalWidth > width;
+    }
+
+    private boolean shouldShowBookmarkIndicator(MessageObject messageObject) {
+        return SharedMediaBookmarkIndicatorHelper.shouldShowBookmarkIndicator(
+                NaConfig.INSTANCE.getShowAddToBookmark().Bool(),
+                NekoConfig.showBookmarkIndicatorInSharedMedia.Bool(),
+                messageObject != null && BookmarksHelper.isBookmarked(currentAccount, messageObject.getDialogId(), messageObject.getId())
+        );
+    }
+
+    public void drawBookmarkIndicator(Canvas canvas, RectF bounds, float alpha) {
+        if (!shouldShowBookmarkIndicator(currentMessageObject)) {
+            return;
+        }
+
+        final int size = dp(17);
+        final float left = bounds.left + dp(5);
+        final float top = bounds.top + dp(5);
+        AndroidUtilities.rectTmp.set(left, top, left + size, top + size);
+        int oldAlpha = Theme.chat_timeBackgroundPaint.getAlpha();
+        Theme.chat_timeBackgroundPaint.setAlpha((int) (oldAlpha * alpha));
+        canvas.drawRoundRect(AndroidUtilities.rectTmp, dp(4), dp(4), Theme.chat_timeBackgroundPaint);
+        Theme.chat_timeBackgroundPaint.setAlpha(oldAlpha);
+
+        if (bookmarkIndicatorDrawable == null) {
+            bookmarkIndicatorDrawable = ContextCompat.getDrawable(getContext(), R.drawable.msg_fave_solar_12);
+            if (bookmarkIndicatorDrawable != null) {
+                bookmarkIndicatorDrawable = bookmarkIndicatorDrawable.mutate();
+            }
+        }
+        if (bookmarkIndicatorDrawable == null) {
+            return;
+        }
+        bookmarkIndicatorDrawable.setAlpha((int) (255 * alpha));
+        bookmarkIndicatorDrawable.setColorFilter(new PorterDuffColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN));
+        bookmarkIndicatorDrawable.setBounds((int) (left + dp(3)), (int) (top + dp(3)), (int) (left + size - dp(3)), (int) (top + size - dp(3)));
+        bookmarkIndicatorDrawable.draw(canvas);
     }
 
     public void drawPrivacy(Canvas canvas, RectF bounds, float alpha) {

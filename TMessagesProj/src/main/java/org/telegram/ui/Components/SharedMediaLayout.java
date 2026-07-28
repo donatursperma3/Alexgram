@@ -180,6 +180,8 @@ import tw.nekomimi.nekogram.ui.BottomBuilder;
 import tw.nekomimi.nekogram.utils.AlertUtil;
 import tw.nekomimi.nekogram.utils.ProxyUtil;
 import xyz.nextalone.nagram.NaConfig;
+import xyz.nextalone.nagram.ToggleResult;
+import xyz.nextalone.nagram.helper.BookmarksHelper;
 
 @SuppressWarnings("unchecked")
 public class SharedMediaLayout extends FrameLayout implements NotificationCenter.NotificationCenterDelegate, DialogCell.DialogCellDelegate {
@@ -1600,6 +1602,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
     private final static int gotochat = 102;
     private final static int pin = 103;
     private final static int unpin = 104;
+    private final static int bookmark = 105;
 
     private BaseFragment profileActivity;
 
@@ -2371,6 +2374,16 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         actionModeLayout.addView(selectRangeItem, new LinearLayout.LayoutParams(dp(54), ViewGroup.LayoutParams.MATCH_PARENT));
         actionModeViews.add(selectRangeItem);
         selectRangeItem.setOnClickListener(v -> performSelectBetween());
+
+        if (NaConfig.INSTANCE.getShowAddToBookmark().Bool()) {
+            ActionBarMenuItem bookmarkItem = new ActionBarMenuItem(context, null, getThemedColor(Theme.key_actionBarActionModeDefaultSelector), getThemedColor(Theme.key_actionBarActionModeDefaultIcon), false);
+            bookmarkItem.setIcon(R.drawable.msg_fave);
+            bookmarkItem.setContentDescription(getString(R.string.AddBookmark));
+            bookmarkItem.setDuplicateParentStateEnabled(false);
+            actionModeLayout.addView(bookmarkItem, new LinearLayout.LayoutParams(dp(54), ViewGroup.LayoutParams.MATCH_PARENT));
+            actionModeViews.add(bookmarkItem);
+            bookmarkItem.setOnClickListener(v -> onActionBarItemClick(v, bookmark));
+        }
 
         deleteItem = new ActionBarMenuItem(context, null, getThemedColor(Theme.key_actionBarActionModeDefaultSelector), getThemedColor(Theme.key_actionBarActionModeDefaultIcon), false);
         deleteItem.setIcon(R.drawable.msg_delete);
@@ -5447,6 +5460,49 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                 actionBar.closeSearchField();
                 cantDeleteMessagesCount = 0;
             }, null, resourcesProvider);
+        } else if (id == bookmark) {
+            if (selectedFiles[0].size() + selectedFiles[1].size() == 0) {
+                return;
+            }
+            ArrayList<MessageObject> selectedMessages = new ArrayList<>();
+            for (int a = 1; a >= 0; a--) {
+                ArrayList<Integer> ids = new ArrayList<>();
+                for (int b = 0; b < selectedFiles[a].size(); b++) {
+                    ids.add(selectedFiles[a].keyAt(b));
+                }
+                Collections.sort(ids);
+                for (Integer id1 : ids) {
+                    MessageObject messageObject = selectedFiles[a].get(id1);
+                    if (messageObject != null) {
+                        selectedMessages.add(messageObject);
+                    }
+                }
+            }
+            if (selectedMessages.isEmpty()) {
+                return;
+            }
+            int[] messageIds = new int[selectedMessages.size()];
+            for (int i = 0; i < selectedMessages.size(); i++) {
+                messageIds[i] = selectedMessages.get(i).getId();
+            }
+            long dialogIdForBookmarks = selectedMessages.get(0).getDialogId();
+            ToggleResult result = BookmarksHelper.toggleBookmarks(profileActivity.getCurrentAccount(), dialogIdForBookmarks, messageIds);
+            if (result == ToggleResult.LIMIT_REACHED) {
+                BulletinFactory.of(profileActivity).createSimpleBulletin(R.raw.error, LocaleController.formatString(R.string.BookmarksLimitReached, BookmarksHelper.MAX_PER_CHAT)).show();
+            } else {
+                boolean added = result == ToggleResult.ADDED;
+                Drawable drawable = AndroidUtilities.getBitmapDrawable(R.drawable.msg_fave);
+                if (drawable != null) {
+                    drawable = drawable.mutate();
+                    drawable.setColorFilter(new PorterDuffColorFilter(getThemedColor(Theme.key_undo_infoColor), PorterDuff.Mode.SRC_IN));
+                }
+                CharSequence text = AndroidUtilities.replaceSingleTag(
+                        getString(result == ToggleResult.ADDED ? R.string.BookmarkAdded : R.string.BookmarkRemoved),
+                        () -> profileActivity.presentFragment(new BookmarksActivity(dialogIdForBookmarks))
+                );
+                BulletinFactory.of(profileActivity).createSimpleBulletin(drawable, text).show();
+            }
+            closeActionMode(false);
         } else if (id == forward || id == forward_noquote) {
             if (userInfo != null) {
                 if (profileActivity.getMessagesController().isUserNoForwards(userInfo)) {
