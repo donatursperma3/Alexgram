@@ -68,6 +68,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat;
 import androidx.recyclerview.widget.DefaultItemAnimator;
 import androidx.recyclerview.widget.GridLayoutManager;
@@ -136,6 +137,7 @@ import org.telegram.ui.Cells.UserCell;
 import org.telegram.ui.ChatActivity;
 import org.telegram.ui.ChatActivityContainer;
 import org.telegram.ui.Components.Forum.ForumUtilities;
+import tw.nekomimi.nekogram.ui.BookmarksActivity;
 import org.telegram.ui.Components.Premium.LimitReachedBottomSheet;
 import org.telegram.ui.Components.Reactions.ReactionsLayoutInBubble;
 import org.telegram.ui.Components.blur3.BlurredBackgroundDrawableViewFactory;
@@ -5491,7 +5493,8 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                 BulletinFactory.of(profileActivity).createSimpleBulletin(R.raw.error, LocaleController.formatString(R.string.BookmarksLimitReached, BookmarksHelper.MAX_PER_CHAT)).show();
             } else {
                 boolean added = result == ToggleResult.ADDED;
-                Drawable drawable = AndroidUtilities.getBitmapDrawable(R.drawable.msg_fave);
+                Context context = profileActivity != null ? profileActivity.getContext() : getContext();
+                Drawable drawable = context != null ? ContextCompat.getDrawable(context, R.drawable.msg_fave) : null;
                 if (drawable != null) {
                     drawable = drawable.mutate();
                     drawable.setColorFilter(new PorterDuffColorFilter(getThemedColor(Theme.key_undo_infoColor), PorterDuff.Mode.SRC_IN));

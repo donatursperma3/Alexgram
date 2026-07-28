@@ -286,6 +286,24 @@ public class NekoChatSettingsActivity extends BaseNekoXSettingsActivity implemen
     private final AbstractConfigCell showSharedMediaGifSizeRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.showSharedMediaGifSize, null, getString(R.string.ShowSharedMediaGifSize)));
     private final AbstractConfigCell showProtectedContentInSharedMediaRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.showProtectedContentInSharedMedia, getString(R.string.ShowProtectedContentInSharedMediaInfo), getString(R.string.ShowProtectedContentInSharedMedia)));
     private final AbstractConfigCell showBookmarkIndicatorInSharedMediaRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.showBookmarkIndicatorInSharedMedia, getString(R.string.ShowBookmarkIndicatorInSharedMediaInfo), getString(R.string.ShowBookmarkIndicatorInSharedMedia)));
+    private final AbstractConfigCell bookmarkIndicatorPlacementForPhotosRow = cellGroup.appendCell(new ConfigCellSelectBox("BookmarkIndicatorPlacementPhotos", NekoConfig.bookmarkIndicatorPlacementForPhotos, new String[]{
+            getString(R.string.BookmarkIndicatorPlacementTopLeft),
+            getString(R.string.BookmarkIndicatorPlacementTopRight),
+            getString(R.string.BookmarkIndicatorPlacementBottomLeft),
+            getString(R.string.BookmarkIndicatorPlacementBottomRight),
+    }, null));
+    private final AbstractConfigCell bookmarkIndicatorPlacementForVideosRow = cellGroup.appendCell(new ConfigCellSelectBox("BookmarkIndicatorPlacementVideos", NekoConfig.bookmarkIndicatorPlacementForVideos, new String[]{
+            getString(R.string.BookmarkIndicatorPlacementTopLeft),
+            getString(R.string.BookmarkIndicatorPlacementTopRight),
+            getString(R.string.BookmarkIndicatorPlacementBottomLeft),
+            getString(R.string.BookmarkIndicatorPlacementBottomRight),
+    }, null));
+    private final AbstractConfigCell bookmarkIndicatorPlacementForDocumentsRow = cellGroup.appendCell(new ConfigCellSelectBox("BookmarkIndicatorPlacementDocuments", NekoConfig.bookmarkIndicatorPlacementForDocuments, new String[]{
+            getString(R.string.BookmarkIndicatorPlacementTopLeft),
+            getString(R.string.BookmarkIndicatorPlacementTopRight),
+            getString(R.string.BookmarkIndicatorPlacementBottomLeft),
+            getString(R.string.BookmarkIndicatorPlacementBottomRight),
+    }, null));
     private final AbstractConfigCell protectedContentLabelRow = cellGroup.appendCell(new ConfigCellTextInput(getString(R.string.ShowProtectedContentLabel), NekoConfig.protectedContentLabel, getString(R.string.ShowProtectedContentLabelInfo), null));
     private final AbstractConfigCell dividerMedia = cellGroup.appendCell(new ConfigCellDivider());
 

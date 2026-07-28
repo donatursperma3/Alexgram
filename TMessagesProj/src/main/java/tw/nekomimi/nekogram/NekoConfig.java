@@ -195,6 +195,9 @@ public class NekoConfig {
     public static ConfigItem showFavoriteAvatarIndicator = addConfig("showFavoriteAvatarIndicator", configTypeBool, true);
     public static ConfigItem showProtectedContentInSharedMedia = addConfig("showProtectedContentInSharedMedia", configTypeBool, false);
     public static ConfigItem showBookmarkIndicatorInSharedMedia = addConfig("showBookmarkIndicatorInSharedMedia", configTypeBool, true);
+    public static ConfigItem bookmarkIndicatorPlacementForPhotos = addConfig("bookmarkIndicatorPlacementForPhotos", configTypeInt, 0);
+    public static ConfigItem bookmarkIndicatorPlacementForVideos = addConfig("bookmarkIndicatorPlacementForVideos", configTypeInt, 0);
+    public static ConfigItem bookmarkIndicatorPlacementForDocuments = addConfig("bookmarkIndicatorPlacementForDocuments", configTypeInt, 0);
     public static ConfigItem protectedContentLabel = addConfig("protectedContentLabel", configTypeString, "Protected");
 
     public static ConfigItem disableAutoDownloadingWin32Executable = addConfig("Win32ExecutableFiles", configTypeBool, true);

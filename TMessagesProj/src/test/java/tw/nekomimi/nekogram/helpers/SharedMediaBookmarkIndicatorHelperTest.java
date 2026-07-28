@@ -13,4 +13,16 @@ public class SharedMediaBookmarkIndicatorHelperTest {
         assertFalse(SharedMediaBookmarkIndicatorHelper.shouldShowBookmarkIndicator(true, false, true));
         assertFalse(SharedMediaBookmarkIndicatorHelper.shouldShowBookmarkIndicator(true, true, false));
     }
+
+    @Test
+    public void shouldNormalizeInvalidPlacementValues() {
+        assertTrue(SharedMediaBookmarkIndicatorHelper.normalizePlacement(-1) == SharedMediaBookmarkIndicatorHelper.PLACEMENT_TOP_LEFT);
+        assertTrue(SharedMediaBookmarkIndicatorHelper.normalizePlacement(99) == SharedMediaBookmarkIndicatorHelper.PLACEMENT_TOP_LEFT);
+        assertTrue(SharedMediaBookmarkIndicatorHelper.normalizePlacement(SharedMediaBookmarkIndicatorHelper.PLACEMENT_TOP_RIGHT) == SharedMediaBookmarkIndicatorHelper.PLACEMENT_TOP_RIGHT);
+    }
+
+    @Test
+    public void shouldSelectPlacementBasedOnMessageType() {
+        assertTrue(SharedMediaBookmarkIndicatorHelper.getPlacementForMessageObject(null, SharedMediaBookmarkIndicatorHelper.PLACEMENT_TOP_RIGHT, SharedMediaBookmarkIndicatorHelper.PLACEMENT_TOP_LEFT, SharedMediaBookmarkIndicatorHelper.PLACEMENT_BOTTOM_LEFT) == SharedMediaBookmarkIndicatorHelper.PLACEMENT_TOP_LEFT);
+    }
 }

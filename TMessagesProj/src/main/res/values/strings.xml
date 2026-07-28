@@ -3232,6 +3232,13 @@
     <string name="ShowProtectedContentInSharedMediaInfo">Display a protected badge when media cannot be forwarded.</string>
     <string name="ShowBookmarkIndicatorInSharedMedia">Show bookmark indicator in shared media</string>
     <string name="ShowBookmarkIndicatorInSharedMediaInfo">Display a bookmark badge on bookmarked items in shared media.</string>
+    <string name="BookmarkIndicatorPlacementPhotos">Bookmark indicator placement for photos</string>
+    <string name="BookmarkIndicatorPlacementVideos">Bookmark indicator placement for videos</string>
+    <string name="BookmarkIndicatorPlacementDocuments">Bookmark indicator placement for documents</string>
+    <string name="BookmarkIndicatorPlacementTopLeft">Top left</string>
+    <string name="BookmarkIndicatorPlacementTopRight">Top right</string>
+    <string name="BookmarkIndicatorPlacementBottomLeft">Bottom left</string>
+    <string name="BookmarkIndicatorPlacementBottomRight">Bottom right</string>
     <string name="ShowProtectedContentLabel">Protected content label</string>
     <string name="ShowProtectedContentLabelInfo">Set the text or emoji shown for protected/shared content.</string>
     <string name="ProtectedContent">🔒 Protected</string>

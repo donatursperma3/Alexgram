@@ -1061,8 +1061,33 @@ public class SharedPhotoVideoCell2 extends FrameLayout {
         }
 
         final int size = dp(17);
-        final float left = bounds.left + dp(5);
-        final float top = bounds.top + dp(5);
+        final int placement = SharedMediaBookmarkIndicatorHelper.getPlacementForMessageObject(
+                currentMessageObject,
+                NekoConfig.bookmarkIndicatorPlacementForPhotos.Int(),
+                NekoConfig.bookmarkIndicatorPlacementForVideos.Int(),
+                NekoConfig.bookmarkIndicatorPlacementForDocuments.Int()
+        );
+
+        float left = bounds.left + dp(5);
+        float top = bounds.top + dp(5);
+        switch (placement) {
+            case SharedMediaBookmarkIndicatorHelper.PLACEMENT_TOP_RIGHT:
+                left = bounds.right - size - dp(5);
+                break;
+            case SharedMediaBookmarkIndicatorHelper.PLACEMENT_BOTTOM_LEFT:
+                left = bounds.left + dp(5);
+                top = bounds.bottom - size - dp(5);
+                break;
+            case SharedMediaBookmarkIndicatorHelper.PLACEMENT_BOTTOM_RIGHT:
+                left = bounds.right - size - dp(5);
+                top = bounds.bottom - size - dp(5);
+                break;
+            default:
+                left = bounds.left + dp(5);
+                top = bounds.top + dp(5);
+                break;
+        }
+
         AndroidUtilities.rectTmp.set(left, top, left + size, top + size);
         int oldAlpha = Theme.chat_timeBackgroundPaint.getAlpha();
         Theme.chat_timeBackgroundPaint.setAlpha((int) (oldAlpha * alpha));

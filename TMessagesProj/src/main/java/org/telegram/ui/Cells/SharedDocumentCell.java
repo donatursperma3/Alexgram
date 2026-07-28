@@ -780,8 +780,31 @@ public class SharedDocumentCell extends FrameLayout implements DownloadControlle
             return;
         }
         int size = AndroidUtilities.dp(16);
-        int x = getMeasuredWidth() - size - AndroidUtilities.dp(8);
+        int placement = SharedMediaBookmarkIndicatorHelper.getPlacementForMessageObject(
+                message,
+                NekoConfig.bookmarkIndicatorPlacementForPhotos.Int(),
+                NekoConfig.bookmarkIndicatorPlacementForVideos.Int(),
+                NekoConfig.bookmarkIndicatorPlacementForDocuments.Int()
+        );
+        int x = AndroidUtilities.dp(8);
         int y = AndroidUtilities.dp(8);
+        switch (placement) {
+            case SharedMediaBookmarkIndicatorHelper.PLACEMENT_TOP_RIGHT:
+                x = getMeasuredWidth() - size - AndroidUtilities.dp(8);
+                break;
+            case SharedMediaBookmarkIndicatorHelper.PLACEMENT_BOTTOM_LEFT:
+                x = AndroidUtilities.dp(8);
+                y = getMeasuredHeight() - size - AndroidUtilities.dp(8);
+                break;
+            case SharedMediaBookmarkIndicatorHelper.PLACEMENT_BOTTOM_RIGHT:
+                x = getMeasuredWidth() - size - AndroidUtilities.dp(8);
+                y = getMeasuredHeight() - size - AndroidUtilities.dp(8);
+                break;
+            default:
+                x = AndroidUtilities.dp(8);
+                y = AndroidUtilities.dp(8);
+                break;
+        }
         bookmarkIndicatorDrawable.setBounds(x, y, x + size, y + size);
         bookmarkIndicatorDrawable.setColorFilter(new PorterDuffColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN));
         bookmarkIndicatorDrawable.draw(canvas);
