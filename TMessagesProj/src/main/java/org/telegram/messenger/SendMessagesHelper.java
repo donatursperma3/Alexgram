@@ -2579,13 +2579,19 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
     ) {
         FileLog.d("BulkForwardDelay: scheduleBulkForwardWithDelay index=" + index + ", delayMs=" + delayMs + ", sentInBatch=" + sentInBatch + ", total messages=" + messages.size());
         if (messages == null || messages.isEmpty() || index >= messages.size()) {
+            FileLog.d("BulkForwardDelay: stopping because messages are empty or index reached end, index=" + index + ", size=" + (messages != null ? messages.size() : 0));
             return;
         }
         final ArrayList<MessageObject> batch = new ArrayList<>();
         int nextIndex = index;
+        MessageObject currentMessage = messages.get(nextIndex);
+        if (currentMessage == null || currentMessage.messageOwner == null) {
+            FileLog.d("BulkForwardDelay: current message is null or messageOwner is null at index=" + index + ", skipping this step");
+            return;
+        }
         // Add current message
-        batch.add(messages.get(nextIndex));
-        long groupId = messages.get(nextIndex).messageOwner.grouped_id;
+        batch.add(currentMessage);
+        long groupId = currentMessage.messageOwner.grouped_id;
         nextIndex++;
         // Add all consecutive messages with the same grouped_id
         if (groupId != 0) {
@@ -2629,7 +2635,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                 final long finalNextDelayMs = nextDelayMs;
                 final int finalNextSentInBatch = nextSentInBatch;
                 FileLog.d("BulkForwardDelay: Scheduling next in " + finalNextDelayMs + "ms, index=" + finalNextIndex + ", sentInBatch=" + finalNextSentInBatch);
-                AndroidUtilities.runOnUIThread(() -> scheduleBulkForwardWithDelay(messages, peer, forwardFromMyName, hideCaption, notify, scheduleDate, scheduleRepeatPeriod, replyToTopMsg, videoTimestamp, payStars, monoForumPeerId, suggestionParams, finalNextIndex, delayMs, finalNextSentInBatch), finalNextDelayMs);
+                AndroidUtilities.runOnUIThread(() -> scheduleBulkForwardWithDelay(messages, peer, forwardFromMyName, hideCaption, notify, scheduleDate, scheduleRepeatPeriod, replyToTopMsg, videoTimestamp, payStars, monoForumPeerId, suggestionParams, finalNextIndex, finalNextDelayMs, finalNextSentInBatch), finalNextDelayMs);
             }
         };
         if (index == 0) {
