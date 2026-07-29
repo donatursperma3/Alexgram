@@ -115,6 +115,7 @@ import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -190,6 +191,19 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         public final HashSet<String> pendingKeys = new HashSet<>();
     }
     private final HashMap<String, ArrayList<DelayedRestrictedForward>> delayedRestrictedForwards = new HashMap<>();
+    private static class QueuedForwardOperation {
+        final Runnable action;
+        final long delayMs;
+        final String debugTag;
+
+        private QueuedForwardOperation(Runnable action, long delayMs, String debugTag) {
+            this.action = action;
+            this.delayMs = Math.max(0L, delayMs);
+            this.debugTag = debugTag;
+        }
+    }
+    private final ArrayDeque<QueuedForwardOperation> queuedForwardOperations = new ArrayDeque<>();
+    private boolean queuedForwardOperationRunning;
 
     private String getDownloadKeyForMessage(MessageObject messageObject) {
         if (messageObject == null || messageObject.messageOwner == null || messageObject.messageOwner.media == null) {
@@ -2448,11 +2462,14 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
     }
 
     private boolean shouldApplyBulkForwardDelay(ArrayList<MessageObject> messages, boolean forwardFromMyName) {
-        if (messages == null || messages.size() <= 1) {
+        if (messages == null || messages.isEmpty()) {
             return false;
         }
         if (forwardFromMyName) {
             return true;
+        }
+        if (messages.size() <= 1) {
+            return false;
         }
         for (int i = 0; i < messages.size(); i++) {
             MessageObject messageObject = messages.get(i);
@@ -2560,6 +2577,57 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         return 5;
     }
 
+    public long getConfiguredBulkForwardDelayMs() {
+        return Math.max(0L, (long) (getConfiguredBulkForwardDelaySeconds() * 1000f));
+    }
+
+    public long getConfiguredBatchForwardDelayMs() {
+        return Math.max(0L, (long) (getConfiguredBatchForwardDelaySeconds() * 1000f));
+    }
+
+    public int getConfiguredBulkForwardBatchSize() {
+        return getConfiguredBatchForwardSize();
+    }
+
+    public void enqueueForwardOperation(Runnable action, long delayMs, String debugTag) {
+        if (action == null) {
+            return;
+        }
+        synchronized (queuedForwardOperations) {
+            queuedForwardOperations.add(new QueuedForwardOperation(action, delayMs, debugTag));
+        }
+        scheduleNextForwardOperation();
+    }
+
+    private void scheduleNextForwardOperation() {
+        final QueuedForwardOperation operation;
+        synchronized (queuedForwardOperations) {
+            if (queuedForwardOperationRunning) {
+                return;
+            }
+            operation = queuedForwardOperations.pollFirst();
+            if (operation == null) {
+                return;
+            }
+            queuedForwardOperationRunning = true;
+        }
+        AndroidUtilities.runOnUIThread(() -> {
+            try {
+                if (BuildVars.LOGS_ENABLED) {
+                    FileLog.d("BulkForwardQueue: execute delayMs=" + operation.delayMs + " tag=" + operation.debugTag);
+                }
+                operation.action.run();
+            } catch (Exception e) {
+                FileLog.e(e);
+            } finally {
+                synchronized (queuedForwardOperations) {
+                    queuedForwardOperationRunning = false;
+                }
+                scheduleNextForwardOperation();
+            }
+        }, operation.delayMs);
+    }
+
     private void scheduleBulkForwardWithDelay(
             ArrayList<MessageObject> messages,
             final long peer,
@@ -2597,7 +2665,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         if (groupId != 0) {
             while (nextIndex < messages.size()) {
                 MessageObject nextMsg = messages.get(nextIndex);
-                if (nextMsg.messageOwner.grouped_id == groupId) {
+                if (nextMsg != null && nextMsg.messageOwner != null && nextMsg.messageOwner.grouped_id == groupId) {
                     batch.add(nextMsg);
                     nextIndex++;
                 } else {
@@ -2616,32 +2684,23 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
 
         final Runnable sendStep = () -> {
             FileLog.d("BulkForwardDelay: Sending batch, index=" + index);
-            try {
-                sendMessage(batch, peer, forwardFromMyName, hideCaption, notify, scheduleDate, scheduleRepeatPeriod, replyToTopMsg, videoTimestamp, payStars, monoForumPeerId, suggestionParams);
-            } catch (Exception e) {
-                FileLog.e(e);
-            }
-            if (finalNextIndex < messages.size()) {
-                // Check if batch delay should be applied
-                long nextDelayMs = delayMs;
-                int nextSentInBatch = newSentInBatch;
-                if (batchDelayEnabled && newSentInBatch >= batchSize) {
-                    // Batch threshold reached, apply batch delay
-                    long batchDelayMs = Math.max(0L, (long) (batchDelaySeconds * 1000f));
-                    nextDelayMs = Math.max(delayMs, batchDelayMs);
-                    nextSentInBatch = 0; // Reset counter
-                    FileLog.d("BatchForwardDelay: Batch threshold reached (" + newSentInBatch + ">=" + batchSize + "), applying batch delay=" + nextDelayMs + "ms");
-                }
-                final long finalNextDelayMs = nextDelayMs;
-                final int finalNextSentInBatch = nextSentInBatch;
-                FileLog.d("BulkForwardDelay: Scheduling next in " + finalNextDelayMs + "ms, index=" + finalNextIndex + ", sentInBatch=" + finalNextSentInBatch);
-                AndroidUtilities.runOnUIThread(() -> scheduleBulkForwardWithDelay(messages, peer, forwardFromMyName, hideCaption, notify, scheduleDate, scheduleRepeatPeriod, replyToTopMsg, videoTimestamp, payStars, monoForumPeerId, suggestionParams, finalNextIndex, finalNextDelayMs, finalNextSentInBatch), finalNextDelayMs);
-            }
+            sendMessageInternal(batch, peer, forwardFromMyName, hideCaption, notify, scheduleDate, scheduleRepeatPeriod, replyToTopMsg, videoTimestamp, payStars, monoForumPeerId, suggestionParams, false);
         };
-        if (index == 0) {
-            sendStep.run();
-        } else {
-            AndroidUtilities.runOnUIThread(sendStep, delayMs);
+
+        final long currentDelayMs = index == 0 ? 0L : delayMs;
+        enqueueForwardOperation(sendStep, currentDelayMs, "bulk-forward peer=" + peer + " index=" + index + " size=" + batch.size());
+
+        if (finalNextIndex < messages.size()) {
+            long nextDelayMs = delayMs;
+            int nextSentInBatch = newSentInBatch;
+            if (batchDelayEnabled && newSentInBatch >= batchSize) {
+                long batchDelayMs = Math.max(0L, (long) (batchDelaySeconds * 1000f));
+                nextDelayMs = Math.max(delayMs, batchDelayMs);
+                nextSentInBatch = 0;
+                FileLog.d("BatchForwardDelay: Batch threshold reached (" + newSentInBatch + ">=" + batchSize + "), applying batch delay=" + nextDelayMs + "ms");
+            }
+            FileLog.d("BulkForwardDelay: Queue next in " + nextDelayMs + "ms, index=" + finalNextIndex + ", sentInBatch=" + nextSentInBatch);
+            scheduleBulkForwardWithDelay(messages, peer, forwardFromMyName, hideCaption, notify, scheduleDate, scheduleRepeatPeriod, replyToTopMsg, videoTimestamp, payStars, monoForumPeerId, suggestionParams, finalNextIndex, nextDelayMs, nextSentInBatch);
         }
     }
 
@@ -2686,21 +2745,36 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         long monoForumPeerId,
         MessageSuggestionParams suggestionParams
     ) {
+        return sendMessageInternal(messages, peer, forwardFromMyName, hideCaption, notify, scheduleDate, scheduleRepeatPeriod, replyToTopMsg, video_timestamp, payStars, monoForumPeerId, suggestionParams, true);
+    }
+
+    private int sendMessageInternal(
+        ArrayList<MessageObject> messages,
+        final long peer,
+        boolean forwardFromMyName,
+        boolean hideCaption,
+        boolean notify,
+        int scheduleDate,
+        int scheduleRepeatPeriod,
+        MessageObject replyToTopMsg,
+        int video_timestamp,
+        long payStars,
+        long monoForumPeerId,
+        MessageSuggestionParams suggestionParams,
+        boolean allowBulkForwardDelay
+    ) {
         if (messages == null || messages.isEmpty()) {
             return 0;
         }
         int sendResult = 0;
         long myId = getUserConfig().getClientUserId();
-        if (shouldApplyBulkForwardDelay(messages, forwardFromMyName)) {
+        if (allowBulkForwardDelay && shouldApplyBulkForwardDelay(messages, forwardFromMyName)) {
             try {
-                float delaySeconds = getConfiguredBulkForwardDelaySeconds();
-                float batchDelaySeconds = getConfiguredBatchForwardDelaySeconds();
-                if (delaySeconds > 0f || batchDelaySeconds > 0f) {
-                    long delayMs = Math.max(0L, (long) (delaySeconds * 1000f));
-                    FileLog.d("Bulk forward delay enabled: count=" + messages.size() + " perMsgDelayMs=" + delayMs + " batchDelaySeconds=" + batchDelaySeconds);
-                    scheduleBulkForwardWithDelay(messages, peer, forwardFromMyName, hideCaption, notify, scheduleDate, scheduleRepeatPeriod, replyToTopMsg, video_timestamp, payStars, monoForumPeerId, suggestionParams, 0, delayMs, 0);
-                    return 0;
-                }
+                long delayMs = getConfiguredBulkForwardDelayMs();
+                long batchDelayMs = getConfiguredBatchForwardDelayMs();
+                FileLog.d("Bulk forward queue enabled: count=" + messages.size() + " perMsgDelayMs=" + delayMs + " batchDelayMs=" + batchDelayMs + " forwardFromMyName=" + forwardFromMyName);
+                scheduleBulkForwardWithDelay(messages, peer, forwardFromMyName, hideCaption, notify, scheduleDate, scheduleRepeatPeriod, replyToTopMsg, video_timestamp, payStars, monoForumPeerId, suggestionParams, 0, delayMs, 0);
+                return 0;
             } catch (Exception e) {
                 FileLog.e(e);
             }
@@ -3189,6 +3263,10 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                 }
 
                 if (arr.size() == 100 || a == messages.size() - 1 || a != messages.size() - 1 && messages.get(a + 1).getDialogId() != msgObj.getDialogId()) {
+                    final long dbgBatchStart = SystemClock.elapsedRealtime();
+                    if (BuildVars.LOGS_ENABLED) {
+                        FileLog.d("dbg/multi-forward-crash forwardMessages batchFlush arr=" + arr.size() + " ids=" + (ids != null ? ids.size() : -1) + " msgsTotal=" + messages.size() + " toPeer=" + peer + " fromDialog=" + msgObj.getDialogId() + " dropAuthor=" + forwardFromMyName + " dropCaptions=" + hideCaption);
+                    }
                     getMessagesStorage().putMessages(new ArrayList<>(arr), false, true, false, 0, scheduleDate != 0 ? 1 : 0, 0);
                     getMessagesController().updateInterfaceWithMessages(peer, objArr, scheduleDate != 0 ? 1 : 0);
                     getNotificationCenter().postNotificationName(NotificationCenter.dialogsNeedReload);
@@ -3247,6 +3325,9 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                     final boolean scheduledOnline = scheduleDate == 0x7FFFFFFE;
                     final Runnable send = () -> {
                         getConnectionsManager().sendRequest(req, (response, error) -> {
+                            if (BuildVars.LOGS_ENABLED) {
+                                FileLog.d("dbg/multi-forward-crash forwardMessages requestDone err=" + (error != null ? error.text : "null") + " updates=" + (response instanceof TLRPC.Updates ? ((TLRPC.Updates) response).updates.size() : -1) + " dt=" + (SystemClock.elapsedRealtime() - dbgBatchStart));
+                            }
                             if (error == null) {
                                 SparseLongArray newMessagesByIds = new SparseLongArray();
                                 TLRPC.Updates updates = (TLRPC.Updates) response;

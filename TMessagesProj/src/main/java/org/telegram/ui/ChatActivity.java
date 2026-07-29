@@ -15384,6 +15384,10 @@ public class ChatActivity extends BaseFragment implements
 		if (arrayList == null || arrayList.isEmpty()) {
 			return;
 		}
+		final long dbgStart = SystemClock.elapsedRealtime();
+		if (BuildVars.LOGS_ENABLED) {
+			FileLog.d("dbg/multi-forward-crash ChatActivity.forwardMessages count=" + arrayList.size() + " fromMyName=" + fromMyName + " hideCaption=" + hideCaption + " notify=" + notify + " scheduleDate=" + scheduleDate + " dialogId=" + dialog_id);
+		}
 		if (!checkSlowModeAlert()) {
 			return;
 		}
@@ -15394,6 +15398,9 @@ public class ChatActivity extends BaseFragment implements
 			}
 		}
 		int result = getSendMessagesHelper().sendMessage(arrayList, dialog_id, fromMyName, hideCaption, notify, scheduleDate, 0, getThreadMessage(), -1, payStars, getSendMonoForumPeerId(), getSendMessageSuggestionParams());
+		if (BuildVars.LOGS_ENABLED) {
+			FileLog.d("dbg/multi-forward-crash ChatActivity.forwardMessages result=" + result + " waiting=" + waitingForSendingMessageLoad + " dt=" + (SystemClock.elapsedRealtime() - dbgStart));
+		}
 		AlertsCreator.showSendMediaAlert(result, this, themeDelegate);
 		if (result != 0) {
 			AndroidUtilities.runOnUIThread(() -> {
@@ -15418,10 +15425,18 @@ public class ChatActivity extends BaseFragment implements
 		if (arrayList == null || arrayList.isEmpty()) {
 			return;
 		}
+		final long dbgStart = SystemClock.elapsedRealtime();
+		if (BuildVars.LOGS_ENABLED) {
+			FileLog.d("dbg/multi-forward-crash ChatActivity.forwardMessages(multi) count=" + arrayList.size() + " fromMyName=" + fromMyName + " hideCaption=" + hideCaption + " notify=" + notify + " scheduleDate=" + scheduleDate + " did=" + did + " dialogId=" + dialog_id);
+		}
 		if ((scheduleDate != 0) == (chatMode == MODE_SCHEDULED)) {
 			waitingForSendingMessageLoad = true;
 		}
-		AlertsCreator.showSendMediaAlert(getSendMessagesHelper().sendMessage(arrayList, did == 0 ? dialog_id : did, fromMyName, hideCaption, notify, scheduleDate, 0, getThreadMessage(), -1, payStars, getSendMonoForumPeerId(), getSendMessageSuggestionParams()), this);
+		final int result = getSendMessagesHelper().sendMessage(arrayList, did == 0 ? dialog_id : did, fromMyName, hideCaption, notify, scheduleDate, 0, getThreadMessage(), -1, payStars, getSendMonoForumPeerId(), getSendMessageSuggestionParams());
+		if (BuildVars.LOGS_ENABLED) {
+			FileLog.d("dbg/multi-forward-crash ChatActivity.forwardMessages(multi) result=" + result + " waiting=" + waitingForSendingMessageLoad + " dt=" + (SystemClock.elapsedRealtime() - dbgStart));
+		}
+		AlertsCreator.showSendMediaAlert(result, this);
 	}
 
 	public boolean shouldShowImport() {

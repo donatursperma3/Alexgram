@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.text.InputType;
 import android.text.style.URLSpan;
 import android.text.TextUtils;
@@ -25,6 +26,7 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.BuildVars;
 import org.telegram.messenger.ChatObject;
 import org.telegram.messenger.DialogObject;
 import org.telegram.messenger.MediaDataController;
@@ -1611,6 +1613,7 @@ public class SpecialForwardActivity extends ChatActivity {
 
     private void rebuildGroupedMessages() {
         if (groupedMessagesMap == null) return;
+        final long dbgStart = SystemClock.elapsedRealtime();
         groupedMessagesMap.clear();
         for (MessageObject msgObj : messages) {
             if (msgObj.getGroupId() != 0) {
@@ -1629,6 +1632,9 @@ public class SpecialForwardActivity extends ChatActivity {
             java.util.Collections.sort(groupedMessages.messages, (a, b) -> Integer.compare(a.getId(), b.getId()));
             groupedMessages.calculate();
         }
+        if (BuildVars.LOGS_ENABLED) {
+            FileLog.d("dbg/multi-forward-crash rebuildGroupedMessages messages=" + (messages != null ? messages.size() : -1) + " groups=" + groupedMessagesMap.size() + " dt=" + (SystemClock.elapsedRealtime() - dbgStart));
+        }
     }
 
     private void forwardMessages() {
@@ -1646,11 +1652,16 @@ public class SpecialForwardActivity extends ChatActivity {
         showDialog(shareAlert);
     }
 
-    private void sendMessagesToPeer(ArrayList<MessageObject> forwardList, long peer, boolean showQuote, boolean keepCaption) {
+    private static class SpecialForwardDelayState {
+        private long nextDelayMs;
+        private int sentInBatch;
+    }
+
+    private boolean shouldSendMessagesAsCopy(ArrayList<MessageObject> forwardList, boolean showQuote) {
         boolean sendAsCopy = !showQuote;
         if (!sendAsCopy) {
             for (MessageObject msg : forwardList) {
-                if (msg != null && (getMessagesController().isPeerNoForwards(msg.getDialogId(), true) 
+                if (msg != null && (getMessagesController().isPeerNoForwards(msg.getDialogId(), true)
                         || (msg.messageOwner != null && msg.messageOwner.noforwards)
                         || msg.localMediaOverridden)) {
                     sendAsCopy = true;
@@ -1658,103 +1669,202 @@ public class SpecialForwardActivity extends ChatActivity {
                 }
             }
         }
-        
-        if (sendAsCopy) {
-            for (int a = 0; a < forwardList.size(); a++) {
-                MessageObject message = forwardList.get(a);
-                if (message == null) continue;
-                long groupId = message.messageOwner.grouped_id;
-                if (groupId != 0) {
-                    ArrayList<MessageObject> group = new ArrayList<>();
-                    group.add(message);
-                    while (a + 1 < forwardList.size() && forwardList.get(a + 1).messageOwner.grouped_id != 0 && forwardList.get(a + 1).messageOwner.grouped_id == groupId) {
-                        group.add(forwardList.get(++a));
-                    }
-                    
-                    boolean hasOverridden = false;
-                    for (MessageObject m : group) {
-                        if (m.localMediaOverridden) {
-                            hasOverridden = true;
-                            break;
-                        }
-                    }
-                    
-                    if (hasOverridden) {
-                        ArrayList<SendMessagesHelper.SendingMediaInfo> infos = new ArrayList<>();
-                        boolean forceDocument = false;
-                        for (MessageObject m : group) {
-                            String path = m.localMediaOverridden ? m.localMediaOverriddenPath : null;
-                            if (path == null) {
-                                java.io.File f = getFileLoader().getPathToMessage(m.messageOwner);
-                                if (f != null && f.exists()) {
-                                    path = f.getAbsolutePath();
-                                }
-                            }
-                            if (path == null) {
-                                path = m.messageOwner.attachPath;
-                            }
-                            
-                            boolean isVideo = false;
-                            if (m.localMediaOverridden) {
-                                isVideo = m.localMediaIsVideo;
-                            } else if (m.messageOwner.media.document instanceof TLRPC.TL_document) {
-                                TLRPC.TL_document document = (TLRPC.TL_document) m.messageOwner.media.document;
-                                isVideo = MessageObject.isVideoDocument(document) || m.videoEditedInfo != null;
-                                if (!isVideo) forceDocument = true;
-                            }
-                            
-                            if (path != null) {
-                                SendMessagesHelper.SendingMediaInfo info = new SendMessagesHelper.SendingMediaInfo();
-                                info.path = path;
-                                info.isVideo = isVideo;
-                                info.caption = keepCaption && m.messageOwner.message != null ? m.messageOwner.message : "";
-                                info.entities = keepCaption ? m.messageOwner.entities : null;
-                                if (m.messageOwner.media != null) {
-                                    info.ttl = m.messageOwner.media.ttl_seconds;
-                                    info.hasMediaSpoilers = m.messageOwner.media.spoiler;
-                                }
-                                info.videoEditedInfo = m.videoEditedInfo;
-                                infos.add(info);
-                            }
-                        }
-                        
-                        if (!infos.isEmpty()) {
-                            final boolean finalForceDocument = forceDocument;
-                            final ArrayList<SendMessagesHelper.SendingMediaInfo> finalInfos = infos;
-                            AndroidUtilities.runOnUIThread(() -> {
-                                SendMessagesHelper.prepareSendingMedia(getAccountInstance(), finalInfos, peer, null, null, null, null, finalForceDocument, true, null, true, 0, 0, 0, false, null, null, 0, 0L, false, 0L, 0L, null);
-                            });
-                        }
-                    } else {
-                        if (group.size() > 1) {
-                            SendMessagesHelper.getInstance(currentAccount).processForwardFromMyName(group, peer, 0, 0, null);
-                        } else {
-                            SendMessagesHelper.getInstance(currentAccount).processForwardFromMyName(message, peer, 0, 0, null);
-                        }
-                    }
-                } else {
-                    if (message.localMediaOverridden) {
-                        String path = message.localMediaOverriddenPath;
-                        String caption = keepCaption && message.messageOwner.message != null ? message.messageOwner.message : "";
-                        ArrayList<TLRPC.MessageEntity> entities = keepCaption ? message.messageOwner.entities : null;
-                        if (message.localMediaIsVideo) {
-                            SendMessagesHelper.prepareSendingVideo(getAccountInstance(), path, message.videoEditedInfo, null, null, peer, null, null, null, null, entities, 0, null, true, 0, 0, false, false, caption, null, 0, 0L, 0L);
-                        } else {
-                            SendMessagesHelper.prepareSendingPhoto(getAccountInstance(), path, null, null, peer, null, null, null, null, entities, null, null, 0, null, message.videoEditedInfo, true, 0, 0, false, caption, null, 0, 0L, 0L);
-                        }
-                    } else {
-                        SendMessagesHelper.getInstance(currentAccount).processForwardFromMyName(message, peer, 0, 0, null);
+        return sendAsCopy;
+    }
+
+    private void updateForwardQueueDelayState(SendMessagesHelper helper, SpecialForwardDelayState state, int sentCount) {
+        if (helper == null || state == null) {
+            return;
+        }
+        long perMessageDelayMs = helper.getConfiguredBulkForwardDelayMs();
+        long batchDelayMs = helper.getConfiguredBatchForwardDelayMs();
+        int batchSize = helper.getConfiguredBulkForwardBatchSize();
+        state.sentInBatch += Math.max(1, sentCount);
+        state.nextDelayMs = perMessageDelayMs;
+        if (batchDelayMs > 0 && batchSize > 0 && state.sentInBatch >= batchSize) {
+            state.nextDelayMs = Math.max(perMessageDelayMs, batchDelayMs);
+            state.sentInBatch = 0;
+        }
+    }
+
+    private void sendCopyForwardGroupToPeer(ArrayList<MessageObject> group, long peer, boolean keepCaption) {
+        if (group == null || group.isEmpty()) {
+            return;
+        }
+        if (group.size() == 1) {
+            sendCopyForwardSingleToPeer(group.get(0), peer, keepCaption);
+            return;
+        }
+
+        boolean hasOverridden = false;
+        for (MessageObject messageObject : group) {
+            if (messageObject != null && messageObject.localMediaOverridden) {
+                hasOverridden = true;
+                break;
+            }
+        }
+
+        if (hasOverridden) {
+            ArrayList<SendMessagesHelper.SendingMediaInfo> infos = new ArrayList<>();
+            boolean forceDocument = false;
+            for (MessageObject messageObject : group) {
+                if (messageObject == null || messageObject.messageOwner == null) {
+                    continue;
+                }
+                String path = messageObject.localMediaOverridden ? messageObject.localMediaOverriddenPath : null;
+                if (path == null) {
+                    java.io.File file = getFileLoader().getPathToMessage(messageObject.messageOwner);
+                    if (file != null && file.exists()) {
+                        path = file.getAbsolutePath();
                     }
                 }
+                if (path == null) {
+                    path = messageObject.messageOwner.attachPath;
+                }
+
+                boolean isVideo = false;
+                if (messageObject.localMediaOverridden) {
+                    isVideo = messageObject.localMediaIsVideo;
+                } else if (messageObject.messageOwner.media != null && messageObject.messageOwner.media.document instanceof TLRPC.TL_document) {
+                    TLRPC.TL_document document = (TLRPC.TL_document) messageObject.messageOwner.media.document;
+                    isVideo = MessageObject.isVideoDocument(document) || messageObject.videoEditedInfo != null;
+                    if (!isVideo) {
+                        forceDocument = true;
+                    }
+                }
+
+                if (path != null) {
+                    SendMessagesHelper.SendingMediaInfo info = new SendMessagesHelper.SendingMediaInfo();
+                    info.path = path;
+                    info.isVideo = isVideo;
+                    info.caption = keepCaption && messageObject.messageOwner.message != null ? messageObject.messageOwner.message : "";
+                    info.entities = keepCaption ? messageObject.messageOwner.entities : null;
+                    if (messageObject.messageOwner.media != null) {
+                        info.ttl = messageObject.messageOwner.media.ttl_seconds;
+                        info.hasMediaSpoilers = messageObject.messageOwner.media.spoiler;
+                    }
+                    info.videoEditedInfo = messageObject.videoEditedInfo;
+                    infos.add(info);
+                }
+            }
+
+            if (!infos.isEmpty()) {
+                SendMessagesHelper.prepareSendingMedia(getAccountInstance(), infos, peer, null, null, null, null, forceDocument, true, null, true, 0, 0, 0, false, null, null, 0, 0L, false, 0L, 0L, null);
+            }
+        } else {
+            SendMessagesHelper.getInstance(currentAccount).processForwardFromMyName(group, peer, 0, 0, null);
+        }
+    }
+
+    private void sendCopyForwardSingleToPeer(MessageObject message, long peer, boolean keepCaption) {
+        if (message == null || message.messageOwner == null) {
+            if (BuildVars.LOGS_ENABLED && message != null) {
+                FileLog.d("dbg/multi-forward-crash sendCopyForwardSingleToPeer null messageOwner msgId=" + message.getId() + " dialogId=" + message.getDialogId());
+            }
+            return;
+        }
+        if (message.localMediaOverridden) {
+            String path = message.localMediaOverriddenPath;
+            String caption = keepCaption && message.messageOwner.message != null ? message.messageOwner.message : "";
+            ArrayList<TLRPC.MessageEntity> entities = keepCaption ? message.messageOwner.entities : null;
+            if (message.localMediaIsVideo) {
+                SendMessagesHelper.prepareSendingVideo(getAccountInstance(), path, message.videoEditedInfo, null, null, peer, null, null, null, null, entities, 0, null, true, 0, 0, false, false, caption, null, 0, 0L, 0L);
+            } else {
+                SendMessagesHelper.prepareSendingPhoto(getAccountInstance(), path, null, null, peer, null, null, null, null, entities, null, null, 0, null, message.videoEditedInfo, true, 0, 0, false, caption, null, 0, 0L, 0L);
+            }
+        } else {
+            SendMessagesHelper.getInstance(currentAccount).processForwardFromMyName(message, peer, 0, 0, null);
+        }
+    }
+
+    private void queueCopyForwardToPeer(ArrayList<MessageObject> forwardList, long peer, boolean keepCaption) {
+        SendMessagesHelper helper = SendMessagesHelper.getInstance(currentAccount);
+        SpecialForwardDelayState delayState = new SpecialForwardDelayState();
+        for (int a = 0; a < forwardList.size(); a++) {
+            MessageObject message = forwardList.get(a);
+            if (message == null || message.messageOwner == null) {
+                if (BuildVars.LOGS_ENABLED && message != null) {
+                    FileLog.d("dbg/multi-forward-crash queueCopyForwardToPeer skip null messageOwner msgId=" + message.getId() + " dialogId=" + message.getDialogId());
+                }
+                continue;
+            }
+            long groupId = message.messageOwner.grouped_id;
+            if (groupId != 0) {
+                ArrayList<MessageObject> group = new ArrayList<>();
+                group.add(message);
+                while (a + 1 < forwardList.size()) {
+                    MessageObject nextMessage = forwardList.get(a + 1);
+                    if (nextMessage == null || nextMessage.messageOwner == null || nextMessage.messageOwner.grouped_id == 0 || nextMessage.messageOwner.grouped_id != groupId) {
+                        break;
+                    }
+                    group.add(forwardList.get(++a));
+                }
+                final ArrayList<MessageObject> finalGroup = group;
+                helper.enqueueForwardOperation(() -> sendCopyForwardGroupToPeer(finalGroup, peer, keepCaption), delayState.nextDelayMs, "special-copy-group peer=" + peer + " size=" + finalGroup.size());
+                updateForwardQueueDelayState(helper, delayState, finalGroup.size());
+            } else {
+                final MessageObject finalMessage = message;
+                helper.enqueueForwardOperation(() -> sendCopyForwardSingleToPeer(finalMessage, peer, keepCaption), delayState.nextDelayMs, "special-copy-single peer=" + peer + " msgId=" + finalMessage.getId());
+                updateForwardQueueDelayState(helper, delayState, 1);
+            }
+        }
+    }
+
+    private void queueForwardAsFileToSelectedChats(ArrayList<Long> dids, ArrayList<MessageObject> forwardList, boolean showQuote, boolean keepCaption) {
+        SendMessagesHelper helper = SendMessagesHelper.getInstance(currentAccount);
+        SpecialForwardDelayState delayState = new SpecialForwardDelayState();
+        for (long peer : dids) {
+            for (int j = 0; j < forwardList.size(); j++) {
+                MessageObject msg = forwardList.get(j);
+                if (msg == null || msg.messageOwner == null) {
+                    continue;
+                }
+
+                final ArrayList<MessageObject> singleList = new ArrayList<>();
+                singleList.add(msg);
+                final String caption = keepCaption && msg.caption != null ? msg.caption.toString() : "";
+                final ArrayList<TLRPC.MessageEntity> entities = keepCaption && msg.messageOwner.entities != null ? new ArrayList<>(msg.messageOwner.entities) : new ArrayList<>();
+                final String attachPath = msg.messageOwner.attachPath;
+
+                if (!TextUtils.isEmpty(attachPath) && !attachPath.startsWith("http")) {
+                    final ArrayList<String> paths = new ArrayList<>();
+                    paths.add(attachPath);
+                    helper.enqueueForwardOperation(() -> SendMessagesHelper.prepareSendingDocuments(getAccountInstance(), paths, paths, null, caption, entities, null, peer, null, null, null, null, null, false, 0, 0, null, null, 0, 0, false, 0, 0, null, null, null, null, false), delayState.nextDelayMs, "special-forward-as-file peer=" + peer + " msgId=" + msg.getId());
+                } else {
+                    helper.enqueueForwardOperation(() -> sendMessagesToPeer(singleList, peer, showQuote, keepCaption), delayState.nextDelayMs, "special-forward-fallback peer=" + peer + " msgId=" + msg.getId());
+                }
+                updateForwardQueueDelayState(helper, delayState, 1);
+            }
+        }
+    }
+
+    private void sendMessagesToPeer(ArrayList<MessageObject> forwardList, long peer, boolean showQuote, boolean keepCaption) {
+        final long dbgStart = SystemClock.elapsedRealtime();
+        boolean sendAsCopy = shouldSendMessagesAsCopy(forwardList, showQuote);
+        if (BuildVars.LOGS_ENABLED) {
+            FileLog.d("dbg/multi-forward-crash sendMessagesToPeer peer=" + peer + " count=" + (forwardList != null ? forwardList.size() : -1) + " showQuote=" + showQuote + " keepCaption=" + keepCaption + " sendAsCopy=" + sendAsCopy + " forwardAsFile=" + forwardAsFile);
+        }
+        
+        if (sendAsCopy) {
+            queueCopyForwardToPeer(forwardList, peer, keepCaption);
+            if (BuildVars.LOGS_ENABLED) {
+                FileLog.d("dbg/multi-forward-crash sendMessagesToPeer(copy) peer=" + peer + " dt=" + (SystemClock.elapsedRealtime() - dbgStart));
             }
         } else {
             SendMessagesHelper.getInstance(currentAccount).sendMessage(forwardList, peer, false, !keepCaption, true, 0, 0);
+            if (BuildVars.LOGS_ENABLED) {
+                FileLog.d("dbg/multi-forward-crash sendMessagesToPeer(forward) peer=" + peer + " dt=" + (SystemClock.elapsedRealtime() - dbgStart));
+            }
         }
     }
 
     private void performForwardToSelectedChats(ArrayList<Long> dids, boolean showQuote, boolean keepCaption, boolean removeLinkPreview) {
+        final long dbgStart = SystemClock.elapsedRealtime();
         ArrayList<MessageObject> forwardList = new ArrayList<>(messages);
         java.util.Collections.sort(forwardList, (o1, o2) -> Integer.compare(o1.getId(), o2.getId()));
+        if (BuildVars.LOGS_ENABLED) {
+            FileLog.d("dbg/multi-forward-crash performForwardToSelectedChats dids=" + (dids != null ? dids.size() : -1) + " msgs=" + (forwardList != null ? forwardList.size() : -1) + " showQuote=" + showQuote + " keepCaption=" + keepCaption + " forwardAsFile=" + forwardAsFile + " removeLinkPreview=" + removeLinkPreview);
+        }
 
         // Strip web page preview if requested
         if (removeLinkPreview) {
@@ -1766,29 +1876,26 @@ public class SpecialForwardActivity extends ChatActivity {
             }
         }
 
-        for (long peer : dids) {
-            if (forwardAsFile) {
-                for (int j = 0; j < forwardList.size(); j++) {
-                    MessageObject msg = forwardList.get(j);
-                    if (msg == null || msg.messageOwner == null) continue;
-                    
-                    String caption = keepCaption && msg.caption != null ? msg.caption.toString() : "";
-                    ArrayList<TLRPC.MessageEntity> entities = keepCaption ? msg.messageOwner.entities : new ArrayList<>();
-                    String attachPath = msg.messageOwner.attachPath;
-                    
-                    if (!TextUtils.isEmpty(attachPath) && !attachPath.startsWith("http")) {
-                        ArrayList<String> paths = new ArrayList<>();
-                        paths.add(attachPath);
-                        SendMessagesHelper.prepareSendingDocuments(getAccountInstance(), paths, paths, null, caption, entities, null, peer, null, null, null, null, null, false, 0, 0, null, null, 0, 0, false, 0, 0, null, null, null, null, false);
-                    } else {
-                        ArrayList<MessageObject> singleList = new ArrayList<>();
-                        singleList.add(msg);
-                        sendMessagesToPeer(singleList, peer, showQuote, keepCaption);
-                    }
+        if (forwardAsFile) {
+            queueForwardAsFileToSelectedChats(dids, forwardList, showQuote, keepCaption);
+        } else {
+            boolean sendAsCopy = shouldSendMessagesAsCopy(forwardList, showQuote);
+            if (!sendAsCopy && forwardList.size() <= 1) {
+                SendMessagesHelper helper = SendMessagesHelper.getInstance(currentAccount);
+                SpecialForwardDelayState delayState = new SpecialForwardDelayState();
+                for (long peer : dids) {
+                    final long finalPeer = peer;
+                    helper.enqueueForwardOperation(() -> sendMessagesToPeer(forwardList, finalPeer, showQuote, keepCaption), delayState.nextDelayMs, "special-single-forward peer=" + finalPeer + " count=" + forwardList.size());
+                    updateForwardQueueDelayState(helper, delayState, Math.max(1, forwardList.size()));
                 }
             } else {
-                sendMessagesToPeer(forwardList, peer, showQuote, keepCaption);
+                for (long peer : dids) {
+                    sendMessagesToPeer(forwardList, peer, showQuote, keepCaption);
+                }
             }
+        }
+        if (BuildVars.LOGS_ENABLED) {
+            FileLog.d("dbg/multi-forward-crash performForwardToSelectedChats done dt=" + (SystemClock.elapsedRealtime() - dbgStart));
         }
         finishFragment();
     }
