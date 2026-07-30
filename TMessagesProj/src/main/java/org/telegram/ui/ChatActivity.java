@@ -11054,6 +11054,9 @@ public class ChatActivity extends BaseFragment implements
 			actionModeOtherItem.addSubItem(nkbtn_savemessage, R.drawable.menu_saved, LocaleController.getString(R.string.AddToSavedMessages));
 			if (canSendMessages) actionModeOtherItem.addSubItem(nkbtn_repeat, R.drawable.msg_repeat, LocaleController.getString(R.string.Repeat));
 		}
+		if (NaConfig.INSTANCE.getShowAddToBookmark().Bool()) {
+			actionModeOtherItem.addSubItem(nkbtn_bookmark, R.drawable.msg_fave, LocaleController.getString(R.string.AddBookmark));
+		}
 		if (canSendMessages) {
 			actionModeOtherItem.addSubItem(nkbtn_repeatascopy, R.drawable.msg_repeat, LocaleController.getString(R.string.RepeatAsCopy));
 		}
@@ -20319,12 +20322,14 @@ public class ChatActivity extends BaseFragment implements
 
 				ActionBarMenuSubItem saveMessageItem = null;
 				ActionBarMenuSubItem forwardNoQuoteItem = null;
+				ActionBarMenuSubItem bookmarkItem = null;
 				ActionBarMenuSubItem repeatItem = null;
 				ActionBarMenuSubItem RepeatAsCopyItem = null;
 				ActionBarMenuSubItem reportItem = null;
 				if (actionModeOtherItem != null) {
 					saveMessageItem = actionModeOtherItem.getSubItem(nkbtn_savemessage);
 					forwardNoQuoteItem = actionModeOtherItem.getSubItem(nkbtn_forward_noquote);
+					bookmarkItem = actionModeOtherItem.getSubItem(nkbtn_bookmark);
 					repeatItem = actionModeOtherItem.getSubItem(nkbtn_repeat);
 					RepeatAsCopyItem = actionModeOtherItem.getSubItem(nkbtn_repeatascopy);
 					reportItem = actionModeOtherItem.getSubItem(nkbtn_report);
@@ -20353,6 +20358,18 @@ public class ChatActivity extends BaseFragment implements
 				}
 				if (saveMessageItem != null) {
 					saveMessageItem.setVisibility(canForward);
+				}
+				if (bookmarkItem != null) {
+					boolean canBookmark = false;
+					if (NaConfig.INSTANCE.getShowAddToBookmark().Bool()) {
+						for (MessageObject msg : getSelectedMessages1()) {
+							if (msg != null && msg.getId() != 0 && !msg.isAnyKindOfSticker()) {
+								canBookmark = true;
+								break;
+							}
+						}
+					}
+					bookmarkItem.setVisibility(canBookmark);
 				}
 				if (actionModeOtherItem != null) {
 					actionModeOtherItem.setSubItemVisibility(combine_message, selectedMessagesCanCopyIds[0].size() + selectedMessagesCanCopyIds[1].size() != 0);
@@ -46848,6 +46865,57 @@ public class ChatActivity extends BaseFragment implements
 			ArrayList<MessageObject> messages = getSelectedMessages();
 			forwardMessages(messages, false, false, true, 0, UserConfig.getInstance(currentAccount).getClientUserId(), 0);
 			undoView.showWithAction(getUserConfig().getClientUserId(), UndoView.ACTION_FWD_MESSAGES, messages.size());
+		} else if (id == nkbtn_bookmark) {
+			try {
+				ArrayList<MessageObject> messages = getSelectedMessages();
+				if (messages == null || messages.isEmpty()) {
+					return;
+				}
+				LongSparseArray<ArrayList<Integer>> idsByDialog = new LongSparseArray<>();
+				for (int i = 0; i < messages.size(); i++) {
+					MessageObject msg = messages.get(i);
+					if (msg == null || msg.getId() == 0 || msg.isAnyKindOfSticker()) {
+						continue;
+					}
+					long did = msg.getDialogId();
+					ArrayList<Integer> ids = idsByDialog.get(did);
+					if (ids == null) {
+						ids = new ArrayList<>();
+						idsByDialog.put(did, ids);
+					}
+					ids.add(msg.getId());
+				}
+				if (idsByDialog.size() == 0) {
+					BulletinFactory.of(this).createSimpleBulletin(R.raw.error, getString(R.string.ErrorOccurred)).show();
+					return;
+				}
+				for (int a = 0; a < idsByDialog.size(); a++) {
+					long did = idsByDialog.keyAt(a);
+					ArrayList<Integer> ids = idsByDialog.valueAt(a);
+					int[] messageIds = new int[ids.size()];
+					for (int i = 0; i < ids.size(); i++) {
+						messageIds[i] = ids.get(i);
+					}
+					BookmarksHelper.addBookmarks(currentAccount, did, messageIds);
+				}
+				Drawable drawable = ContextCompat.getDrawable(getParentActivity(), R.drawable.msg_fave);
+				if (drawable != null) {
+					drawable = drawable.mutate();
+					drawable.setColorFilter(new PorterDuffColorFilter(getThemedColor(Theme.key_undo_infoColor), PorterDuff.Mode.SRC_IN));
+				}
+				CharSequence text = AndroidUtilities.replaceSingleTag(
+						getString(R.string.BookmarkAdded),
+						() -> presentFragment(new BookmarksActivity(dialog_id))
+				);
+				BulletinFactory.of(this).createSimpleBulletin(drawable, text).show();
+				updateVisibleRows();
+				if (headerItem != null && bookmarksItem != null) {
+					headerItem.setSubItemShown(nkbtn_bookmarks_manager, BookmarksHelper.getBookmarkedMessageIds(currentAccount, dialog_id).length > 0);
+				}
+			} catch (Exception e) {
+				FileLog.e(e);
+				BulletinFactory.of(this).createSimpleBulletin(R.raw.error, getString(R.string.ErrorOccurred)).show();
+			}
 		} else if (id == nkbtn_hide) {
 			ArrayList<MessageObject> messages = getSelectedMessages();
 			for (MessageObject message : messages) {

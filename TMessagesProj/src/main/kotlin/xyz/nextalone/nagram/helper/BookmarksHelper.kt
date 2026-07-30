@@ -175,6 +175,36 @@ object BookmarksHelper {
     }
 
     @JvmStatic
+    fun addBookmarks(accountId: Int, dialogId: Long, messageIds: IntArray): ToggleResult {
+        if (!NaConfig.showAddToBookmark.Bool()) {
+            return ToggleResult.REMOVED
+        }
+        return try {
+            val ids = normalizeMessageIds(messageIds)
+            if (ids.isEmpty()) {
+                return ToggleResult.REMOVED
+            }
+            val k = key(accountId, dialogId)
+            val current = getIds(k).toMutableList()
+            val currentSet = current.toHashSet()
+            var changed = false
+            for (id in ids) {
+                if (currentSet.add(id)) {
+                    current.add(id)
+                    changed = true
+                }
+            }
+            if (changed) {
+                persist(k, current)
+            }
+            if (changed) ToggleResult.ADDED else ToggleResult.REMOVED
+        } catch (e: Exception) {
+            FileLog.e(e)
+            ToggleResult.REMOVED
+        }
+    }
+
+    @JvmStatic
     fun clearAllBookmarks(accountId: Int) {
         val ownerId = getOwnerId(accountId)
         val legacyPrefix = LEGACY_KEY_PREFIX + accountId + "_"
