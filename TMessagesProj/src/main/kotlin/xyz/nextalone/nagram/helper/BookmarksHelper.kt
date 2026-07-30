@@ -1,6 +1,7 @@
 package xyz.nextalone.nagram.helper
 
 import androidx.core.content.edit
+import org.telegram.messenger.FileLog
 import org.telegram.messenger.UserConfig
 import xyz.nextalone.nagram.NaConfig
 import xyz.nextalone.nagram.ToggleResult
@@ -10,7 +11,7 @@ object BookmarksHelper {
     const val KEY_PREFIX = "nax_bookmarks_"
     private const val LEGACY_KEY_PREFIX = "nax_bookmarks_v1_"
     private const val CURRENT_KEY_PREFIX = "nax_bookmarks_v2_"
-    const val MAX_PER_CHAT: Int = 30
+    private const val DEFAULT_CAPACITY: Int = 30
 
     private val cache = ConcurrentHashMap<String, IntArray>()
     private val migratedOwners = ConcurrentHashMap<Int, Long>()
@@ -82,8 +83,7 @@ object BookmarksHelper {
             set.remove(id)
             set.add(id)
         }
-        val merged = set.toList()
-        return if (merged.size <= MAX_PER_CHAT) merged else merged.takeLast(MAX_PER_CHAT)
+        return set.toList()
     }
 
     private fun key(accountId: Int, dialogId: Long): String {
@@ -93,25 +93,25 @@ object BookmarksHelper {
 
     private fun getIds(key: String): IntArray {
         return cache.computeIfAbsent(key) { k ->
-            val raw = NaConfig.getPreferences().getString(k, null)
-            if (raw.isNullOrBlank()) {
-                intArrayOf()
-            } else {
-                val result = ArrayList<Int>(MAX_PER_CHAT)
-                val seen = HashSet<Int>(MAX_PER_CHAT)
-                for (part in raw.split(',')) {
-                    val id = part.trim().toIntOrNull() ?: continue
-                    if (id == 0) continue
-                    if (seen.add(id)) {
-                        result.add(id)
-                    }
-                }
-                val ids = if (result.size <= MAX_PER_CHAT) {
-                    result
+            try {
+                val raw = NaConfig.getPreferences().getString(k, null)
+                if (raw.isNullOrBlank()) {
+                    intArrayOf()
                 } else {
-                    ArrayList(result.takeLast(MAX_PER_CHAT))
+                    val result = ArrayList<Int>(DEFAULT_CAPACITY)
+                    val seen = HashSet<Int>(DEFAULT_CAPACITY)
+                    for (part in raw.split(',')) {
+                        val id = part.trim().toIntOrNull() ?: continue
+                        if (id == 0) continue
+                        if (seen.add(id)) {
+                            result.add(id)
+                        }
+                    }
+                    result.toIntArray()
                 }
-                ids.toIntArray()
+            } catch (e: Exception) {
+                FileLog.e(e)
+                intArrayOf()
             }
         }
     }
@@ -226,15 +226,6 @@ object BookmarksHelper {
             }
             return ToggleResult.REMOVED
         }
-        var missingCount = 0
-        for (id in ids) {
-            if (!currentSet.contains(id)) {
-                missingCount++
-            }
-        }
-        if (current.size + missingCount > MAX_PER_CHAT) {
-            return ToggleResult.LIMIT_REACHED
-        }
         for (id in ids) {
             if (currentSet.add(id)) {
                 current.add(id)
@@ -265,13 +256,17 @@ object BookmarksHelper {
     }
 
     private fun persist(key: String, ids: List<Int>) {
-        if (ids.isEmpty()) {
-            NaConfig.getPreferences().edit { remove(key) }
-            cache[key] = intArrayOf()
-            return
+        try {
+            if (ids.isEmpty()) {
+                NaConfig.getPreferences().edit { remove(key) }
+                cache[key] = intArrayOf()
+                return
+            }
+            val normalized = ids.distinct()
+            NaConfig.getPreferences().edit { putString(key, normalized.joinToString(",")) }
+            cache[key] = normalized.toIntArray()
+        } catch (e: Exception) {
+            FileLog.e(e)
         }
-        val normalized = ids.distinct().takeLast(MAX_PER_CHAT)
-        NaConfig.getPreferences().edit { putString(key, normalized.joinToString(",")) }
-        cache[key] = normalized.toIntArray()
     }
 }

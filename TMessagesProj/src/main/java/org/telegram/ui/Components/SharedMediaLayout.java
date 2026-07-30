@@ -5490,7 +5490,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
             long dialogIdForBookmarks = selectedMessages.get(0).getDialogId();
             ToggleResult result = BookmarksHelper.toggleBookmarks(profileActivity.getCurrentAccount(), dialogIdForBookmarks, messageIds);
             if (result == ToggleResult.LIMIT_REACHED) {
-                BulletinFactory.of(profileActivity).createSimpleBulletin(R.raw.error, LocaleController.formatString(R.string.BookmarksLimitReached, BookmarksHelper.MAX_PER_CHAT)).show();
+                BulletinFactory.of(profileActivity).createSimpleBulletin(R.raw.error, getString(R.string.ErrorOccurred)).show();
             } else {
                 boolean added = result == ToggleResult.ADDED;
                 Context context = profileActivity != null ? profileActivity.getContext() : getContext();

@@ -70,6 +70,7 @@ import org.telegram.ui.Components.inset.WindowInsetsStateHolder;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Locale;
 
@@ -90,10 +91,16 @@ public class BookmarksActivity extends NekoDelegateFragment {
     private static final int OPTION_SAVE_TO_GALLERY = 7;
     private static final int OPTION_SAVE_TO_DOWNLOADS = 8;
     private static final int OPTION_TRANSLATE = 9;
+    private static final int LOAD_BATCH_SIZE = 100;
+    private static final int LOAD_MORE_THRESHOLD = 10;
 
     private final long dialogId;
     private final ArrayList<MessageObject> bookmarkedMessages = new ArrayList<>();
     private final ArrayList<MessageObject> filteredMessages = new ArrayList<>();
+    private int[] allMessageIds = new int[0];
+    private int loadedFromIndex;
+    private boolean loadingMore;
+    private int bookmarksLoadToken;
 
     private int rowCount;
     private RecyclerListView listView;
@@ -184,6 +191,7 @@ public class BookmarksActivity extends NekoDelegateFragment {
             updateFloatingDateView();
             updatePagedownButtonVisibility(true);
             updateVisibleMessageCells();
+            checkLoadMore();
         }
     };
 
@@ -204,41 +212,20 @@ public class BookmarksActivity extends NekoDelegateFragment {
     private void updateBookmarks(Runnable onComplete) {
         int accountId = getCurrentAccount();
         long userId = getUserConfig().getClientUserId();
+        int token = ++bookmarksLoadToken;
+        loadingMore = false;
         Utilities.globalQueue.postRunnable(() -> {
             int[] messageIds = BookmarksHelper.getBookmarkedMessageIds(accountId, dialogId);
-            ArrayList<MessageObject> loaded = new ArrayList<>(messageIds.length);
-
-            for (int messageId : messageIds) {
-                TLRPC.Message message = MessagesStorage.getInstance(accountId).getMessage(dialogId, messageId);
-                MessageObject messageObject = null;
-                if (message != null) {
-                    messageObject = new MessageObject(accountId, message, false, true);
-                    if (messageObject.messageOwner.media != null) {
-                        messageObject.messageOwner.media.ttl_seconds = 0;
-                    }
-                } else {
-                    DeletedMessageFull deleted = AyuMessagesController.getInstance().getMessage(userId, dialogId, messageId);
-                    if (hasAyuDeletedContent(deleted)) {
-                        var base = deleted.message;
-                        var tl = new TLRPC.TL_message();
-                        AyuMessageUtils.map(base, tl, accountId);
-                        AyuMessageUtils.mapMedia(base, tl, accountId);
-                        tl.ayuDeleted = true;
-                        messageObject = new MessageObject(accountId, tl, false, true);
-                    }
-                }
-                if (messageObject == null) {
-                    messageObject = createMissingMessagePlaceholder(accountId, userId, messageId);
-                }
-                if (messageObject != null) {
-                    messageObject.forceAvatar = true;
-                    loaded.add(messageObject);
-                }
-            }
-
-            loaded.sort(Comparator.comparingInt(MessageObject::getId));
+            Arrays.sort(messageIds);
+            int startIndex = Math.max(0, messageIds.length - LOAD_BATCH_SIZE);
+            ArrayList<MessageObject> loaded = loadMessages(accountId, userId, messageIds, startIndex, messageIds.length);
 
             AndroidUtilities.runOnUIThread(() -> {
+                if (token != bookmarksLoadToken) {
+                    return;
+                }
+                allMessageIds = messageIds;
+                loadedFromIndex = startIndex;
                 bookmarkedMessages.clear();
                 bookmarkedMessages.addAll(loaded);
                 applySearchFilter();
@@ -278,6 +265,41 @@ public class BookmarksActivity extends NekoDelegateFragment {
         }
 
         return new MessageObject(accountId, tl, false, true);
+    }
+
+    private ArrayList<MessageObject> loadMessages(int accountId, long userId, int[] messageIds, int startIndex, int endIndex) {
+        int count = Math.max(0, endIndex - startIndex);
+        ArrayList<MessageObject> loaded = new ArrayList<>(count);
+        for (int i = startIndex; i < endIndex; i++) {
+            int messageId = messageIds[i];
+            TLRPC.Message message = MessagesStorage.getInstance(accountId).getMessage(dialogId, messageId);
+            MessageObject messageObject = null;
+            if (message != null) {
+                messageObject = new MessageObject(accountId, message, false, true);
+                if (messageObject.messageOwner.media != null) {
+                    messageObject.messageOwner.media.ttl_seconds = 0;
+                }
+            } else {
+                DeletedMessageFull deleted = AyuMessagesController.getInstance().getMessage(userId, dialogId, messageId);
+                if (hasAyuDeletedContent(deleted)) {
+                    var base = deleted.message;
+                    var tl = new TLRPC.TL_message();
+                    AyuMessageUtils.map(base, tl, accountId);
+                    AyuMessageUtils.mapMedia(base, tl, accountId);
+                    tl.ayuDeleted = true;
+                    messageObject = new MessageObject(accountId, tl, false, true);
+                }
+            }
+            if (messageObject == null) {
+                messageObject = createMissingMessagePlaceholder(accountId, userId, messageId);
+            }
+            if (messageObject != null) {
+                messageObject.forceAvatar = true;
+                loaded.add(messageObject);
+            }
+        }
+        loaded.sort(Comparator.comparingInt(MessageObject::getId));
+        return loaded;
     }
 
     private TLRPC.Peer createPeerId(long dialogId) {
@@ -675,6 +697,7 @@ public class BookmarksActivity extends NekoDelegateFragment {
                     presentFragment(new ChatActivity(args), false, false);
                 } else if (option == OPTION_DELETE_BOOKMARK) {
                     BookmarksHelper.removeBookmark(getCurrentAccount(), dialogId, msg.getId());
+                    removeMessageIdFromAllIds(msg.getId());
                     if (position >= 0 && position < filteredMessages.size()) {
                         MessageObject toRemove = filteredMessages.remove(position);
                         bookmarkedMessages.remove(toRemove);
@@ -851,8 +874,8 @@ public class BookmarksActivity extends NekoDelegateFragment {
         if (actionBar == null) {
             return;
         }
-        int count = bookmarkedMessages.size();
-        actionBar.setSubtitle(getString(R.string.BookmarksManager) + " (" + count + "/" + BookmarksHelper.MAX_PER_CHAT + ")");
+        int count = allMessageIds != null ? allMessageIds.length : bookmarkedMessages.size();
+        actionBar.setSubtitle(getString(R.string.BookmarksManager) + " (" + count + ")");
     }
 
     private void updateFloatingDateView() {
@@ -991,6 +1014,87 @@ public class BookmarksActivity extends NekoDelegateFragment {
 
     private void updateEmptyView(boolean delayIfEmpty) {
         showEmptyViewRunnable = updateListEmptyView(() -> emptyView, () -> listView, rowCount == 0, delayIfEmpty, showEmptyViewRunnable, () -> showEmptyViewRunnable = null);
+    }
+
+    private void removeMessageIdFromAllIds(int messageId) {
+        if (messageId == 0 || allMessageIds == null || allMessageIds.length == 0) {
+            return;
+        }
+        int index = Arrays.binarySearch(allMessageIds, messageId);
+        if (index < 0) {
+            return;
+        }
+        int[] newIds = new int[allMessageIds.length - 1];
+        if (index > 0) {
+            System.arraycopy(allMessageIds, 0, newIds, 0, index);
+        }
+        if (index < newIds.length) {
+            System.arraycopy(allMessageIds, index + 1, newIds, index, newIds.length - index);
+        }
+        allMessageIds = newIds;
+        if (index < loadedFromIndex) {
+            loadedFromIndex = Math.max(0, loadedFromIndex - 1);
+        }
+    }
+
+    private void checkLoadMore() {
+        if (loadingMore || listView == null || loadedFromIndex <= 0 || allMessageIds == null || allMessageIds.length == 0 || !TextUtils.isEmpty(searchQuery)) {
+            return;
+        }
+        RecyclerView.LayoutManager lm = listView.getLayoutManager();
+        if (!(lm instanceof LinearLayoutManager layoutManager)) {
+            return;
+        }
+        int firstVisible = layoutManager.findFirstVisibleItemPosition();
+        if (firstVisible <= LOAD_MORE_THRESHOLD) {
+            loadOlderBatch(layoutManager, firstVisible);
+        }
+    }
+
+    private void loadOlderBatch(LinearLayoutManager layoutManager, int firstVisible) {
+        if (loadingMore || listView == null || loadedFromIndex <= 0 || allMessageIds == null) {
+            return;
+        }
+        int oldStart = loadedFromIndex;
+        int newStart = Math.max(0, oldStart - LOAD_BATCH_SIZE);
+        if (newStart >= oldStart) {
+            return;
+        }
+        loadingMore = true;
+        int token = bookmarksLoadToken;
+        View firstView = layoutManager.findViewByPosition(firstVisible);
+        int topOffset = firstView != null ? firstView.getTop() : 0;
+        int accountId = getCurrentAccount();
+        long userId = getUserConfig().getClientUserId();
+        int[] ids = allMessageIds;
+        Utilities.globalQueue.postRunnable(() -> {
+            ArrayList<MessageObject> olderLoaded = loadMessages(accountId, userId, ids, newStart, oldStart);
+            AndroidUtilities.runOnUIThread(() -> {
+                if (token != bookmarksLoadToken || listView == null) {
+                    loadingMore = false;
+                    return;
+                }
+                loadedFromIndex = newStart;
+                loadingMore = false;
+                if (olderLoaded.isEmpty()) {
+                    return;
+                }
+                bookmarkedMessages.addAll(0, olderLoaded);
+                filteredMessages.addAll(0, olderLoaded);
+                rowCount = filteredMessages.size();
+                RecyclerView.Adapter<?> adapter = listView.getAdapter();
+                if (adapter != null) {
+                    adapter.notifyItemRangeInserted(0, olderLoaded.size());
+                }
+                layoutManager.scrollToPositionWithOffset(firstVisible + olderLoaded.size(), topOffset);
+                updateActionBarCount();
+                updateEmptyView(false);
+                listView.post(() -> {
+                    updatePagedownButtonVisibility(false);
+                    updateVisibleMessageCells();
+                });
+            });
+        });
     }
 
     @Override

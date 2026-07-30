@@ -47156,7 +47156,7 @@ public class ChatActivity extends BaseFragment implements
 				}
 				ToggleResult result = BookmarksHelper.toggleBookmarks(currentAccount, selectedObject.getDialogId(), messageIds);
 				if (result == ToggleResult.LIMIT_REACHED) {
-					BulletinFactory.of(this).createSimpleBulletin(R.raw.error, formatString(R.string.BookmarksLimitReached, BookmarksHelper.MAX_PER_CHAT)).show();
+					BulletinFactory.of(this).createSimpleBulletin(R.raw.error, getString(R.string.ErrorOccurred)).show();
 				} else {
 					boolean added = result == ToggleResult.ADDED;
 					Drawable drawable = ContextCompat.getDrawable(getParentActivity(), added ? R.drawable.msg_fave : R.drawable.msg_unfave);
