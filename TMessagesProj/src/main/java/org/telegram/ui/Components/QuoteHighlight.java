@@ -125,9 +125,13 @@ public class QuoteHighlight extends Path {
             final int blockStart = Math.max(0, start - block.charactersOffset);
             final int blockEnd = Math.min(end - block.charactersOffset, block.charactersEnd - block.charactersOffset);
 
-            currentOffsetX = -offsetX;
-            if (block.code && !block.quote) {
-                currentOffsetX += dp(10);
+            if (block.quote) {
+                currentOffsetX = 0;
+            } else {
+                currentOffsetX = -offsetX;
+                if (block.code) {
+                    currentOffsetX += dp(10);
+                }
             }
             currentOffsetY = block.textYOffset(blocks) + block.padTop;
             minX = block.quote ? dp(10) : 0;

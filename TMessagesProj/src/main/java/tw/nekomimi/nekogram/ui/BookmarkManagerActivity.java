@@ -144,10 +144,6 @@ public class BookmarkManagerActivity extends BaseFragment {
         if (actionBar == null) {
             return 0;
         }
-        final int measured = actionBar.getMeasuredHeight();
-        if (measured > 0) {
-            return measured;
-        }
         return ActionBar.getCurrentActionBarHeight() + (actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0);
     }
 
@@ -304,7 +300,7 @@ public class BookmarkManagerActivity extends BaseFragment {
          * This padding controls the vertical breathing room inside the tab container.
          */
         tabsContainer = new SearchTabsAndFiltersLayout(context);
-        tabsContainer.setPadding(0, dp(2), 0, dp(2));
+        tabsContainer.setPadding(0, dp(7), 0, dp(7));
 
         tabsView = new ViewPagerFixed.TabsView(context, false, ViewPagerFixed.SELECTOR_TYPE_BUBBLE_STYLE, resourceProvider);
         tabsView.setIndicatorAnimation(320, CubicBezierInterpolator.EASE_OUT_QUINT);

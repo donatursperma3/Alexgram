@@ -415,7 +415,7 @@ public class ReplyMessageLine {
             backgroundColor = Theme.multAlpha(color1, 0.10f);
             nameColor = Theme.getColor(Theme.key_chat_inReplyNameText, resourcesProvider);
         }
-        if (messageObject.shouldDrawWithoutBackground()) {
+        if (type != TYPE_QUOTE && type != TYPE_CODE && messageObject.shouldDrawWithoutBackground()) {
             hasColor2 = false;
             hasColor3 = false;
             // Fix: Use dark/light theme contrast color for quote/reply lines without bubble background (e.g. channel posts)
