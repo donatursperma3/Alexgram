@@ -13112,12 +13112,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 backgroundWidth = Math.max(maxChildWidth, lastLineWidth + timeMore) + dp(31);
             }
         }
-        // Clamp outgoing bubble width to ensure edit button visibility
         if (currentMessageObject != null && currentMessageObject.isOutOwner()) {
             int avatarMargin = getOutgoingAvatarOffset();
-            int extraInset = Math.min(getOutgoingContentLeftInset(), dp(6));
-            int editButtonSpace = dp(8) + dp(32) + getOutgoingContentLeftInset();
-            int maxAllowed = getParentWidth() - avatarMargin - extraInset - editButtonSpace;
+            int maxAllowed = getParentWidth() - avatarMargin - dp(64);
             if (backgroundWidth > maxAllowed) {
                 backgroundWidth = maxAllowed;
             }
@@ -17156,6 +17153,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     restore = canvas.saveLayerAlpha(rect, (int) (alpha * 255), Canvas.ALL_SAVE_FLAG);
                 }
             }
+            // [Channel Message] Penanda logika warna spoiler dan highlight quote untuk pesan channel
             int spoilersColor = currentMessageObject.isOutOwner() && !ChatObject.isChannelAndNotMegaGroup(currentMessageObject.getChatId(), currentAccount) ? getThemedColor(Theme.key_chat_outTimeText) : Theme.chat_msgTextPaint.getColor();
             if (quoteHighlight != null && !quoteHighlight.todo && !quoteHighlight.poll && currentMessagesGroup == null) {
                 Theme.MessageDrawable backgroundDrawable = currentBackgroundDrawable;
@@ -20803,7 +20801,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             // For outgoing messages, the avatar sits on the right edge. The bubble should stay
             // close to the avatar without overlapping it, while also leaving room for the quick edit affordance.
             int avatarOffset = getOutgoingAvatarOffset();
-            backgroundDrawableLeft = layoutWidth - backgroundWidth - avatarOffset - (!mediaBackground ? dp(2) : dp(4)) - Math.min(getOutgoingContentLeftInset(), dp(6));
+            backgroundDrawableLeft = layoutWidth - backgroundWidth - avatarOffset - (!mediaBackground ? 0 : dp(9));
             if (currentMessageObject.isAnyKindOfSticker() && isAvatarVisible) {
                 backgroundDrawableLeft -= dp(1);
             }
@@ -22302,11 +22300,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         MessageObject messageObject = getMessageObject();
         if (messageObject != null && messageObject.isOutOwner()) {
             int avatarMargin = getOutgoingAvatarOffset();
-            int extraInset = Math.min(getOutgoingContentLeftInset(), dp(6));
             if (isRoundVideo) {
-                return layoutWidth - backgroundWidth - avatarMargin - extraInset - (int) ((1f - getVideoTranscriptionProgress()) * dp(4));
+                return layoutWidth - backgroundWidth - avatarMargin - (int) ((1f - getVideoTranscriptionProgress()) * dp(9));
             }
-            return layoutWidth - backgroundWidth - avatarMargin - extraInset - (!mediaBackground ? dp(2) : dp(4));
+            return layoutWidth - backgroundWidth - avatarMargin - (!mediaBackground ? 0 : dp(9));
         } else {
             int r;
             boolean isUserDialog = DialogObject.isUserDialog(messageObject.getDialogId());

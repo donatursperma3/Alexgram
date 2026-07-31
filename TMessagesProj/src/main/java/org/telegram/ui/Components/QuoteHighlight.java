@@ -125,13 +125,13 @@ public class QuoteHighlight extends Path {
             final int blockStart = Math.max(0, start - block.charactersOffset);
             final int blockEnd = Math.min(end - block.charactersOffset, block.charactersEnd - block.charactersOffset);
 
+            // Fix: Keep currentOffsetX within cell bounds (0 or code padding) so highlight never shifts off-screen to the left
             if (block.quote) {
                 currentOffsetX = 0;
+            } else if (block.code) {
+                currentOffsetX = dp(10);
             } else {
-                currentOffsetX = -offsetX;
-                if (block.code) {
-                    currentOffsetX += dp(10);
-                }
+                currentOffsetX = 0;
             }
             currentOffsetY = block.textYOffset(blocks) + block.padTop;
             minX = block.quote ? dp(10) : 0;
