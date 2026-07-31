@@ -235,7 +235,6 @@ public class BookmarkManagerActivity extends BaseFragment {
         optionsItem.setOnClickListener(v -> optionsItem.toggleSubMenu());
 
         tabsContainer = new SearchTabsAndFiltersLayout(context);
-        // reduce vertical padding to tighten gap between action bar and tabs
         tabsContainer.setPadding(0, dp(2), 0, dp(2));
 
         tabsView = new ViewPagerFixed.TabsView(context, false, ViewPagerFixed.SELECTOR_TYPE_BUBBLE_STYLE, resourceProvider);
@@ -331,11 +330,9 @@ public class BookmarkManagerActivity extends BaseFragment {
         emptyView.setTextSize(15);
         emptyView.setGravity(Gravity.CENTER);
         emptyView.setPadding(dp(24), dp(24), dp(24), dp(24));
-        final int topContentOffset = getTopContentOffset();
         final int tabsHeight = dp(TABS_CONTAINER_HEIGHT_DP);
-        contentLayout.addView(emptyView, LayoutHelper.createFrameMarginPx(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.TOP, 0, topContentOffset + tabsHeight, 0, 0));
-        // place tabs directly under the action bar without extra top margin
-        contentLayout.addView(tabsContainer, LayoutHelper.createFrameMarginPx(LayoutHelper.MATCH_PARENT, TABS_CONTAINER_HEIGHT_DP, Gravity.TOP, dp(4), topContentOffset, dp(4), 0));
+        contentLayout.addView(emptyView, LayoutHelper.createFrameMarginPx(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.TOP, 0, tabsHeight, 0, 0));
+        contentLayout.addView(tabsContainer, LayoutHelper.createFrameMarginPx(LayoutHelper.MATCH_PARENT, TABS_CONTAINER_HEIGHT_DP, Gravity.TOP, dp(4), 0, dp(4), 0));
         updateTabsStyle();
         setPageTab(viewPages[0], selectedTabId, false);
         updateBlur3Capture();
@@ -909,11 +906,11 @@ public class BookmarkManagerActivity extends BaseFragment {
         }
 
         final int additional = dp(48);
-        final int topContentOffset = getTopContentOffset();
+        final int tabsTop = tabsContainer != null ? tabsContainer.getTop() : 0;
         final int tabsHeight = dp(TABS_CONTAINER_HEIGHT_DP);
 
         blur3PositionActionBar.set(0, -additional, width, actionBarHeight + additional);
-        blur3PositionTabs.set(0, topContentOffset, width, topContentOffset + tabsHeight);
+        blur3PositionTabs.set(0, tabsTop, width, tabsTop + tabsHeight);
         if (!LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS)) {
             blur3PositionTabs.bottom += dp(48);
         }

@@ -14,6 +14,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.SparseArray;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.KeyEvent;
@@ -39,11 +40,13 @@ import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ChatObject;
 import org.telegram.messenger.DialogObject;
 import org.telegram.messenger.FileLoader;
+import org.telegram.messenger.FileLog;
 import org.telegram.messenger.MediaController;
 import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.MessagesStorage;
 import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.R;
+import org.telegram.messenger.SendMessagesHelper;
 import org.telegram.messenger.Utilities;
 import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.tgnet.TLRPC;
@@ -56,6 +59,8 @@ import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Cells.ChatActionCell;
 import org.telegram.ui.Cells.ChatMessageCell;
 import org.telegram.ui.ChatActivity;
+import org.telegram.ui.Components.Forum.ForumUtilities;
+import org.telegram.ui.Components.NumberTextView;
 import org.telegram.ui.Components.Bulletin;
 import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.ChatScrimPopupContainerLayout;
@@ -67,14 +72,18 @@ import org.telegram.ui.Components.blur3.drawable.color.BlurredBackgroundColorPro
 import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceColor;
 import org.telegram.ui.Components.chat.layouts.ChatActivitySideControlsButtonsLayout;
 import org.telegram.ui.Components.inset.WindowInsetsStateHolder;
+import org.telegram.ui.DialogsActivity;
+import org.telegram.ui.SpecialForwardActivity;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Locale;
 
 import kotlin.Unit;
+import xyz.nextalone.nagram.NaConfig;
 import tw.nekomimi.nekogram.helpers.MessageHelper;
 import tw.nekomimi.nekogram.llm.LlmConfig;
 import tw.nekomimi.nekogram.translate.Translator;
@@ -93,10 +102,21 @@ public class BookmarksActivity extends NekoDelegateFragment {
     private static final int OPTION_TRANSLATE = 9;
     private static final int LOAD_BATCH_SIZE = 100;
     private static final int LOAD_MORE_THRESHOLD = 10;
+    private static final int ACTION_MODE_FORWARD = 1001;
+    private static final int ACTION_MODE_SPECIAL_FORWARD = 1002;
+    private static final int ACTION_MODE_SELECT_BETWEEN = 1003;
+    private static final int ACTION_MODE_REMOVE_BOOKMARK = 1004;
+    private static final int ACTION_MODE_COPY = 1005;
+    private static final int ACTION_MODE_OTHER = 1006;
+    private static final int ACTION_MODE_FORWARD_NOQUOTE = 1007;
+    private static final int ACTION_MODE_DETAILS = 1008;
+    private static final int MAX_SELECTED_MESSAGES = 100;
 
     private final long dialogId;
     private final ArrayList<MessageObject> bookmarkedMessages = new ArrayList<>();
     private final ArrayList<MessageObject> filteredMessages = new ArrayList<>();
+    private final SparseArray<MessageObject>[] selectedMessagesIds = new SparseArray[]{new SparseArray<>(), new SparseArray<>()};
+    private final HashSet<Integer> missingMessageIds = new HashSet<>();
     private int[] allMessageIds = new int[0];
     private int loadedFromIndex;
     private boolean loadingMore;
@@ -116,6 +136,8 @@ public class BookmarksActivity extends NekoDelegateFragment {
     private boolean scrollingFloatingDate;
     private final Runnable updateFloatingDateRunnable = this::updateFloatingDateView;
     private final WindowInsetsStateHolder windowInsetsStateHolder = new WindowInsetsStateHolder(this::checkInsets);
+    private NumberTextView selectedMessagesCountTextView;
+    private ActionBarMenuItem actionModeOtherItem;
 
     public BookmarksActivity(long dialogId) {
         this.dialogId = dialogId;
@@ -214,6 +236,7 @@ public class BookmarksActivity extends NekoDelegateFragment {
         long userId = getUserConfig().getClientUserId();
         int token = ++bookmarksLoadToken;
         loadingMore = false;
+        missingMessageIds.clear();
         Utilities.globalQueue.postRunnable(() -> {
             int[] messageIds = BookmarksHelper.getBookmarkedMessageIds(accountId, dialogId);
             Arrays.sort(messageIds);
@@ -240,6 +263,7 @@ public class BookmarksActivity extends NekoDelegateFragment {
         if (messageId == 0) {
             return null;
         }
+        missingMessageIds.add(messageId);
 
         TLRPC.TL_message tl = new TLRPC.TL_message();
         tl.id = messageId;
@@ -386,11 +410,30 @@ public class BookmarksActivity extends NekoDelegateFragment {
             @Override
             public void onItemClick(int id) {
                 if (id == -1) {
-                    finishFragment();
+                    if (actionBar.isActionModeShowed()) {
+                        hideActionMode();
+                    } else {
+                        finishFragment();
+                    }
+                } else if (id == ACTION_MODE_FORWARD) {
+                    openForward(false);
+                } else if (id == ACTION_MODE_SPECIAL_FORWARD) {
+                    openSpecialForwardActivity();
+                } else if (id == ACTION_MODE_SELECT_BETWEEN) {
+                    performSelectBetweenMessages();
+                } else if (id == ACTION_MODE_REMOVE_BOOKMARK) {
+                    removeSelectedBookmarks();
+                } else if (id == ACTION_MODE_COPY) {
+                    copySelectedMessages();
+                } else if (id == ACTION_MODE_FORWARD_NOQUOTE) {
+                    openForward(true);
+                } else if (id == ACTION_MODE_DETAILS) {
+                    openSelectedMessageDetails();
                 }
             }
         });
 
+        createActionMode();
         ActionBarMenu menu = actionBar.createMenu();
         searchItem = menu.addItem(0, R.drawable.ic_ab_search_solar).setIsSearchField(true);
         searchItem.setSearchFieldHint(getString(R.string.Search));
@@ -465,8 +508,29 @@ public class BookmarksActivity extends NekoDelegateFragment {
 
         listView.setOnItemClickListener((view, position, x, y) -> {
             if (view instanceof NekoMessageCell) {
-                createMenu(view, x, y, position);
+                if (actionBar.isActionModeShowed()) {
+                    MessageObject messageObject = ((NekoMessageCell) view).getMessageObject();
+                    toggleSelectedMessage(messageObject, true);
+                } else {
+                    createMenu(view, x, y, position);
+                }
             }
+        });
+        listView.setOnItemLongClickListener((view, position) -> {
+            if (!(view instanceof NekoMessageCell) || position < 0 || position >= filteredMessages.size()) {
+                return false;
+            }
+            MessageObject messageObject = ((NekoMessageCell) view).getMessageObject();
+            if (messageObject == null) {
+                return false;
+            }
+            if (!actionBar.isActionModeShowed()) {
+                AndroidUtilities.hideKeyboard(fragmentView.findFocus());
+                actionBar.showActionMode();
+            }
+            toggleSelectedMessage(messageObject, false);
+            startMultiselect(position);
+            return true;
         });
         listView.addOnScrollListener(listScrollListener);
 
@@ -530,6 +594,41 @@ public class BookmarksActivity extends NekoDelegateFragment {
         return fragmentView;
     }
 
+    private void createActionMode() {
+        final ActionBarMenu actionMode = actionBar.createActionMode();
+        actionMode.setBackgroundColor(0);
+
+        selectedMessagesCountTextView = new NumberTextView(actionMode.getContext());
+        selectedMessagesCountTextView.setTextSize(18);
+        selectedMessagesCountTextView.setTypeface(AndroidUtilities.bold());
+        selectedMessagesCountTextView.setTextColor(getThemedColor(Theme.key_actionBarActionModeDefaultIcon));
+        selectedMessagesCountTextView.setOnTouchListener((v, event) -> true);
+        actionMode.addView(selectedMessagesCountTextView, LayoutHelper.createLinear(0, LayoutHelper.MATCH_PARENT, 1.0f, 65, 0, 0, 0));
+
+        if (NaConfig.INSTANCE.getActionBarButtonSelectBetween().Bool()) {
+            actionMode.addItemWithWidth(ACTION_MODE_SELECT_BETWEEN, R.drawable.ic_select_between, dp(54), getString(R.string.SelectBetween));
+        }
+        if (NaConfig.INSTANCE.getActionBarButtonCopy().Bool()) {
+            actionMode.addItemWithWidth(ACTION_MODE_COPY, R.drawable.msg_copy, dp(54), getString(R.string.Copy));
+        }
+        if (NaConfig.INSTANCE.getActionBarButtonForward().Bool()) {
+            actionMode.addItemWithWidth(ACTION_MODE_FORWARD, R.drawable.msg_forward, dp(54), getString(R.string.Forward));
+        }
+        if (NaConfig.INSTANCE.getSpecialForward().Bool()) {
+            actionMode.addItemWithWidth(ACTION_MODE_SPECIAL_FORWARD, R.drawable.nk_special_forward, dp(54), getString(R.string.SpecialForward));
+        }
+        if (NaConfig.INSTANCE.getShowAddToBookmark().Bool()) {
+            actionMode.addItemWithWidth(ACTION_MODE_REMOVE_BOOKMARK, R.drawable.msg_unfave, dp(54), getString(R.string.RemoveBookmark));
+        }
+
+        actionModeOtherItem = actionMode.addItemWithWidth(ACTION_MODE_OTHER, R.drawable.ic_ab_other, dp(54), getString(R.string.MessageMenu));
+        if (actionModeOtherItem != null) {
+            actionModeOtherItem.addSubItem(ACTION_MODE_FORWARD_NOQUOTE, R.drawable.msg_forward_noquote, getString(R.string.NoQuoteForward));
+            actionModeOtherItem.addSubItem(ACTION_MODE_SPECIAL_FORWARD, R.drawable.nk_special_forward, getString(R.string.SpecialForward));
+            actionModeOtherItem.addSubItem(ACTION_MODE_DETAILS, R.drawable.msg_info, getString(R.string.MessageDetails));
+        }
+    }
+
     @Override
     public void onResume() {
         super.onResume();
@@ -562,6 +661,10 @@ public class BookmarksActivity extends NekoDelegateFragment {
         if (scrimPopupWindow != null) {
             scrimPopupWindow.dismiss();
             scrimPopupWindow = null;
+        }
+
+        if (actionBar != null && actionBar.isActionModeShowed()) {
+            hideActionMode();
         }
     }
 
@@ -597,6 +700,541 @@ public class BookmarksActivity extends NekoDelegateFragment {
         if (searchItem != null) {
             searchItem.setActionBarMenuItemSearchListener(null);
             searchItem = null;
+        }
+    }
+
+    private void startMultiselect(int position) {
+        if (listView == null) {
+            return;
+        }
+        listView.startMultiselect(position, false, new RecyclerListView.onMultiSelectionChanged() {
+            @Override
+            public void onSelectionChanged(int position, boolean selected, float x, float y) {
+                if (position < 0 || position >= filteredMessages.size()) {
+                    return;
+                }
+                MessageObject messageObject = filteredMessages.get(position);
+                if (messageObject == null) {
+                    return;
+                }
+                if (selected) {
+                    if (isSelectionLimitReached()) {
+                        return;
+                    }
+                    selectedMessagesIds[0].put(messageObject.getId(), messageObject);
+                } else {
+                    selectedMessagesIds[0].remove(messageObject.getId());
+                }
+                updateActionModeTitle(true);
+                updateVisibleSelection(true);
+            }
+
+            @Override
+            public boolean canSelect(int position) {
+                return position >= 0 && position < filteredMessages.size();
+            }
+
+            @Override
+            public int checkPosition(int position, boolean selectionFromTop) {
+                return position;
+            }
+
+            @Override
+            public boolean limitReached() {
+                return isSelectionLimitReached();
+            }
+
+            @Override
+            public void getPaddings(int[] paddings) {
+                paddings[0] = 0;
+                paddings[1] = windowInsetsStateHolder.getCurrentNavigationBarInset();
+            }
+
+            @Override
+            public void scrollBy(int dy) {
+                if (listView != null) {
+                    listView.scrollBy(0, dy);
+                }
+            }
+        });
+    }
+
+    private boolean isSelectionLimitReached() {
+        return selectedMessagesIds[0].size() + selectedMessagesIds[1].size() >= MAX_SELECTED_MESSAGES;
+    }
+
+    private void toggleSelectedMessage(MessageObject messageObject, boolean animated) {
+        if (messageObject == null) {
+            return;
+        }
+        int messageId = messageObject.getId();
+        if (messageId == 0) {
+            return;
+        }
+        if (selectedMessagesIds[0].indexOfKey(messageId) >= 0) {
+            selectedMessagesIds[0].remove(messageId);
+        } else {
+            if (isSelectionLimitReached()) {
+                if (selectedMessagesCountTextView != null) {
+                    AndroidUtilities.shakeView(selectedMessagesCountTextView);
+                }
+                return;
+            }
+            selectedMessagesIds[0].put(messageId, messageObject);
+        }
+
+        if (actionBar.isActionModeShowed() && getSelectedCount() == 0) {
+            hideActionMode();
+            return;
+        }
+
+        if (!actionBar.isActionModeShowed() && getSelectedCount() > 0) {
+            AndroidUtilities.hideKeyboard(fragmentView.findFocus());
+            actionBar.showActionMode();
+        }
+        updateActionModeTitle(animated);
+        updateVisibleSelection(animated);
+    }
+
+    private int getSelectedCount() {
+        return selectedMessagesIds[0].size() + selectedMessagesIds[1].size();
+    }
+
+    private void hideActionMode() {
+        actionBar.hideActionMode();
+        selectedMessagesIds[0].clear();
+        selectedMessagesIds[1].clear();
+        updateVisibleSelection(true);
+    }
+
+    private void updateActionModeTitle(boolean animated) {
+        if (selectedMessagesCountTextView != null) {
+            selectedMessagesCountTextView.setNumber(getSelectedCount(), animated);
+        }
+        ActionBarMenu actionMode = actionBar.getActionMode();
+        if (actionMode != null) {
+            ActionBarMenuItem selectBetweenItem = actionMode.getItem(ACTION_MODE_SELECT_BETWEEN);
+            if (selectBetweenItem != null) {
+                boolean canSelect = canSelectBetweenMessages();
+                selectBetweenItem.setEnabled(canSelect);
+                selectBetweenItem.setAlpha(canSelect ? 1f : 0.5f);
+            }
+            ActionBarMenuItem copyItem = actionMode.getItem(ACTION_MODE_COPY);
+            if (copyItem != null) {
+                boolean canCopy = canCopySelectedMessages();
+                copyItem.setEnabled(canCopy);
+                copyItem.setAlpha(canCopy ? 1f : 0.5f);
+            }
+            ActionBarMenuItem removeBookmarkItem = actionMode.getItem(ACTION_MODE_REMOVE_BOOKMARK);
+            if (removeBookmarkItem != null) {
+                boolean canRemove = getSelectedCount() > 0;
+                removeBookmarkItem.setEnabled(canRemove);
+                removeBookmarkItem.setAlpha(canRemove ? 1f : 0.5f);
+            }
+        }
+
+        if (actionModeOtherItem != null) {
+            ActionBarMenuSubItem noQuoteItem = actionModeOtherItem.getSubItem(ACTION_MODE_FORWARD_NOQUOTE);
+            if (noQuoteItem != null) {
+                boolean canShow = NaConfig.INSTANCE.getShowNoQuoteForward().Bool() && canForwardSelectedMessages();
+                noQuoteItem.setVisibility(canShow ? View.VISIBLE : View.GONE);
+            }
+            ActionBarMenuSubItem specialForwardItem = actionModeOtherItem.getSubItem(ACTION_MODE_SPECIAL_FORWARD);
+            if (specialForwardItem != null) {
+                specialForwardItem.setVisibility(NaConfig.INSTANCE.getSpecialForward().Bool() ? View.VISIBLE : View.GONE);
+            }
+            ActionBarMenuSubItem detailsItem = actionModeOtherItem.getSubItem(ACTION_MODE_DETAILS);
+            if (detailsItem != null) {
+                detailsItem.setVisibility(getSelectedCount() == 1 ? View.VISIBLE : View.GONE);
+            }
+        }
+    }
+
+    private void updateVisibleSelection(boolean animated) {
+        if (listView == null) {
+            return;
+        }
+        boolean show = actionBar.isActionModeShowed();
+        for (int i = 0, count = listView.getChildCount(); i < count; i++) {
+            View child = listView.getChildAt(i);
+            if (!(child instanceof ChatMessageCell cell)) {
+                continue;
+            }
+            MessageObject messageObject = cell.getMessageObject();
+            boolean checked = messageObject != null && selectedMessagesIds[0].indexOfKey(messageObject.getId()) >= 0;
+            cell.setCheckBoxVisible(show, animated);
+            cell.setChecked(checked, checked, animated);
+        }
+    }
+
+    private boolean isSelectableBetweenMessage(MessageObject message, int begin, int end) {
+        if (message == null) {
+            return false;
+        }
+        int msgId = message.getId();
+        if (msgId <= begin || msgId >= end || msgId == 0) {
+            return false;
+        }
+        return selectedMessagesIds[0].indexOfKey(msgId) < 0;
+    }
+
+    private boolean canSelectBetweenMessages() {
+        int[] bounds = tw.nekomimi.nekogram.helpers.ChatsHelper.getSelectBetweenBounds(selectedMessagesIds);
+        if (bounds == null) {
+            return false;
+        }
+        int begin = bounds[0];
+        int end = bounds[1];
+        for (int i = 0; i < filteredMessages.size(); i++) {
+            if (isSelectableBetweenMessage(filteredMessages.get(i), begin, end)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void performSelectBetweenMessages() {
+        int[] bounds = tw.nekomimi.nekogram.helpers.ChatsHelper.getSelectBetweenBounds(selectedMessagesIds);
+        if (bounds == null) {
+            return;
+        }
+        int begin = bounds[0];
+        int end = bounds[1];
+        for (int i = 0; i < filteredMessages.size(); i++) {
+            MessageObject message = filteredMessages.get(i);
+            if (!isSelectableBetweenMessage(message, begin, end)) {
+                continue;
+            }
+            if (isSelectionLimitReached()) {
+                break;
+            }
+            selectedMessagesIds[0].put(message.getId(), message);
+        }
+        if (!actionBar.isActionModeShowed() && getSelectedCount() > 0) {
+            actionBar.showActionMode();
+        }
+        updateActionModeTitle(true);
+        updateVisibleSelection(true);
+    }
+
+    private ArrayList<MessageObject> getSelectedMessagesSorted() {
+        ArrayList<MessageObject> result = new ArrayList<>(selectedMessagesIds[0].size());
+        for (int i = 0; i < selectedMessagesIds[0].size(); i++) {
+            MessageObject messageObject = selectedMessagesIds[0].valueAt(i);
+            if (messageObject != null) {
+                result.add(messageObject);
+            }
+        }
+        result.sort(Comparator.comparingInt(MessageObject::getId));
+        return result;
+    }
+
+    private ArrayList<MessageObject> getSelectedCopyableMessagesSorted() {
+        ArrayList<MessageObject> selected = getSelectedMessagesSorted();
+        if (selected.isEmpty()) {
+            return selected;
+        }
+        ArrayList<MessageObject> result = new ArrayList<>(selected.size());
+        for (int i = 0; i < selected.size(); i++) {
+            MessageObject msg = selected.get(i);
+            if (msg == null || msg.getId() == 0) {
+                continue;
+            }
+            if (missingMessageIds.contains(msg.getId())) {
+                continue;
+            }
+            if (msg.messageOwner != null && msg.messageOwner.ayuDeleted) {
+                continue;
+            }
+            String text = msg.messageOwner != null ? msg.messageOwner.message : null;
+            if (TextUtils.isEmpty(text)) {
+                continue;
+            }
+            result.add(msg);
+        }
+        result.sort(Comparator.comparingInt(MessageObject::getId));
+        return result;
+    }
+
+    private boolean canCopySelectedMessages() {
+        return !getSelectedCopyableMessagesSorted().isEmpty();
+    }
+
+    private void copySelectedMessages() {
+        ArrayList<MessageObject> list = getSelectedCopyableMessagesSorted();
+        if (list.isEmpty()) {
+            BulletinFactory.of(this).createErrorBulletin(getString(R.string.ErrorOccurred)).show();
+            return;
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < list.size(); i++) {
+            MessageObject msg = list.get(i);
+            String text = msg != null && msg.messageOwner != null ? msg.messageOwner.message : null;
+            if (TextUtils.isEmpty(text)) {
+                continue;
+            }
+            if (sb.length() > 0) {
+                sb.append("\n\n");
+            }
+            sb.append(text);
+        }
+        if (sb.length() <= 0) {
+            BulletinFactory.of(this).createErrorBulletin(getString(R.string.ErrorOccurred)).show();
+            return;
+        }
+        AndroidUtilities.addToClipboard(sb.toString());
+        BulletinFactory.of(this).createCopyBulletin(getString(R.string.MessageCopied)).show();
+    }
+
+    private void removeSelectedBookmarks() {
+        if (getParentActivity() == null) {
+            return;
+        }
+        if (getSelectedCount() <= 0) {
+            return;
+        }
+        try {
+            int accountId = getCurrentAccount();
+            HashSet<Integer> removeIds = new HashSet<>();
+            for (int i = 0; i < selectedMessagesIds[0].size(); i++) {
+                int messageId = selectedMessagesIds[0].keyAt(i);
+                if (messageId == 0) {
+                    continue;
+                }
+                removeIds.add(messageId);
+            }
+            if (removeIds.isEmpty()) {
+                return;
+            }
+            for (Integer messageId : removeIds) {
+                BookmarksHelper.removeBookmark(accountId, dialogId, messageId);
+                removeMessageIdFromAllIds(messageId);
+                missingMessageIds.remove(messageId);
+            }
+            bookmarkedMessages.removeIf(m -> m != null && removeIds.contains(m.getId()));
+            filteredMessages.removeIf(m -> m != null && removeIds.contains(m.getId()));
+            rowCount = filteredMessages.size();
+            notifyAdapterDataChanged();
+            updateActionBarCount();
+            updateEmptyView(false);
+            if (listView != null) {
+                listView.post(() -> {
+                    updatePagedownButtonVisibility(false);
+                    updateVisibleMessageCells();
+                });
+            } else {
+                updatePagedownButtonVisibility(false);
+            }
+        } catch (Exception e) {
+            FileLog.e(e);
+            BulletinFactory.of(this).createErrorBulletin(getString(R.string.ErrorOccurred)).show();
+        } finally {
+            hideActionMode();
+        }
+    }
+
+    private ArrayList<MessageObject> getSelectedForwardableMessages(boolean includeGroups) {
+        ArrayList<MessageObject> selected = getSelectedMessagesSorted();
+        if (selected.isEmpty()) {
+            return selected;
+        }
+
+        ArrayList<MessageObject> resolved = new ArrayList<>();
+        HashSet<Integer> addedIds = new HashSet<>();
+        for (int i = 0; i < selected.size(); i++) {
+            MessageObject msg = selected.get(i);
+            if (msg == null || msg.getId() == 0) {
+                continue;
+            }
+            if (missingMessageIds.contains(msg.getId())) {
+                continue;
+            }
+            if (msg.messageOwner != null && msg.messageOwner.ayuDeleted) {
+                continue;
+            }
+            long groupId = msg.getGroupId();
+            if (includeGroups && groupId != 0) {
+                for (int j = 0; j < bookmarkedMessages.size(); j++) {
+                    MessageObject candidate = bookmarkedMessages.get(j);
+                    if (candidate != null && candidate.getGroupId() == groupId) {
+                        int id = candidate.getId();
+                        if (id != 0 && !missingMessageIds.contains(id) && (candidate.messageOwner == null || !candidate.messageOwner.ayuDeleted) && addedIds.add(id)) {
+                            resolved.add(candidate);
+                        }
+                    }
+                }
+                continue;
+            }
+            if (addedIds.add(msg.getId())) {
+                resolved.add(msg);
+            }
+        }
+        resolved.sort(Comparator.comparingInt(MessageObject::getId));
+        return resolved;
+    }
+
+    private boolean hasSelectedNoForwardsMessage(ArrayList<MessageObject> selected) {
+        for (int i = 0; i < selected.size(); i++) {
+            MessageObject msg = selected.get(i);
+            if (msg != null && msg.messageOwner != null && msg.messageOwner.noforwards) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasSelectedAyuDeletedMessage(ArrayList<MessageObject> selected) {
+        for (int i = 0; i < selected.size(); i++) {
+            MessageObject msg = selected.get(i);
+            if (msg != null && msg.messageOwner != null && msg.messageOwner.ayuDeleted) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean canForwardSelectedMessages() {
+        ArrayList<MessageObject> forwardMessages = getSelectedForwardableMessages(true);
+        if (forwardMessages.isEmpty()) {
+            return false;
+        }
+        boolean peerNoForwards = getMessagesController().isPeerNoForwards(dialogId, true);
+        boolean hasNoForwards = hasSelectedNoForwardsMessage(forwardMessages);
+        boolean hasAyuDeleted = hasSelectedAyuDeletedMessage(forwardMessages);
+
+        boolean blockForward = (peerNoForwards || hasNoForwards || hasAyuDeleted) && !NaConfig.INSTANCE.getAllowForwardingRestriction().Bool();
+        if (NaConfig.INSTANCE.getAllowForwardingRestriction().Bool()) {
+            blockForward = hasAyuDeleted;
+        }
+        return !blockForward;
+    }
+
+    private void openForward(boolean noQuote) {
+        if (getParentActivity() == null) {
+            return;
+        }
+        ArrayList<MessageObject> forwardMessages = getSelectedForwardableMessages(true);
+        if (forwardMessages.isEmpty()) {
+            BulletinFactory.of(this).createErrorBulletin(getString(R.string.ErrorOccurred)).show();
+            return;
+        }
+
+        boolean peerNoForwards = getMessagesController().isPeerNoForwards(dialogId, true);
+        boolean hasNoForwards = hasSelectedNoForwardsMessage(forwardMessages);
+        boolean hasAyuDeleted = hasSelectedAyuDeletedMessage(forwardMessages);
+
+        boolean blockForward = (peerNoForwards || hasNoForwards || hasAyuDeleted) && !NaConfig.INSTANCE.getAllowForwardingRestriction().Bool();
+        if (NaConfig.INSTANCE.getAllowForwardingRestriction().Bool()) {
+            blockForward = hasAyuDeleted;
+        }
+        if (blockForward) {
+            String str;
+            if (peerNoForwards) {
+                if (dialogId > 0) {
+                    str = getString(R.string.ForwardsRestrictedInfoUser);
+                } else {
+                    TLRPC.Chat chat = getMessagesController().getChat(-dialogId);
+                    if (chat != null && ChatObject.isChannel(chat) && !chat.megagroup) {
+                        str = getString(R.string.ForwardsRestrictedInfoChannel);
+                    } else {
+                        str = getString(R.string.ForwardsRestrictedInfoGroup);
+                    }
+                }
+            } else {
+                str = getString(R.string.ForwardsRestrictedInfoBot);
+                if (hasAyuDeleted) {
+                    str = getString(R.string.ForwardsRestrictedInfoAyuDeleted);
+                }
+            }
+            BulletinFactory.of(this).createErrorBulletin(str).show();
+            return;
+        }
+
+        Bundle args = new Bundle();
+        args.putBoolean("onlySelect", true);
+        args.putBoolean("canSelectTopics", true);
+        args.putInt("dialogsType", DialogsActivity.DIALOGS_TYPE_FORWARD);
+        args.putInt("messagesCount", forwardMessages.size());
+        DialogsActivity fragment = new DialogsActivity(args);
+        fragment.setDelegate((fragment1, dids, msgText, param, notify, scheduleDate, scheduleRepeatPeriod, topicsFragment) -> {
+            try {
+                if (dids.size() > 1 || dids.get(0).dialogId == getUserConfig().getClientUserId() || msgText != null) {
+                    for (int a = 0; a < dids.size(); a++) {
+                        long did = dids.get(a).dialogId;
+                        if (msgText != null) {
+                            SendMessagesHelper.getInstance(getCurrentAccount()).sendMessage(msgText.toString(), did, null, null, null, true, null, null, null, notify, scheduleDate, 0, null, false);
+                        }
+                        SendMessagesHelper.getInstance(getCurrentAccount()).sendMessage(forwardMessages, did, noQuote, false, notify, scheduleDate, 0);
+                    }
+                    fragment1.finishFragment();
+                } else {
+                    long did = dids.get(0).dialogId;
+                    Bundle args1 = new Bundle();
+                    args1.putBoolean("scrollToTopOnResume", true);
+                    args1.putBoolean("forward_noquote", noQuote);
+                    if (DialogObject.isEncryptedDialog(did)) {
+                        args1.putInt("enc_id", DialogObject.getEncryptedChatId(did));
+                    } else {
+                        if (DialogObject.isUserDialog(did)) {
+                            args1.putLong("user_id", did);
+                        } else {
+                            args1.putLong("chat_id", -did);
+                        }
+                        if (!getMessagesController().checkCanOpenChat(args1, fragment1)) {
+                            return true;
+                        }
+                    }
+                    getNotificationCenter().postNotificationName(NotificationCenter.closeChats);
+                    ChatActivity chatActivity = new ChatActivity(args1);
+                    ForumUtilities.applyTopic(chatActivity, dids.get(0));
+                    fragment1.presentFragment(chatActivity, true);
+                    chatActivity.showFieldPanelForForward(true, forwardMessages);
+                }
+            } catch (Exception e) {
+                FileLog.e(e);
+                BulletinFactory.of(this).createErrorBulletin(getString(R.string.ErrorOccurred)).show();
+            }
+            hideActionMode();
+            return true;
+        });
+        presentFragment(fragment);
+    }
+
+    private void openSpecialForwardActivity() {
+        ArrayList<MessageObject> messages = getSelectedForwardableMessages(true);
+        if (messages.isEmpty()) {
+            BulletinFactory.of(this).createErrorBulletin(getString(R.string.ErrorOccurred)).show();
+            return;
+        }
+        boolean hasAyuDeleted = hasSelectedAyuDeletedMessage(messages);
+        if (hasAyuDeleted && !NaConfig.INSTANCE.getAllowForwardingRestriction().Bool()) {
+            BulletinFactory.of(this).createErrorBulletin(getString(R.string.ForwardsRestrictedInfoAyuDeleted)).show();
+            return;
+        }
+        try {
+            presentFragment(new SpecialForwardActivity(messages));
+            hideActionMode();
+        } catch (Exception e) {
+            FileLog.e(e);
+            BulletinFactory.of(this).createErrorBulletin(getString(R.string.ErrorOccurred)).show();
+        }
+    }
+
+    private void openSelectedMessageDetails() {
+        if (getSelectedCount() != 1) {
+            return;
+        }
+        MessageObject msg = selectedMessagesIds[0].size() == 1 ? selectedMessagesIds[0].valueAt(0) : null;
+        if (msg == null) {
+            BulletinFactory.of(this).createErrorBulletin(getString(R.string.ErrorOccurred)).show();
+            return;
+        }
+        try {
+            presentFragment(new MessageDetailsActivity(msg, null));
+            hideActionMode();
+        } catch (Exception e) {
+            FileLog.e(e);
+            BulletinFactory.of(this).createErrorBulletin(getString(R.string.ErrorOccurred)).show();
         }
     }
 
@@ -1142,6 +1780,10 @@ public class BookmarksActivity extends NekoDelegateFragment {
                 msg.forceAvatar = true;
                 cell.setAyuDelegate(BookmarksActivity.this);
                 cell.setMessageObject(msg, null, false, false, false);
+                boolean show = actionBar != null && actionBar.isActionModeShowed();
+                boolean checked = msg != null && selectedMessagesIds[0].indexOfKey(msg.getId()) >= 0;
+                cell.setCheckBoxVisible(show, false);
+                cell.setChecked(checked, checked, false);
                 cell.setAlpha(1f);
                 cell.setId(position);
             }
