@@ -75,12 +75,17 @@ import org.telegram.ui.Components.inset.WindowInsetsStateHolder;
 import org.telegram.ui.DialogsActivity;
 import org.telegram.ui.SpecialForwardActivity;
 
+import androidx.collection.LongSparseArray;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Locale;
+
+import org.telegram.tgnet.TLObject;
 
 import kotlin.Unit;
 import xyz.nextalone.nagram.NaConfig;
@@ -101,6 +106,8 @@ public class BookmarksActivity extends NekoDelegateFragment {
     private static final int OPTION_SAVE_TO_GALLERY = 7;
     private static final int OPTION_SAVE_TO_DOWNLOADS = 8;
     private static final int OPTION_TRANSLATE = 9;
+    private static final int OPTION_GO_TO_FIRST_MESSAGE = 10;
+    private static final int OPTION_MENU_OTHER = 11;
     private static final int LOAD_BATCH_SIZE = 100;
     private static final int LOAD_MORE_THRESHOLD = 10;
     private static final int ACTION_MODE_FORWARD = 1001;
@@ -232,6 +239,8 @@ public class BookmarksActivity extends NekoDelegateFragment {
         updateBookmarks(null);
     }
 
+    private boolean loadingMissing;
+
     private void updateBookmarks(Runnable onComplete) {
         int accountId = getCurrentAccount();
         long userId = getUserConfig().getClientUserId();
@@ -255,6 +264,99 @@ public class BookmarksActivity extends NekoDelegateFragment {
                 applySearchFilter();
                 if (onComplete != null) {
                     onComplete.run();
+                }
+                loadMissingMessagesServer();
+            });
+        });
+    }
+
+    private void loadMissingMessagesServer() {
+        if (missingMessageIds.isEmpty() || loadingMissing) {
+            return;
+        }
+        loadingMissing = true;
+        int accountId = getCurrentAccount();
+        ArrayList<Integer> idsToFetch = new ArrayList<>(missingMessageIds);
+        if (idsToFetch.size() > 100) {
+            idsToFetch = new ArrayList<>(idsToFetch.subList(0, 100));
+        }
+        final ArrayList<Integer> currentBatch = idsToFetch;
+
+        Utilities.globalQueue.postRunnable(() -> {
+            TLObject request;
+            TLRPC.Chat chat = null;
+            if (DialogObject.isChatDialog(dialogId)) {
+                chat = getMessagesController().getChat(-dialogId);
+                if (chat == null) {
+                    chat = getMessagesStorage().getChatSync(-dialogId);
+                    if (chat != null) {
+                        getMessagesController().putChat(chat, true);
+                    }
+                }
+            }
+            if (ChatObject.isChannel(chat)) {
+                TLRPC.TL_channels_getMessages req = new TLRPC.TL_channels_getMessages();
+                req.channel = getMessagesController().getInputChannel(chat);
+                req.id.addAll(currentBatch);
+                request = req;
+            } else {
+                TLRPC.TL_messages_getMessages req = new TLRPC.TL_messages_getMessages();
+                req.id.addAll(currentBatch);
+                request = req;
+            }
+
+            getConnectionsManager().sendRequest(request, (response, error) -> {
+                if (response instanceof TLRPC.messages_Messages messagesRes) {
+                    getMessagesController().putUsers(messagesRes.users, false);
+                    getMessagesController().putChats(messagesRes.chats, false);
+                    getMessagesStorage().putUsersAndChats(messagesRes.users, messagesRes.chats, true, true);
+                    getMessagesStorage().putMessages(messagesRes, dialogId, -1, 0, false, 0, 0);
+
+                    LongSparseArray<TLRPC.User> usersLocal = new LongSparseArray<>();
+                    for (int a = 0; a < messagesRes.users.size(); a++) {
+                        TLRPC.User u = messagesRes.users.get(a);
+                        usersLocal.put(u.id, u);
+                    }
+                    LongSparseArray<TLRPC.Chat> chatsLocal = new LongSparseArray<>();
+                    for (int a = 0; a < messagesRes.chats.size(); a++) {
+                        TLRPC.Chat c = messagesRes.chats.get(a);
+                        chatsLocal.put(c.id, c);
+                    }
+
+                    HashMap<Integer, MessageObject> fetchedMap = new HashMap<>();
+                    for (int a = 0; a < messagesRes.messages.size(); a++) {
+                        TLRPC.Message message = messagesRes.messages.get(a);
+                        if (message != null && !(message instanceof TLRPC.TL_messageEmpty)) {
+                            message.dialog_id = dialogId;
+                            MessageObject obj = new MessageObject(accountId, message, usersLocal, chatsLocal, false, true);
+                            obj.forceAvatar = true;
+                            fetchedMap.put(message.id, obj);
+                        }
+                    }
+
+                    AndroidUtilities.runOnUIThread(() -> {
+                        loadingMissing = false;
+                        boolean updated = false;
+                        for (int i = 0; i < bookmarkedMessages.size(); i++) {
+                            MessageObject current = bookmarkedMessages.get(i);
+                            if (current != null && currentBatch.contains(current.getId())) {
+                                MessageObject fetched = fetchedMap.get(current.getId());
+                                if (fetched != null) {
+                                    missingMessageIds.remove(current.getId());
+                                    bookmarkedMessages.set(i, fetched);
+                                    updated = true;
+                                }
+                            }
+                        }
+                        if (updated) {
+                            applySearchFilter();
+                        }
+                        if (!missingMessageIds.isEmpty()) {
+                            loadMissingMessagesServer();
+                        }
+                    });
+                } else {
+                    AndroidUtilities.runOnUIThread(() -> loadingMissing = false);
                 }
             });
         });
@@ -416,6 +518,8 @@ public class BookmarksActivity extends NekoDelegateFragment {
                     } else {
                         finishFragment();
                     }
+                } else if (id == OPTION_GO_TO_FIRST_MESSAGE) {
+                    scrollToFirstMessage();
                 } else if (id == ACTION_MODE_FORWARD) {
                     openForward(false);
                 } else if (id == ACTION_MODE_SPECIAL_FORWARD) {
@@ -466,6 +570,10 @@ public class BookmarksActivity extends NekoDelegateFragment {
                 applySearchFilter();
             }
         });
+
+        ActionBarMenuItem otherItem = menu.addItem(OPTION_MENU_OTHER, R.drawable.ic_ab_other);
+        otherItem.setContentDescription(getString(R.string.AccDescrMoreOptions));
+        otherItem.addSubItem(OPTION_GO_TO_FIRST_MESSAGE, R.drawable.msg_go_up, getString(R.string.ToTheMessage));
 
         SizeNotifierFrameLayout frameLayout = new ScrimFrameLayout(context) {
             @Override
@@ -1735,8 +1843,65 @@ public class BookmarksActivity extends NekoDelegateFragment {
                     updatePagedownButtonVisibility(false);
                     updateVisibleMessageCells();
                 });
+                loadMissingMessagesServer();
             });
         });
+    }
+
+    private void scrollToFirstMessage() {
+        try {
+            if (listView == null || rowCount <= 0 || filteredMessages.isEmpty()) {
+                return;
+            }
+
+            if (loadedFromIndex > 0 && allMessageIds != null && allMessageIds.length > 0) {
+                int accountId = getCurrentAccount();
+                long userId = getUserConfig().getClientUserId();
+                int token = bookmarksLoadToken;
+                int oldStart = loadedFromIndex;
+                int[] ids = allMessageIds;
+
+                Utilities.globalQueue.postRunnable(() -> {
+                    try {
+                        ArrayList<MessageObject> olderLoaded = loadMessages(accountId, userId, ids, 0, oldStart);
+                        AndroidUtilities.runOnUIThread(() -> {
+                            try {
+                                if (token != bookmarksLoadToken || listView == null) {
+                                    return;
+                                }
+                                loadedFromIndex = 0;
+                                if (!olderLoaded.isEmpty()) {
+                                    bookmarkedMessages.addAll(0, olderLoaded);
+                                    applySearchFilter();
+                                }
+                                if (listView != null && !filteredMessages.isEmpty()) {
+                                    if (filteredMessages.size() > 50) {
+                                        listView.scrollToPosition(0);
+                                    } else {
+                                        listView.smoothScrollToPosition(0);
+                                    }
+                                    updateVisibleMessageCells();
+                                }
+                                loadMissingMessagesServer();
+                            } catch (Exception e) {
+                                FileLog.e(e);
+                            }
+                        });
+                    } catch (Exception e) {
+                        FileLog.e(e);
+                    }
+                });
+            } else {
+                if (filteredMessages.size() > 50) {
+                    listView.scrollToPosition(0);
+                } else {
+                    listView.smoothScrollToPosition(0);
+                }
+                updateVisibleMessageCells();
+            }
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
     }
 
     @Override
