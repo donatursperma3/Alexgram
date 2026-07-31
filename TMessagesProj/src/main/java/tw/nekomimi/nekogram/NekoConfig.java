@@ -169,6 +169,7 @@ public class NekoConfig {
     public static ConfigItem useChatAttachMediaMenu = addConfig("UseChatAttachEnterMenu", configTypeBool, true);
     public static ConfigItem disableLinkPreviewByDefault = addConfig("DisableLinkPreviewByDefault", configTypeBool, false);
     public static ConfigItem sendCommentAfterForward = addConfig("SendCommentAfterForward", configTypeBool, true);
+    public static ConfigItem unlimitedMessageSelection = addConfig("unlimitedMessageSelection", configTypeBool, false);
     public static ConfigItem bulkForwardAutoDelay = addConfig("BulkForwardAutoDelay", configTypeBool, false);
     public static ConfigItem bulkForwardDelayPreset = addConfig("BulkForwardDelayPreset", configTypeInt, BULK_FORWARD_DELAY_PRESET_01S);
     public static ConfigItem bulkForwardDelayManualSeconds = addConfig("BulkForwardDelayManualSeconds", configTypeString, "0.1");

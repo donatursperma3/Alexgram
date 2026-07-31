@@ -129,11 +129,74 @@ public class BookmarkManagerActivity extends BaseFragment {
     private final RectF blur3PositionActionBar = new RectF();
     private final RectF blur3PositionTabs = new RectF();
 
+    /*
+     * TOP AREA DEFINITIONS (Bookmarks main page)
+     *
+     * - "Header bar"  : ActionBar (title + search/menu) provided by BaseFragment.
+     * - "Chat filter" : tabsContainer -> tabsView (All / Channels / Groups / Users / Bots).
+     *
+     * Layout behavior:
+     * - tabsContainer is placed right under ActionBar using top margin = getTopContentOffset().
+     * - Recycler list paddingTop is set to (tabsHeight + topContentOffset) so list content starts below
+     *   ActionBar + tabs (no overlap, no excessive gap).
+     */
     private int getTopContentOffset() {
         if (actionBar == null) {
             return 0;
         }
+        final int measured = actionBar.getMeasuredHeight();
+        if (measured > 0) {
+            return measured;
+        }
         return ActionBar.getCurrentActionBarHeight() + (actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0);
+    }
+
+    /*
+     * Synchronizes padding/margins between:
+     * - ActionBar (header bar)
+     * - tabsContainer (chat filter tabs)
+     * - listView (content)
+     *
+     * This runs after measurement (post) and also onResume, to avoid device-specific measurement
+     * differences that can make the gap look too large.
+     */
+    private void updateTopOffsets() {
+        if (tabsContainer == null || emptyView == null || viewPages == null) {
+            return;
+        }
+        final int topContentOffset = getTopContentOffset();
+        final int tabsHeight = dp(TABS_CONTAINER_HEIGHT_DP);
+
+        ViewGroup.LayoutParams params = tabsContainer.getLayoutParams();
+        if (params instanceof FrameLayout.LayoutParams) {
+            FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) params;
+            if (lp.topMargin != topContentOffset) {
+                lp.topMargin = topContentOffset;
+                tabsContainer.setLayoutParams(lp);
+            }
+        }
+
+        params = emptyView.getLayoutParams();
+        if (params instanceof FrameLayout.LayoutParams) {
+            FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) params;
+            final int top = topContentOffset + tabsHeight;
+            if (lp.topMargin != top) {
+                lp.topMargin = top;
+                emptyView.setLayoutParams(lp);
+            }
+        }
+
+        final int listPaddingTop = tabsHeight + topContentOffset;
+        for (int i = 0; i < viewPages.length; i++) {
+            ViewPage page = viewPages[i];
+            if (page == null) {
+                continue;
+            }
+            int current = page.listView.getPaddingTop();
+            if (current != listPaddingTop) {
+                page.listView.setPadding(0, listPaddingTop, 0, 0);
+            }
+        }
     }
 
     private void updateBlur3Capture() {
@@ -234,8 +297,13 @@ public class BookmarkManagerActivity extends BaseFragment {
         clearAllItem.setSelectorColor(Theme.multAlpha(Theme.getColor(Theme.key_text_RedRegular), .12f));
         optionsItem.setOnClickListener(v -> optionsItem.toggleSubMenu());
 
+        /*
+         * tabsContainer = visual container under ActionBar (header bar) that hosts the filter tabs.
+         * tabsView      = the actual tab chips (All / Channels / Groups / Users / Bots).
+         *
+         * This padding controls the vertical breathing room inside the tab container.
+         */
         tabsContainer = new SearchTabsAndFiltersLayout(context);
-        // reduce vertical padding to tighten gap between action bar and tabs
         tabsContainer.setPadding(0, dp(2), 0, dp(2));
 
         tabsView = new ViewPagerFixed.TabsView(context, false, ViewPagerFixed.SELECTOR_TYPE_BUBBLE_STYLE, resourceProvider);
@@ -333,8 +401,12 @@ public class BookmarkManagerActivity extends BaseFragment {
         emptyView.setPadding(dp(24), dp(24), dp(24), dp(24));
         final int topContentOffset = getTopContentOffset();
         final int tabsHeight = dp(TABS_CONTAINER_HEIGHT_DP);
+        /*
+         * Positioning rules:
+         * - tabsContainer: directly under ActionBar using top margin = topContentOffset.
+         * - emptyView/list: start after (topContentOffset + tabsHeight) so they are below ActionBar+tabs.
+         */
         contentLayout.addView(emptyView, LayoutHelper.createFrameMarginPx(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.TOP, 0, topContentOffset + tabsHeight, 0, 0));
-        // place tabs directly under the action bar without extra top margin
         contentLayout.addView(tabsContainer, LayoutHelper.createFrameMarginPx(LayoutHelper.MATCH_PARENT, TABS_CONTAINER_HEIGHT_DP, Gravity.TOP, dp(4), topContentOffset, dp(4), 0));
         updateTabsStyle();
         setPageTab(viewPages[0], selectedTabId, false);
@@ -343,6 +415,7 @@ public class BookmarkManagerActivity extends BaseFragment {
         updateSwipeBackEnabled();
         updateEmptyView();
         invalidateGestureExclusion();
+        contentLayout.post(this::updateTopOffsets);
 
         return fragmentView;
     }
@@ -370,6 +443,7 @@ public class BookmarkManagerActivity extends BaseFragment {
     @Override
     public void onResume() {
         super.onResume();
+        updateTopOffsets();
         updateTabsStyle();
         reloadData();
     }
@@ -846,6 +920,10 @@ public class BookmarkManagerActivity extends BaseFragment {
             listView.setSelectorType(2);
             listView.setScrollingTouchSlop(RecyclerView.TOUCH_SLOP_PAGING);
             listView.setClipToPadding(false);
+            /*
+             * listView paddingTop = tabsHeight + topContentOffset:
+             * ensures the list content starts under ActionBar (header bar) + tabsContainer (chat filter).
+             */
             listView.setPadding(0, dp(TABS_CONTAINER_HEIGHT_DP) + getTopContentOffset(), 0, 0);
             listView.addOnScrollListener(new RecyclerView.OnScrollListener() {
                 @Override

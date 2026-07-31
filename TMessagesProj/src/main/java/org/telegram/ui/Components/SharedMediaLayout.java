@@ -2568,7 +2568,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                     if (messageObject == null) return false;
                     final int loadIndex = messageObject.getDialogId() == dialog_id ? 0 : 1;
                     if (selectedFiles[loadIndex].indexOfKey(messageObject.getId()) < 0) {
-                        if (selectedFiles[0].size() + selectedFiles[1].size() >= 100) {
+                        if (isMessageSelectionLimitReached()) {
                             return false;
                         }
                         selectedFiles[loadIndex].put(messageObject.getId(), messageObject);
@@ -6269,6 +6269,10 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         }
     }
 
+    private boolean isMessageSelectionLimitReached() {
+        return !tw.nekomimi.nekogram.NekoConfig.unlimitedMessageSelection.Bool() && selectedFiles[0].size() + selectedFiles[1].size() >= 100;
+    }
+
     public boolean canSelectBetween() {
         int currentType = getClosestTab();
         if (currentType == TAB_POLL) {
@@ -6329,7 +6333,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
             MessageObject message = messages.get(i);
             int loadIndex = message.getDialogId() == dialog_id ? 0 : 1;
             if (selectedFiles[loadIndex].indexOfKey(message.getId()) < 0) {
-                if (selectedFiles[0].size() + selectedFiles[1].size() >= 100) {
+                if (isMessageSelectionLimitReached()) {
                     break;
                 }
                 selectedFiles[loadIndex].put(message.getId(), message);
@@ -8145,7 +8149,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                     cantDeleteMessagesCount--;
                 }
             } else {
-                if (selectedFiles[0].size() + selectedFiles[1].size() >= 100) {
+                if (isMessageSelectionLimitReached()) {
                     return;
                 }
                 selectedFiles[loadIndex].put(message.getId(), message);

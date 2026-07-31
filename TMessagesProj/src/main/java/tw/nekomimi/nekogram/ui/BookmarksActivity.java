@@ -84,6 +84,7 @@ import java.util.Locale;
 
 import kotlin.Unit;
 import xyz.nextalone.nagram.NaConfig;
+import tw.nekomimi.nekogram.NekoConfig;
 import tw.nekomimi.nekogram.helpers.MessageHelper;
 import tw.nekomimi.nekogram.llm.LlmConfig;
 import tw.nekomimi.nekogram.translate.Translator;
@@ -760,6 +761,9 @@ public class BookmarksActivity extends NekoDelegateFragment {
     }
 
     private boolean isSelectionLimitReached() {
+        if (NekoConfig.unlimitedMessageSelection.Bool()) {
+            return false;
+        }
         return selectedMessagesIds[0].size() + selectedMessagesIds[1].size() >= MAX_SELECTED_MESSAGES;
     }
 

@@ -1916,7 +1916,7 @@ public class ChatActivity extends BaseFragment implements
 						return;
 					}
 					if (messageObject.contentType == 0) {
-						if (selected && selectedMessagesIds[0].size() + selectedMessagesIds[1].size() >= 100) {
+						if (selected && isMessageSelectionLimitReached()) {
 							limitReached = true;
 						} else {
 							limitReached = false;
@@ -10242,6 +10242,10 @@ public class ChatActivity extends BaseFragment implements
 		updateLeftBottomButton(ChatsHelper.getLeftButtonAction(this, noForwards));
 	}
 
+	private boolean isMessageSelectionLimitReached() {
+		return !NekoConfig.unlimitedMessageSelection.Bool() && selectedMessagesIds[0].size() + selectedMessagesIds[1].size() >= 100;
+	}
+
 	private boolean isSelectableBetweenMessage(MessageObject message, int begin, int end) {
 		int msgId = message.getId();
 		if (msgId <= begin || msgId >= end) {
@@ -10289,7 +10293,7 @@ public class ChatActivity extends BaseFragment implements
 			if (!isSelectableBetweenMessage(message, begin, end)) {
 				continue;
 			}
-			if (selectedMessagesIds[0].size() + selectedMessagesIds[1].size() >= 100) {
+			if (isMessageSelectionLimitReached()) {
 				if (message.getId() != begin) {
 					for (int x = 0; x < messages.size(); x++) {
 						MessageObject msg = messages.get(x);
@@ -20260,7 +20264,7 @@ public class ChatActivity extends BaseFragment implements
 					}
 				}
 			} else {
-				if (selectedMessagesIds[0].size() + selectedMessagesIds[1].size() >= 100) {
+				if (isMessageSelectionLimitReached()) {
 					AndroidUtilities.shakeView(selectedMessagesCountTextView);
 					Vibrator vibrator = (Vibrator) ApplicationLoader.applicationContext.getSystemService(Context.VIBRATOR_SERVICE);
 					if (vibrator != null) {

@@ -117,6 +117,7 @@ public class NekoChatSettingsActivity extends BaseNekoXSettingsActivity implemen
     ArrayList<ConfigCellCheckBox> premiumElementsRows = ((ConfigCellTextCheck2) premiumElementsToggleRow).getCheckBox();
     private final AbstractConfigCell unreadBadgeOnBackButton = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.unreadBadgeOnBackButton));
     private final AbstractConfigCell sendCommentAfterForwardRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.sendCommentAfterForward));
+    private final AbstractConfigCell unlimitedMessageSelectionRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.unlimitedMessageSelection));
     private final AbstractConfigCell bulkForwardAutoDelayRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.bulkForwardAutoDelay));
     private final AbstractConfigCell bulkForwardDelayPresetRow = cellGroup.appendCell(new ConfigCellSelectBox("BulkForwardDelayPreset", NekoConfig.bulkForwardDelayPreset, new String[]{
             getString(R.string.BulkForwardDelayPreset01s),
