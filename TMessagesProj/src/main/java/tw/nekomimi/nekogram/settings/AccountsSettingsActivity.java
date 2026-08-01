@@ -366,7 +366,7 @@ public class AccountsSettingsActivity extends BaseNekoXSettingsActivity {
         if (getParentActivity() == null) {
             return;
         }
-        runAsyncBackupTask("Restoring account backup...", password, (pwd, listener) -> SettingsBackupHelper.importUserConfig(getParentActivity(), uri, pwd, listener), count -> {
+        this.<Integer>runAsyncBackupTask("Restoring account backup...", password, (pwd, listener) -> SettingsBackupHelper.importUserConfig(getParentActivity(), uri, pwd, listener), count -> {
             if (count != null && count >= 1) {
                 String successMsg = (count == 1)
                         ? getParentActivity().getString(R.string.AccountRestoreSuccess, 1)
