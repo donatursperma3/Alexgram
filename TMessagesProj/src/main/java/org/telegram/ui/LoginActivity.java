@@ -1267,7 +1267,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                     if (getParentActivity() == null) {
                         return;
                     }
-                    if (!UserConfig.getInstance(targetAccount).isClientActivated()) {
+                    if (targetAccount < 0 || !UserConfig.getInstance(targetAccount).isClientActivated()) {
                         tw.nekomimi.nekogram.utils.AlertUtil.showSimpleAlert(getParentActivity(), new IllegalArgumentException("Backup file does not contain an activated account."));
                         return;
                     }

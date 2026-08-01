@@ -376,6 +376,8 @@ public class AccountsSettingsActivity extends BaseNekoXSettingsActivity {
                 restartDialog.setMessage(successMsg + "\n\n" + getString(R.string.RestartAppToTakeEffect));
                 restartDialog.setPositiveButton(getString(R.string.OK), (__, ___) -> tw.nekomimi.nekogram.helpers.AppRestartHelper.triggerRebirth(getParentActivity(), new Intent(getParentActivity(), org.telegram.ui.LaunchActivity.class)));
                 restartDialog.show();
+            } else {
+                AlertUtil.showSimpleAlert(getParentActivity(), new IllegalArgumentException("No valid account backup found in selected file."));
             }
         });
     }
@@ -388,6 +390,8 @@ public class AccountsSettingsActivity extends BaseNekoXSettingsActivity {
         runAsyncBackupTask("Appending account to backup...", password, (pwd, listener) -> SettingsBackupHelper.appendUserConfigToZip(getParentActivity(), account, uri, pwd, listener), backupFile -> {
             if (backupFile != null) {
                 tw.nekomimi.nekogram.utils.ShareUtil.shareFile(getParentActivity(), backupFile);
+            } else {
+                AlertUtil.showSimpleAlert(getParentActivity(), new IllegalArgumentException("Failed to append account to backup file."));
             }
         });
     }

@@ -502,58 +502,75 @@ public final class SettingsBackupHelper {
     }
 
     private static int importUserConfigFromZip(byte[] zipBytes, String password, ProgressListener listener) throws Exception {
-        java.util.Map<String, ZipPackage> packages = new java.util.LinkedHashMap<>();
-        int legacyCount = 0;
-
+        Map<String, byte[]> allEntries = new HashMap<>();
         if (listener != null) listener.onProgress(10, "Extracting ZIP archive entries...");
         try (ZipInputStream zipInput = new ZipInputStream(new BufferedInputStream(new java.io.ByteArrayInputStream(zipBytes)))) {
             ZipEntry entry;
             while ((entry = zipInput.getNextEntry()) != null) {
-                if (entry.isDirectory()) {
-                    continue;
-                }
-                String name = entry.getName();
-                byte[] entryBytes = readAllBytes(zipInput);
-
-                if (name.contains("/")) {
-                    String prefix = name.substring(0, name.indexOf('/') + 1);
-                    String rest = name.substring(name.indexOf('/') + 1);
-                    ZipPackage pkg = packages.computeIfAbsent(prefix, k -> new ZipPackage());
-                    String fileNameOnly = rest.contains("/") ? rest.substring(rest.lastIndexOf('/') + 1) : rest;
-                    if (fileNameOnly.equals("config.json") || fileNameOnly.equals("config.json.enc") || fileNameOnly.equals("userconfig.json") || fileNameOnly.equals("settings.json")) {
-                        pkg.configName = fileNameOnly;
-                        pkg.configBytes = entryBytes;
-                    } else {
-                        String fileRelPath = rest.startsWith("files/") ? rest.substring("files/".length()) : rest;
-                        pkg.filesMap.put(fileRelPath, entryBytes);
-                    }
-                } else {
-                    // Legacy flat entries inside ZIP
-                    if (name.endsWith(".json.enc") || name.endsWith(".enc")) {
-                        if (password == null) throw new BackupPasswordRequiredException();
-                        try {
-                            entryBytes = decryptBackupData(entryBytes, password);
-                        } catch (Exception e) {
-                            throw new BackupPasswordInvalidException();
-                        }
-                    }
-                    if (name.endsWith(".json") || name.endsWith(".json.enc") || name.endsWith(".enc")) {
-                        String text = new String(entryBytes, java.nio.charset.StandardCharsets.UTF_8);
-                        JsonObject root = GsonUtil.toJsonObject(text);
-                        if (root != null) {
-                            importUserConfig(root);
-                            legacyCount++;
-                        }
-                    }
+                if (!entry.isDirectory()) {
+                    allEntries.put(entry.getName(), readAllBytes(zipInput));
                 }
             }
         }
 
-        if (packages.isEmpty() && legacyCount == 0) {
-            throw new Exception("No account backup found in ZIP");
+        if (allEntries.isEmpty()) {
+            throw new Exception("ZIP archive is empty");
         }
 
-        int importedCount = legacyCount;
+        List<String> configPaths = new ArrayList<>();
+        for (String path : allEntries.keySet()) {
+            String fileName = path.contains("/") ? path.substring(path.lastIndexOf('/') + 1) : path;
+            if (fileName.equals("config.json") || fileName.equals("config.json.enc") ||
+                fileName.equals("userconfig.json") || fileName.equals("userconfig.json.enc") ||
+                fileName.equals("settings.json") || fileName.equals("settings.json.enc")) {
+                configPaths.add(path);
+            }
+        }
+
+        if (configPaths.isEmpty()) {
+            for (String path : allEntries.keySet()) {
+                if (!path.contains("/") && (path.endsWith(".json") || path.endsWith(".json.enc") || path.endsWith(".enc"))) {
+                    configPaths.add(path);
+                }
+            }
+        }
+
+        if (configPaths.isEmpty()) {
+            throw new Exception("No account backup configuration found in ZIP");
+        }
+
+        Map<String, ZipPackage> packages = new java.util.LinkedHashMap<>();
+        for (String configPath : configPaths) {
+            String dirPrefix = configPath.contains("/") ? configPath.substring(0, configPath.lastIndexOf('/') + 1) : "";
+            String configFileName = configPath.contains("/") ? configPath.substring(configPath.lastIndexOf('/') + 1) : configPath;
+
+            ZipPackage pkg = new ZipPackage();
+            pkg.configName = configFileName;
+            pkg.configBytes = allEntries.get(configPath);
+
+            for (Map.Entry<String, byte[]> entry : allEntries.entrySet()) {
+                String entryPath = entry.getKey();
+                if (entryPath.equals(configPath)) continue;
+
+                if (dirPrefix.isEmpty() || entryPath.startsWith(dirPrefix)) {
+                    String relInPkg = dirPrefix.isEmpty() ? entryPath : entryPath.substring(dirPrefix.length());
+                    String fileRelPath;
+                    if (relInPkg.contains("/files/")) {
+                        fileRelPath = relInPkg.substring(relInPkg.indexOf("/files/") + 7);
+                    } else if (relInPkg.startsWith("files/")) {
+                        fileRelPath = relInPkg.substring("files/".length());
+                    } else {
+                        fileRelPath = relInPkg;
+                    }
+                    if (!fileRelPath.isEmpty() && !fileRelPath.endsWith("/")) {
+                        pkg.filesMap.put(fileRelPath, entry.getValue());
+                    }
+                }
+            }
+            packages.put(configPath, pkg);
+        }
+
+        int importedCount = 0;
         int totalPkgs = packages.size();
         int pkgIndex = 0;
         for (ZipPackage pkg : packages.values()) {
@@ -576,6 +593,7 @@ public final class SettingsBackupHelper {
             }
             String text = new String(configBytes, java.nio.charset.StandardCharsets.UTF_8);
             JsonObject root = GsonUtil.toJsonObject(text);
+            if (root == null) continue;
 
             int targetAccount = findTargetAccountSlot(root);
             if (targetAccount < 0) {
