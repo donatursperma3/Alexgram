@@ -12,6 +12,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.res.Configuration;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
@@ -25,6 +26,8 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.FrameLayout;
+import android.widget.HorizontalScrollView;
+import android.widget.LinearLayout;
 
 import androidx.core.graphics.ColorUtils;
 
@@ -103,6 +106,16 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
 
     SharedMediaLayout sharedMediaLayout;
     private int initialTab;
+    private final String[] chatFilterLabels = {"All", "Users", "Groups", "Channels", "Bots"};
+    private final String[] downloadFilterLabels = {"All", "Downloaded", "Pending"};
+    private int chatFilterType = 0;
+    private int downloadFilterType = 0;
+    private HorizontalScrollView chatTypeFilterScrollView;
+    private LinearLayout chatTypeFilterContainer;
+    private TextView[] chatTypeFilterChips;
+    private HorizontalScrollView downloadFilterScrollView;
+    private LinearLayout downloadFilterContainer;
+    private TextView[] downloadFilterChips;
 
     public MediaActivity(Bundle args, SharedMediaLayout.SharedMediaPreloader sharedMediaPreloader) {
         super(args);
@@ -117,6 +130,8 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
         hashtag = getArguments().getString("hashtag", "");
         username = getArguments().getString("username", "");
         storiesCount = getArguments().getInt("storiesCount", -1);
+        chatFilterType = getArguments().getInt("chat_filter_type", 0);
+        downloadFilterType = getArguments().getInt("download_filter_type", 0);
         int defaultTab = SharedMediaLayout.TAB_PHOTOVIDEO;
         if (type == TYPE_ARCHIVED_CHANNEL_STORIES) {
             defaultTab = SharedMediaLayout.TAB_ARCHIVED_STORIES;
@@ -225,13 +240,17 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
             @Override
             protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
                 FrameLayout.LayoutParams lp = (LayoutParams) sharedMediaLayout.getLayoutParams();
-                lp.topMargin = ActionBar.getCurrentActionBarHeight() + (actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0);
+                lp.topMargin = ActionBar.getCurrentActionBarHeight() + (actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0) + AndroidUtilities.dp(44);
 
                 lp = (LayoutParams) avatarContainer.getLayoutParams();
                 lp.topMargin = actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0;
                 lp.height = ActionBar.getCurrentActionBarHeight();
 
                 int textTop;
+                if (chatTypeFilterScrollView != null) {
+                    FrameLayout.LayoutParams filterLp = (LayoutParams) chatTypeFilterScrollView.getLayoutParams();
+                    filterLp.topMargin = ActionBar.getCurrentActionBarHeight() + (actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0);
+                }
                 for (int i = 0; i < 2; ++i) {
                     if (nameTextView[i] != null) {
                         textTop = (ActionBar.getCurrentActionBarHeight() / 2 - dp(22)) / 2 + dp(!AndroidUtilities.isTablet() && getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE ? 4 : 5);
@@ -270,6 +289,11 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
         fragmentView.needBlur = true;
         this.fragmentView = fragmentView;
         fragmentView.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundGray));
+
+        if (type == TYPE_MEDIA) {
+            createChatTypeFilterView(context);
+            createDownloadStatusFilterView(context);
+        }
 
         ActionBarMenu menu2 = actionBar.createMenu();
         if (type == TYPE_STORIES || type == TYPE_ARCHIVED_CHANNEL_STORIES) {
@@ -596,6 +620,11 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
             }
 
             @Override
+            protected boolean canShowSearchItem() {
+                return type != TYPE_STORIES && type != TYPE_ARCHIVED_CHANNEL_STORIES;
+            }
+
+            @Override
             protected int getInitialTab() {
                 return initialTab;
             }
@@ -837,6 +866,9 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
         updateMediaCount();
         updateColors();
 
+        if (type == TYPE_MEDIA) {
+            sharedMediaLayout.setFilesFilterState(downloadFilterType);
+        }
         if (type == TYPE_STORIES && initialTab == SharedMediaLayout.TAB_ARCHIVED_STORIES) {
             sharedMediaLayout.onTabProgress(9f);
         }
@@ -873,6 +905,132 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
     }
 
     private int lastTab;
+
+    private void createChatTypeFilterView(Context context) {
+        if (fragmentView == null) {
+            return;
+        }
+        chatTypeFilterScrollView = new HorizontalScrollView(context);
+        chatTypeFilterScrollView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        chatTypeFilterScrollView.setHorizontalScrollBarEnabled(false);
+        chatTypeFilterScrollView.setClipToPadding(false);
+        chatTypeFilterScrollView.setPadding(0, 0, 0, 0);
+        chatTypeFilterScrollView.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
+
+        chatTypeFilterContainer = new LinearLayout(context);
+        chatTypeFilterContainer.setOrientation(LinearLayout.HORIZONTAL);
+        chatTypeFilterContainer.setPadding(AndroidUtilities.dp(12), AndroidUtilities.dp(8), AndroidUtilities.dp(12), AndroidUtilities.dp(8));
+
+        chatTypeFilterChips = new TextView[chatFilterLabels.length];
+        for (int i = 0; i < chatFilterLabels.length; i++) {
+            final int index = i;
+            TextView chip = new TextView(context);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    AndroidUtilities.dp(36)
+            );
+            lp.setMargins(0, 0, AndroidUtilities.dp(6), 0);
+            chip.setLayoutParams(lp);
+            chip.setPadding(AndroidUtilities.dp(12), 0, AndroidUtilities.dp(12), 0);
+            chip.setSingleLine();
+            chip.setGravity(Gravity.CENTER);
+            chip.setBackgroundResource(R.drawable.bg_file_manager_chip);
+            chip.setText(chatFilterLabels[i]);
+            chip.setTextColor(0xff354B63);
+            chip.setTextSize(12);
+            chip.setAllCaps(false);
+            chip.setOnClickListener(v -> {
+                chatFilterType = index;
+                updateChatFilterSelection();
+            });
+            chatTypeFilterContainer.addView(chip);
+            chatTypeFilterChips[i] = chip;
+        }
+
+        chatTypeFilterScrollView.addView(chatTypeFilterContainer);
+        fragmentView.addView(chatTypeFilterScrollView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP | Gravity.FILL_HORIZONTAL, 0, 0, 0, 0));
+        updateChatFilterSelection();
+    }
+
+    private void updateChatFilterSelection() {
+        if (chatTypeFilterChips == null) {
+            return;
+        }
+        for (int i = 0; i < chatTypeFilterChips.length; i++) {
+            TextView chip = chatTypeFilterChips[i];
+            if (chip == null) {
+                continue;
+            }
+            boolean selected = i == chatFilterType;
+            chip.setBackgroundResource(selected ? R.drawable.bg_file_manager_chip_selected : R.drawable.bg_file_manager_chip);
+            chip.setTextColor(selected ? Color.WHITE : 0xff354B63);
+        }
+    }
+
+    private void createDownloadStatusFilterView(Context context) {
+        if (fragmentView == null) {
+            return;
+        }
+        downloadFilterScrollView = new HorizontalScrollView(context);
+        downloadFilterScrollView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        downloadFilterScrollView.setHorizontalScrollBarEnabled(false);
+        downloadFilterScrollView.setClipToPadding(false);
+        downloadFilterScrollView.setPadding(0, 0, 0, 0);
+        downloadFilterScrollView.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
+
+        downloadFilterContainer = new LinearLayout(context);
+        downloadFilterContainer.setOrientation(LinearLayout.HORIZONTAL);
+        downloadFilterContainer.setPadding(AndroidUtilities.dp(12), AndroidUtilities.dp(8), AndroidUtilities.dp(12), AndroidUtilities.dp(8));
+
+        downloadFilterChips = new TextView[downloadFilterLabels.length];
+        for (int i = 0; i < downloadFilterLabels.length; i++) {
+            final int index = i;
+            TextView chip = new TextView(context);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    AndroidUtilities.dp(36)
+            );
+            lp.setMargins(0, 0, AndroidUtilities.dp(6), 0);
+            chip.setLayoutParams(lp);
+            chip.setPadding(AndroidUtilities.dp(12), 0, AndroidUtilities.dp(12), 0);
+            chip.setSingleLine();
+            chip.setGravity(Gravity.CENTER);
+            chip.setBackgroundResource(R.drawable.bg_file_manager_chip);
+            chip.setText(downloadFilterLabels[i]);
+            chip.setTextColor(0xff354B63);
+            chip.setTextSize(12);
+            chip.setAllCaps(false);
+            chip.setOnClickListener(v -> {
+                downloadFilterType = index;
+                updateDownloadFilterSelection();
+                if (sharedMediaLayout != null) {
+                    sharedMediaLayout.setFilesFilterState(index);
+                }
+            });
+            downloadFilterContainer.addView(chip);
+            downloadFilterChips[i] = chip;
+        }
+
+        fragmentView.addView(downloadFilterScrollView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP | Gravity.FILL_HORIZONTAL, 0, 0, 0, 0));
+        downloadFilterScrollView.addView(downloadFilterContainer);
+        updateDownloadFilterSelection();
+    }
+
+    private void updateDownloadFilterSelection() {
+        if (downloadFilterChips == null) {
+            return;
+        }
+        for (int i = 0; i < downloadFilterChips.length; i++) {
+            TextView chip = downloadFilterChips[i];
+            if (chip == null) {
+                continue;
+            }
+            boolean selected = i == downloadFilterType;
+            chip.setBackgroundResource(selected ? R.drawable.bg_file_manager_chip_selected : R.drawable.bg_file_manager_chip);
+            chip.setTextColor(selected ? Color.WHITE : 0xff354B63);
+        }
+    }
+
     private void updateMediaCount() {
         if (sharedMediaLayout == null || subtitleTextView[0] == null) {
             return;

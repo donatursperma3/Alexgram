@@ -56,7 +56,7 @@ public class FileManagerActivity extends AppCompatActivity {
             SharedMediaLayout.TAB_POLL,
             SharedMediaLayout.TAB_STORIES
     };
-    private final String[] chatLabels = {"All chats", "Private", "Groups", "Channels"};
+    private final String[] chatLabels = {"All", "Users", "Groups", "Channels", "Bots"};
     private final String[] statusLabels = {"All", "Downloaded", "Pending"};
     private final String[] itemLabels = {
             "IMG-001.jpg",
@@ -112,7 +112,7 @@ public class FileManagerActivity extends AppCompatActivity {
             if (toolbar != null) {
                 toolbar.setNavigationIcon(R.drawable.ic_ab_back);
                 toolbar.setNavigationOnClickListener(v -> onBackPressed());
-                toolbar.setTitle("File Manager");
+                toolbar.setTitle("Shared media");
             }
             summaryText = findViewById(R.id.fm_selection_summary);
             selectionStatus = findViewById(R.id.fm_selection_status);
@@ -130,9 +130,10 @@ public class FileManagerActivity extends AppCompatActivity {
             }
             chatChips = new TextView[] {
                     findViewById(R.id.fm_chat_chip_all),
-                    findViewById(R.id.fm_chat_chip_private),
+                    findViewById(R.id.fm_chat_chip_users),
                     findViewById(R.id.fm_chat_chip_groups),
-                    findViewById(R.id.fm_chat_chip_channels)
+                    findViewById(R.id.fm_chat_chip_channels),
+                    findViewById(R.id.fm_chat_chip_bots)
             };
             statusChips = new TextView[] {
                     findViewById(R.id.fm_status_chip_all),
@@ -363,9 +364,11 @@ public class FileManagerActivity extends AppCompatActivity {
 
         try {
             Bundle args = new Bundle();
-            args.putLong("dialog_id", 0L);
+            args.putLong("dialog_id", UserConfig.getInstance(UserConfig.selectedAccount).getClientUserId());
             args.putInt("type", MediaActivity.TYPE_MEDIA);
             args.putInt("start_from", getInitialTab());
+            args.putInt("chat_filter_type", selectedChatType);
+            args.putInt("download_filter_type", selectedStatus);
             LaunchActivity.instance.presentFragment(new MediaActivity(args, null));
             finish();
         } catch (Exception e) {

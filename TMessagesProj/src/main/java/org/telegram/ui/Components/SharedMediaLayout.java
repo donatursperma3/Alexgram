@@ -256,6 +256,21 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         return mediaPages[0].listView.getFastScroll().dispatchTouchEvent(ev);
     }
 
+    public void setFilesFilterState(int state) {
+        if (state < FILES_FILTER_ALL || state > FILES_FILTER_NOT_DOWNLOADED) {
+            state = FILES_FILTER_ALL;
+        }
+        filesFilterState = state;
+        try {
+            applyFilesFilter();
+            if (documentsAdapter != null) {
+                documentsAdapter.notifyDataSetChanged();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     private void applyFilesFilter() {
         try {
             SharedMediaData data = sharedMediaData[TAB_FILES];
