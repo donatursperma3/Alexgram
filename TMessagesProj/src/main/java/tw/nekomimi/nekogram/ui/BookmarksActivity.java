@@ -41,6 +41,7 @@ import org.telegram.messenger.ChatObject;
 import org.telegram.messenger.DialogObject;
 import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.FileLog;
+import org.telegram.messenger.ImageReceiver;
 import org.telegram.messenger.MediaController;
 import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.MessagesStorage;
@@ -73,6 +74,7 @@ import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceColor;
 import org.telegram.ui.Components.chat.layouts.ChatActivitySideControlsButtonsLayout;
 import org.telegram.ui.Components.inset.WindowInsetsStateHolder;
 import org.telegram.ui.DialogsActivity;
+import org.telegram.ui.PhotoViewer;
 import org.telegram.ui.SpecialForwardActivity;
 
 import androidx.collection.LongSparseArray;
@@ -616,12 +618,15 @@ public class BookmarksActivity extends NekoDelegateFragment {
         frameLayout.addView(listView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
         listView.setOnItemClickListener((view, position, x, y) -> {
-            if (view instanceof NekoMessageCell) {
+            if (view instanceof NekoMessageCell messageCell) {
                 if (actionBar.isActionModeShowed()) {
-                    MessageObject messageObject = ((NekoMessageCell) view).getMessageObject();
+                    MessageObject messageObject = messageCell.getMessageObject();
                     toggleSelectedMessage(messageObject, true);
                 } else {
-                    createMenu(view, x, y, position);
+                    MessageObject messageObject = messageCell.getMessageObject();
+                    if (!processMediaClick(messageObject, messageCell)) {
+                        createMenu(view, x, y, position);
+                    }
                 }
             }
         });
@@ -1907,6 +1912,95 @@ public class BookmarksActivity extends NekoDelegateFragment {
     @Override
     public void didReceivedNotification(int id, int account, Object... args) {
 
+    }
+
+    @Override
+    public void onImagePressed(ChatMessageCell cell) {
+        if (cell == null) return;
+        MessageObject messageObject = cell.getMessageObject();
+        if (messageObject != null) {
+            processMediaClick(messageObject, cell);
+        }
+    }
+
+    private boolean processMediaClick(MessageObject messageObject, ChatMessageCell cell) {
+        if (messageObject == null || getParentActivity() == null) {
+            return false;
+        }
+
+        try {
+            if (messageObject.isVoice() || messageObject.isRoundVideo() || messageObject.isMusic()) {
+                return MediaController.getInstance().playMessage(messageObject);
+            }
+
+            if (messageObject.isVideo() || messageObject.isPhoto() || messageObject.isGif() || messageObject.isRoundVideo()) {
+                ArrayList<MessageObject> mediaList = new ArrayList<>();
+                int indexInMedia = -1;
+                for (int i = 0; i < filteredMessages.size(); i++) {
+                    MessageObject msg = filteredMessages.get(i);
+                    if (msg != null && (msg.isVideo() || msg.isPhoto() || msg.isGif() || msg.isRoundVideo())) {
+                        if (msg.getId() == messageObject.getId()) {
+                            indexInMedia = mediaList.size();
+                        }
+                        mediaList.add(msg);
+                    }
+                }
+                if (mediaList.isEmpty()) {
+                    mediaList.add(messageObject);
+                    indexInMedia = 0;
+                }
+                if (indexInMedia < 0) {
+                    indexInMedia = 0;
+                }
+
+                PhotoViewer.PhotoViewerProvider provider = new PhotoViewer.EmptyPhotoViewerProvider() {
+                    @Override
+                    public PhotoViewer.PlaceProviderObject getPlaceForPhoto(MessageObject msgObj, TLRPC.FileLocation fileLocation, int index, boolean needPreview, boolean closing) {
+                        if (listView == null) return null;
+                        int count = listView.getChildCount();
+                        for (int a = 0; a < count; a++) {
+                            View v = listView.getChildAt(a);
+                            if (v instanceof ChatMessageCell c) {
+                                MessageObject cellMsg = c.getMessageObject();
+                                if (cellMsg != null && cellMsg.getId() == (msgObj != null ? msgObj.getId() : 0)) {
+                                    ImageReceiver imageReceiver = c.getPhotoImage();
+                                    if (imageReceiver != null) {
+                                        int[] coords = new int[2];
+                                        c.getLocationInWindow(coords);
+                                        PhotoViewer.PlaceProviderObject object = new PhotoViewer.PlaceProviderObject();
+                                        object.viewX = coords[0];
+                                        object.viewY = coords[1];
+                                        object.parentView = listView;
+                                        object.imageReceiver = imageReceiver;
+                                        object.thumb = imageReceiver.getBitmapSafe();
+                                        object.radius = imageReceiver.getRoundRadius(true);
+                                        return object;
+                                    }
+                                }
+                            }
+                        }
+                        return null;
+                    }
+                };
+
+                PhotoViewer.getInstance().setParentActivity(getParentActivity());
+                PhotoViewer.getInstance().openPhoto(mediaList, indexInMedia, dialogId, 0, 0, provider);
+                return true;
+            }
+
+            if (messageObject.messageOwner != null && messageObject.messageOwner.media != null) {
+                if (messageObject.type == MessageObject.TYPE_VIDEO) {
+                    PhotoViewer.getInstance().setParentActivity(getParentActivity());
+                    PhotoViewer.getInstance().openPhoto(messageObject, dialogId, 0, 0, new PhotoViewer.EmptyPhotoViewerProvider(), true);
+                    return true;
+                } else if (messageObject.type == MessageObject.TYPE_VOICE || messageObject.type == MessageObject.TYPE_MUSIC) {
+                    return MediaController.getInstance().playMessage(messageObject);
+                }
+            }
+        } catch (Throwable e) {
+            FileLog.e(e);
+        }
+        return false;
     }
 
     private class ListAdapter extends RecyclerListView.SelectionAdapter {

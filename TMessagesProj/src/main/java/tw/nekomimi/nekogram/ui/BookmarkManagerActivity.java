@@ -160,7 +160,8 @@ public class BookmarkManagerActivity extends BaseFragment {
         if (tabsContainer == null || emptyView == null || viewPages == null) {
             return;
         }
-        final int topContentOffset = getTopContentOffset();
+        final int tabShift = dp(6);
+        final int topContentOffset = Math.max(0, getTopContentOffset() - tabShift);
         final int tabsHeight = dp(TABS_CONTAINER_HEIGHT_DP);
 
         ViewGroup.LayoutParams params = tabsContainer.getLayoutParams();
@@ -300,7 +301,7 @@ public class BookmarkManagerActivity extends BaseFragment {
          * This padding controls the vertical breathing room inside the tab container.
          */
         tabsContainer = new SearchTabsAndFiltersLayout(context);
-        tabsContainer.setPadding(0, dp(7), 0, dp(7));
+        tabsContainer.setPadding(0, dp(2), 0, dp(2));
 
         tabsView = new ViewPagerFixed.TabsView(context, false, ViewPagerFixed.SELECTOR_TYPE_BUBBLE_STYLE, resourceProvider);
         tabsView.setIndicatorAnimation(320, CubicBezierInterpolator.EASE_OUT_QUINT);
@@ -395,11 +396,12 @@ public class BookmarkManagerActivity extends BaseFragment {
         emptyView.setTextSize(15);
         emptyView.setGravity(Gravity.CENTER);
         emptyView.setPadding(dp(24), dp(24), dp(24), dp(24));
-        final int topContentOffset = getTopContentOffset();
+        final int tabShift = dp(6);
+        final int topContentOffset = Math.max(0, getTopContentOffset() - tabShift);
         final int tabsHeight = dp(TABS_CONTAINER_HEIGHT_DP);
         /*
          * Positioning rules:
-         * - tabsContainer: directly under ActionBar using top margin = topContentOffset.
+         * - tabsContainer: directly under ActionBar using top margin = topContentOffset (shifted closer to header).
          * - emptyView/list: start after (topContentOffset + tabsHeight) so they are below ActionBar+tabs.
          */
         contentLayout.addView(emptyView, LayoutHelper.createFrameMarginPx(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.TOP, 0, topContentOffset + tabsHeight, 0, 0));

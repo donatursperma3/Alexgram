@@ -279,7 +279,7 @@ public class SpecialForwardActivity extends ChatActivity {
         
         if (avatarContainer != null) {
             avatarContainer.setTitle(LocaleController.getString("SpecialForwardTitle", R.string.SpecialForwardTitle));
-            avatarContainer.setSubtitle(messages.size() + " messages");
+            updateHeaderMessageCount();
             
             // Customize avatar to be circular blue forward button
             if (avatarContainer.avatarImageView != null) {
@@ -312,6 +312,8 @@ public class SpecialForwardActivity extends ChatActivity {
         } else {
             updateBottomOverlay();
         }
+
+        setupSideNavButtons();
     }
 
     private void setupCustomEditPanel() {
@@ -1646,7 +1648,7 @@ public class SpecialForwardActivity extends ChatActivity {
             messages, 
             forwardAsFile, 
             (dids, showQuoteState, keepCaptionState, sendAsAlbumState, removeLinkPreviewState) -> {
-                performForwardToSelectedChats(dids, showQuoteState, keepCaptionState, removeLinkPreviewState);
+                performForwardToSelectedChats(dids, showQuoteState, keepCaptionState, sendAsAlbumState, removeLinkPreviewState);
             }
         );
         showDialog(shareAlert);
@@ -1858,12 +1860,12 @@ public class SpecialForwardActivity extends ChatActivity {
         }
     }
 
-    private void performForwardToSelectedChats(ArrayList<Long> dids, boolean showQuote, boolean keepCaption, boolean removeLinkPreview) {
+    private void performForwardToSelectedChats(ArrayList<Long> dids, boolean showQuote, boolean keepCaption, boolean sendAsAlbum, boolean removeLinkPreview) {
         final long dbgStart = SystemClock.elapsedRealtime();
         ArrayList<MessageObject> forwardList = new ArrayList<>(messages);
         java.util.Collections.sort(forwardList, (o1, o2) -> Integer.compare(o1.getId(), o2.getId()));
         if (BuildVars.LOGS_ENABLED) {
-            FileLog.d("dbg/multi-forward-crash performForwardToSelectedChats dids=" + (dids != null ? dids.size() : -1) + " msgs=" + (forwardList != null ? forwardList.size() : -1) + " showQuote=" + showQuote + " keepCaption=" + keepCaption + " forwardAsFile=" + forwardAsFile + " removeLinkPreview=" + removeLinkPreview);
+            FileLog.d("dbg/multi-forward-crash performForwardToSelectedChats dids=" + (dids != null ? dids.size() : -1) + " msgs=" + (forwardList != null ? forwardList.size() : -1) + " showQuote=" + showQuote + " keepCaption=" + keepCaption + " sendAsAlbum=" + sendAsAlbum + " forwardAsFile=" + forwardAsFile + " removeLinkPreview=" + removeLinkPreview);
         }
 
         // Strip web page preview if requested
@@ -1872,6 +1874,25 @@ public class SpecialForwardActivity extends ChatActivity {
                 if (msg != null && msg.messageOwner != null
                         && msg.messageOwner.media instanceof TLRPC.TL_messageMediaWebPage) {
                     msg.messageOwner.media = new TLRPC.TL_messageMediaEmpty();
+                }
+            }
+        }
+
+        // Group media messages into albums if sendAsAlbum is enabled
+        if (sendAsAlbum) {
+            long currentAlbumId = 0;
+            int albumCount = 0;
+            for (MessageObject msg : forwardList) {
+                if (msg != null && msg.messageOwner != null && (msg.isPhoto() || msg.isVideo() || msg.isGif() || msg.isRoundVideo())) {
+                    if (currentAlbumId == 0 || albumCount >= 10) {
+                        currentAlbumId = Utilities.random.nextLong();
+                        albumCount = 0;
+                    }
+                    msg.messageOwner.grouped_id = currentAlbumId;
+                    albumCount++;
+                } else if (msg != null && msg.messageOwner != null) {
+                    currentAlbumId = 0;
+                    albumCount = 0;
                 }
             }
         }
@@ -2633,6 +2654,103 @@ public class SpecialForwardActivity extends ChatActivity {
             if (searchAdapterHelper != null) {
                 searchAdapterHelper.queryServerSearch(null, true, true, true, true, false, 0, false, 0, 0);
             }
+        }
+    }
+
+    private void updateHeaderMessageCount() {
+        if (avatarContainer != null) {
+            int count = messages != null ? messages.size() : 0;
+            String text = LocaleController.formatPluralString("Messages", count, count);
+            avatarContainer.setSubtitle(text);
+        }
+    }
+
+    private LinearLayout sideNavLayout;
+
+    private void setupSideNavButtons() {
+        if (getParentActivity() == null) {
+            return;
+        }
+        View parentView = fragmentView != null ? fragmentView : contentView;
+        if (!(parentView instanceof ViewGroup)) {
+            return;
+        }
+
+        try {
+            if (sideNavLayout != null && sideNavLayout.getParent() != null) {
+                ((ViewGroup) sideNavLayout.getParent()).removeView(sideNavLayout);
+            }
+
+            Context context = getParentActivity();
+            sideNavLayout = new LinearLayout(context);
+            sideNavLayout.setOrientation(LinearLayout.VERTICAL);
+            sideNavLayout.setGravity(Gravity.RIGHT | Gravity.BOTTOM);
+
+            int iconColor = getThemedColor(Theme.key_chat_goDownButton);
+            int bgColor = getThemedColor(Theme.key_chat_goDownButtonCounterBackground);
+
+            // Go to First (top) button — arrow pointing up
+            ImageView btnGoToFirst = new ImageView(context);
+            btnGoToFirst.setImageResource(R.drawable.pagedown);
+            btnGoToFirst.setRotation(180f);
+            btnGoToFirst.setColorFilter(new android.graphics.PorterDuffColorFilter(iconColor, android.graphics.PorterDuff.Mode.SRC_IN));
+            android.graphics.drawable.GradientDrawable bgFirst = new android.graphics.drawable.GradientDrawable();
+            bgFirst.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+            bgFirst.setColor(bgColor);
+            btnGoToFirst.setBackground(bgFirst);
+            btnGoToFirst.setPadding(AndroidUtilities.dp(10), AndroidUtilities.dp(10), AndroidUtilities.dp(10), AndroidUtilities.dp(10));
+            btnGoToFirst.setOnClickListener(v -> scrollToFirstMessage());
+
+            // Go to Last (bottom) button — arrow pointing down
+            ImageView btnGoToLast = new ImageView(context);
+            btnGoToLast.setImageResource(R.drawable.pagedown);
+            btnGoToLast.setColorFilter(new android.graphics.PorterDuffColorFilter(iconColor, android.graphics.PorterDuff.Mode.SRC_IN));
+            android.graphics.drawable.GradientDrawable bgLast = new android.graphics.drawable.GradientDrawable();
+            bgLast.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+            bgLast.setColor(bgColor);
+            btnGoToLast.setBackground(bgLast);
+            btnGoToLast.setPadding(AndroidUtilities.dp(10), AndroidUtilities.dp(10), AndroidUtilities.dp(10), AndroidUtilities.dp(10));
+            btnGoToLast.setOnClickListener(v -> scrollToLastMessage());
+
+            LinearLayout.LayoutParams lpFirst = new LinearLayout.LayoutParams(AndroidUtilities.dp(44), AndroidUtilities.dp(44));
+            lpFirst.bottomMargin = AndroidUtilities.dp(8);
+
+            LinearLayout.LayoutParams lpLast = new LinearLayout.LayoutParams(AndroidUtilities.dp(44), AndroidUtilities.dp(44));
+
+            sideNavLayout.addView(btnGoToFirst, lpFirst);
+            sideNavLayout.addView(btnGoToLast, lpLast);
+
+            FrameLayout.LayoutParams containerLp = LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.RIGHT | Gravity.BOTTOM, 0, 0, 12, 64);
+            ((ViewGroup) parentView).addView(sideNavLayout, containerLp);
+        } catch (Throwable e) {
+            FileLog.e(e);
+        }
+    }
+
+    private void scrollToFirstMessage() {
+        try {
+            int count = chatAdapter != null ? chatAdapter.getItemCount() : (messages != null ? messages.size() : 0);
+            if (count > 0 && chatListView != null) {
+                RecyclerView.LayoutManager lm = ((RecyclerView) chatListView).getLayoutManager();
+                if (lm instanceof androidx.recyclerview.widget.LinearLayoutManager) {
+                    ((androidx.recyclerview.widget.LinearLayoutManager) lm).scrollToPositionWithOffset(count - 1, 0);
+                }
+            }
+        } catch (Throwable e) {
+            FileLog.e(e);
+        }
+    }
+
+    private void scrollToLastMessage() {
+        try {
+            if (chatListView != null) {
+                RecyclerView.LayoutManager lm = ((RecyclerView) chatListView).getLayoutManager();
+                if (lm instanceof androidx.recyclerview.widget.LinearLayoutManager) {
+                    ((androidx.recyclerview.widget.LinearLayoutManager) lm).scrollToPositionWithOffset(0, 0);
+                }
+            }
+        } catch (Throwable e) {
+            FileLog.e(e);
         }
     }
 }
