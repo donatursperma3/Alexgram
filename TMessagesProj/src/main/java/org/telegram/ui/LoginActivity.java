@@ -1281,14 +1281,14 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                     restartDialog.setPositiveButton(getString(R.string.OK), (__, ___) -> tw.nekomimi.nekogram.helpers.AppRestartHelper.triggerRebirth(getParentActivity(), new Intent(getParentActivity(), LaunchActivity.class)));
                     restartDialog.show();
                 });
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 FileLog.e(e);
                 AndroidUtilities.runOnUIThread(() -> {
                     try {
                         if (progressDialog.isShowing()) {
                             progressDialog.dismiss();
                         }
-                    } catch (Exception ignore) {
+                    } catch (Throwable ignore) {
                     }
                     if (getParentActivity() == null) {
                         return;

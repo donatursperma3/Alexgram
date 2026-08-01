@@ -234,14 +234,14 @@ public class AccountsSettingsActivity extends BaseNekoXSettingsActivity {
                         onSuccess.accept(result);
                     }
                 });
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 org.telegram.messenger.FileLog.e(e);
                 AndroidUtilities.runOnUIThread(() -> {
                     try {
                         if (progressDialog.isShowing()) {
                             progressDialog.dismiss();
                         }
-                    } catch (Exception ignore) {
+                    } catch (Throwable ignore) {
                     }
                     if (getParentActivity() != null) {
                         if (e instanceof SettingsBackupHelper.BackupPasswordRequiredException) {

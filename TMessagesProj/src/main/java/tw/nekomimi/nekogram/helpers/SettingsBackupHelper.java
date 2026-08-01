@@ -479,7 +479,7 @@ public final class SettingsBackupHelper {
             if (is == null) {
                 throw new IOException("Unable to open file");
             }
-            byte[] fileBytes = is.readAllBytes();
+            byte[] fileBytes = readAllBytes(is);
             if (fileBytes.length >= 2 && fileBytes[0] == 'P' && fileBytes[1] == 'K') {
                 return importUserConfigFromZip(fileBytes, password, listener);
             }
@@ -719,7 +719,7 @@ public final class SettingsBackupHelper {
             if (is == null) {
                 throw new IOException("Unable to open file");
             }
-            byte[] existingZip = is.readAllBytes();
+            byte[] existingZip = readAllBytes(is);
             if (existingZip.length < 2 || existingZip[0] != 'P' || existingZip[1] != 'K') {
                 throw new IllegalArgumentException("Selected file is not a ZIP archive");
             }
