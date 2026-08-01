@@ -470,120 +470,122 @@ public final class SettingsBackupHelper {
         return importUserConfig(context, uri, password, null);
     }
 
+    private static void copyStream(InputStream input, OutputStream output) throws IOException {
+        byte[] buffer = new byte[8192];
+        int read;
+        while ((read = input.read(buffer)) != -1) {
+            output.write(buffer, 0, read);
+        }
+    }
+
     public static int importUserConfig(Context context, android.net.Uri uri, String password, ProgressListener listener) throws Exception {
         if (context == null || uri == null) {
             throw new IllegalArgumentException("Invalid import parameters");
         }
         if (listener != null) listener.onProgress(5, "Reading backup file...");
-        try (InputStream is = context.getContentResolver().openInputStream(uri)) {
-            if (is == null) {
-                throw new IOException("Unable to open file");
+
+        File tempFile = new File(AndroidUtilities.getCacheDir(), "temp_import_" + System.currentTimeMillis() + ".tmp");
+        try {
+            try (InputStream is = context.getContentResolver().openInputStream(uri);
+                 FileOutputStream fos = new FileOutputStream(tempFile)) {
+                if (is == null) {
+                    throw new IOException("Unable to open file");
+                }
+                copyStream(is, fos);
             }
-            byte[] fileBytes = readAllBytes(is);
-            if (fileBytes.length >= 2 && fileBytes[0] == 'P' && fileBytes[1] == 'K') {
-                return importUserConfigFromZip(fileBytes, password, listener);
+
+            boolean isZip = false;
+            try (FileInputStream fis = new FileInputStream(tempFile)) {
+                byte[] header = new byte[2];
+                if (fis.read(header) == 2 && header[0] == 'P' && header[1] == 'K') {
+                    isZip = true;
+                }
             }
+
+            if (isZip) {
+                return importUserConfigFromZipFile(tempFile, password, listener);
+            }
+
             if (listener != null) listener.onProgress(40, "Parsing account JSON...");
-            String text = new String(fileBytes, java.nio.charset.StandardCharsets.UTF_8);
+            String text;
+            try (FileInputStream fis = new FileInputStream(tempFile)) {
+                text = new String(readAllBytes(fis), java.nio.charset.StandardCharsets.UTF_8);
+            }
             JsonObject root = GsonUtil.toJsonObject(text);
             if (listener != null) listener.onProgress(80, "Restoring configuration...");
             int res = importUserConfig(root);
             if (listener != null) listener.onProgress(100, "Restore complete.");
             return 1;
+        } finally {
+            if (tempFile.exists()) {
+                tempFile.delete();
+            }
         }
     }
 
-    private static class ZipPackage {
-        String configName;
-        byte[] configBytes;
-        java.util.Map<String, byte[]> filesMap = new java.util.HashMap<>();
-    }
+    private static int importUserConfigFromZipFile(File zipFile, String password, ProgressListener listener) throws Exception {
+        if (listener != null) listener.onProgress(10, "Scanning ZIP archive...");
 
-    private static int importUserConfigFromZip(byte[] zipBytes, String password) throws Exception {
-        return importUserConfigFromZip(zipBytes, password, null);
-    }
-
-    private static int importUserConfigFromZip(byte[] zipBytes, String password, ProgressListener listener) throws Exception {
-        Map<String, byte[]> allEntries = new HashMap<>();
-        if (listener != null) listener.onProgress(10, "Extracting ZIP archive entries...");
-        try (ZipInputStream zipInput = new ZipInputStream(new BufferedInputStream(new java.io.ByteArrayInputStream(zipBytes)))) {
+        Map<String, String> configEntries = new java.util.LinkedHashMap<>();
+        try (ZipInputStream zis = new ZipInputStream(new BufferedInputStream(new FileInputStream(zipFile)))) {
             ZipEntry entry;
-            while ((entry = zipInput.getNextEntry()) != null) {
-                if (!entry.isDirectory()) {
-                    allEntries.put(entry.getName(), readAllBytes(zipInput));
+            while ((entry = zis.getNextEntry()) != null) {
+                if (entry.isDirectory()) continue;
+                String path = entry.getName();
+                String fileName = path.contains("/") ? path.substring(path.lastIndexOf('/') + 1) : path;
+                if (fileName.equals("config.json") || fileName.equals("config.json.enc") ||
+                    fileName.equals("userconfig.json") || fileName.equals("userconfig.json.enc") ||
+                    fileName.equals("settings.json") || fileName.equals("settings.json.enc")) {
+                    String prefix = path.contains("/") ? path.substring(0, path.lastIndexOf('/') + 1) : "";
+                    configEntries.put(path, prefix);
                 }
             }
         }
 
-        if (allEntries.isEmpty()) {
-            throw new Exception("ZIP archive is empty");
-        }
-
-        List<String> configPaths = new ArrayList<>();
-        for (String path : allEntries.keySet()) {
-            String fileName = path.contains("/") ? path.substring(path.lastIndexOf('/') + 1) : path;
-            if (fileName.equals("config.json") || fileName.equals("config.json.enc") ||
-                fileName.equals("userconfig.json") || fileName.equals("userconfig.json.enc") ||
-                fileName.equals("settings.json") || fileName.equals("settings.json.enc")) {
-                configPaths.add(path);
-            }
-        }
-
-        if (configPaths.isEmpty()) {
-            for (String path : allEntries.keySet()) {
-                if (!path.contains("/") && (path.endsWith(".json") || path.endsWith(".json.enc") || path.endsWith(".enc"))) {
-                    configPaths.add(path);
+        if (configEntries.isEmpty()) {
+            try (ZipInputStream zis = new ZipInputStream(new BufferedInputStream(new FileInputStream(zipFile)))) {
+                ZipEntry entry;
+                while ((entry = zis.getNextEntry()) != null) {
+                    if (entry.isDirectory()) continue;
+                    String path = entry.getName();
+                    if (!path.contains("/") && (path.endsWith(".json") || path.endsWith(".json.enc") || path.endsWith(".enc"))) {
+                        configEntries.put(path, "");
+                    }
                 }
             }
         }
 
-        if (configPaths.isEmpty()) {
+        if (configEntries.isEmpty()) {
             throw new Exception("No account backup configuration found in ZIP");
         }
 
-        Map<String, ZipPackage> packages = new java.util.LinkedHashMap<>();
-        for (String configPath : configPaths) {
-            String dirPrefix = configPath.contains("/") ? configPath.substring(0, configPath.lastIndexOf('/') + 1) : "";
+        int importedCount = 0;
+        int totalPkgs = configEntries.size();
+        int pkgIndex = 0;
+
+        for (Map.Entry<String, String> configItem : configEntries.entrySet()) {
+            pkgIndex++;
+            String configPath = configItem.getKey();
+            String dirPrefix = configItem.getValue();
             String configFileName = configPath.contains("/") ? configPath.substring(configPath.lastIndexOf('/') + 1) : configPath;
 
-            ZipPackage pkg = new ZipPackage();
-            pkg.configName = configFileName;
-            pkg.configBytes = allEntries.get(configPath);
+            int pkgStartP = 20 + (int) (((pkgIndex - 1) / (float) Math.max(1, totalPkgs)) * 75);
+            if (listener != null) listener.onProgress(pkgStartP, String.format("Restoring account %d of %d...", pkgIndex, totalPkgs));
 
-            for (Map.Entry<String, byte[]> entry : allEntries.entrySet()) {
-                String entryPath = entry.getKey();
-                if (entryPath.equals(configPath)) continue;
-
-                if (dirPrefix.isEmpty() || entryPath.startsWith(dirPrefix)) {
-                    String relInPkg = dirPrefix.isEmpty() ? entryPath : entryPath.substring(dirPrefix.length());
-                    String fileRelPath;
-                    if (relInPkg.contains("/files/")) {
-                        fileRelPath = relInPkg.substring(relInPkg.indexOf("/files/") + 7);
-                    } else if (relInPkg.startsWith("files/")) {
-                        fileRelPath = relInPkg.substring("files/".length());
-                    } else {
-                        fileRelPath = relInPkg;
-                    }
-                    if (!fileRelPath.isEmpty() && !fileRelPath.endsWith("/")) {
-                        pkg.filesMap.put(fileRelPath, entry.getValue());
+            byte[] configBytes = null;
+            try (ZipInputStream zis = new ZipInputStream(new BufferedInputStream(new FileInputStream(zipFile)))) {
+                ZipEntry entry;
+                while ((entry = zis.getNextEntry()) != null) {
+                    if (entry.getName().equals(configPath)) {
+                        configBytes = readAllBytes(zis);
+                        break;
                     }
                 }
             }
-            packages.put(configPath, pkg);
-        }
 
-        int importedCount = 0;
-        int totalPkgs = packages.size();
-        int pkgIndex = 0;
-        for (ZipPackage pkg : packages.values()) {
-            if (pkg.configBytes == null) continue;
-            pkgIndex++;
-            int pkgStartP = 20 + (int) (((pkgIndex - 1) / (float) Math.max(1, totalPkgs)) * 75);
-            int pkgEndP = 20 + (int) ((pkgIndex / (float) Math.max(1, totalPkgs)) * 75);
-            if (listener != null) listener.onProgress(pkgStartP, String.format("Restoring account %d of %d...", pkgIndex, totalPkgs));
+            if (configBytes == null) continue;
 
-            byte[] configBytes = pkg.configBytes;
-            if (pkg.configName != null && pkg.configName.endsWith(".enc")) {
+            if (configFileName.endsWith(".enc")) {
                 if (password == null || password.isEmpty()) throw new BackupPasswordRequiredException();
                 try {
                     configBytes = decryptBackupData(configBytes, password);
@@ -593,6 +595,7 @@ public final class SettingsBackupHelper {
                     throw new BackupPasswordInvalidException();
                 }
             }
+
             String text = new String(configBytes, java.nio.charset.StandardCharsets.UTF_8);
             JsonObject root = GsonUtil.toJsonObject(text);
             if (root == null) continue;
@@ -605,35 +608,52 @@ public final class SettingsBackupHelper {
             File targetDir = (targetAccount == 0) ? ApplicationLoader.getFilesDirFixed() : new File(ApplicationLoader.getFilesDirFixed(), "account" + targetAccount);
             targetDir.mkdirs();
 
-            int totalFiles = pkg.filesMap.size();
-            int fileIndex = 0;
-            for (Map.Entry<String, byte[]> fileEntry : pkg.filesMap.entrySet()) {
-                fileIndex++;
-                int filePercent = pkgStartP + (int) ((fileIndex / (float) Math.max(1, totalFiles)) * (pkgEndP - pkgStartP));
-                if (listener != null) listener.onProgress(filePercent, "Restoring " + fileEntry.getKey() + "...");
+            try (ZipInputStream zis = new ZipInputStream(new BufferedInputStream(new FileInputStream(zipFile)))) {
+                ZipEntry entry;
+                while ((entry = zis.getNextEntry()) != null) {
+                    if (entry.isDirectory()) continue;
+                    String entryPath = entry.getName();
+                    if (entryPath.equals(configPath)) continue;
 
-                String fileName = fileEntry.getKey();
-                byte[] fBytes = fileEntry.getValue();
-                if (fileName.endsWith(".enc")) {
-                    if (password == null || password.isEmpty()) throw new BackupPasswordRequiredException();
-                    try {
-                        fBytes = decryptBackupData(fBytes, password);
-                    } catch (BackupPasswordRequiredException e) {
-                        throw e;
-                    } catch (Exception e) {
-                        throw new BackupPasswordInvalidException();
+                    if (dirPrefix.isEmpty() || entryPath.startsWith(dirPrefix)) {
+                        String relInPkg = dirPrefix.isEmpty() ? entryPath : entryPath.substring(dirPrefix.length());
+                        String fileRelPath;
+                        if (relInPkg.contains("/files/")) {
+                            fileRelPath = relInPkg.substring(relInPkg.indexOf("/files/") + 7);
+                        } else if (relInPkg.startsWith("files/")) {
+                            fileRelPath = relInPkg.substring("files/".length());
+                        } else {
+                            fileRelPath = relInPkg;
+                        }
+
+                        if (fileRelPath.isEmpty() || fileRelPath.endsWith("/")) continue;
+
+                        boolean isEnc = fileRelPath.endsWith(".enc");
+                        String outFileName = isEnc ? fileRelPath.substring(0, fileRelPath.length() - 4) : fileRelPath;
+                        File destFile = new File(targetDir, outFileName);
+                        File parent = destFile.getParentFile();
+                        if (parent != null) parent.mkdirs();
+
+                        if (isEnc) {
+                            if (password == null || password.isEmpty()) throw new BackupPasswordRequiredException();
+                            byte[] encBytes = readAllBytes(zis);
+                            byte[] decBytes;
+                            try {
+                                decBytes = decryptBackupData(encBytes, password);
+                            } catch (BackupPasswordRequiredException e) {
+                                throw e;
+                            } catch (Exception e) {
+                                throw new BackupPasswordInvalidException();
+                            }
+                            try (FileOutputStream fos = new FileOutputStream(destFile)) {
+                                fos.write(decBytes);
+                            }
+                        } else {
+                            try (FileOutputStream fos = new FileOutputStream(destFile)) {
+                                copyStream(zis, fos);
+                            }
+                        }
                     }
-                    fileName = fileName.substring(0, fileName.length() - ".enc".length());
-                }
-                File destFile = new File(targetDir, fileName);
-                File parent = destFile.getParentFile();
-                if (parent != null) parent.mkdirs();
-                try {
-                    java.io.FileOutputStream fos = new java.io.FileOutputStream(destFile);
-                    fos.write(fBytes);
-                    fos.close();
-                } catch (Exception e) {
-                    FileLog.e(e);
                 }
             }
 
@@ -712,19 +732,19 @@ public final class SettingsBackupHelper {
             throw new IllegalArgumentException("Invalid append parameters");
         }
         if (listener != null) listener.onProgress(5, "Opening target ZIP file...");
-        long accountUserId = UserConfig.getInstance(account).getClientUserId();
-        String newPrefix = String.format("account_%d/", accountUserId != 0 ? accountUserId : account);
 
-        try (InputStream is = context.getContentResolver().openInputStream(uri)) {
-            if (is == null) {
-                throw new IOException("Unable to open file");
+        File sourceZipFile = new File(AndroidUtilities.getCacheDir(), "temp_source_zip_" + System.currentTimeMillis() + ".zip");
+        try {
+            try (InputStream is = context.getContentResolver().openInputStream(uri);
+                 FileOutputStream fos = new FileOutputStream(sourceZipFile)) {
+                if (is == null) {
+                    throw new IOException("Unable to open file");
+                }
+                copyStream(is, fos);
             }
-            byte[] existingZip = readAllBytes(is);
-            if (existingZip.length < 2 || existingZip[0] != 'P' || existingZip[1] != 'K') {
-                throw new IllegalArgumentException("Selected file is not a ZIP archive");
-            }
+
             boolean hasEncryptedEntries = false;
-            try (ZipInputStream zisCheck = new ZipInputStream(new BufferedInputStream(new java.io.ByteArrayInputStream(existingZip)))) {
+            try (ZipInputStream zisCheck = new ZipInputStream(new BufferedInputStream(new FileInputStream(sourceZipFile)))) {
                 ZipEntry eCheck;
                 while ((eCheck = zisCheck.getNextEntry()) != null) {
                     if (eCheck.getName().endsWith(".enc")) {
@@ -737,14 +757,18 @@ public final class SettingsBackupHelper {
             if (hasEncryptedEntries && (password == null || password.isEmpty())) {
                 throw new BackupPasswordRequiredException();
             }
+
             if (listener != null) listener.onProgress(25, "Processing existing entries...");
+            long accountUserId = UserConfig.getInstance(account).getClientUserId();
+            String newPrefix = String.format("account_%d/", accountUserId != 0 ? accountUserId : account);
+
             File cacheFile = new File(AndroidUtilities.getCacheDir(), String.format("alexgram-account-append-%d-%d.zip", account, System.currentTimeMillis()));
-            try (ZipInputStream zis = new ZipInputStream(new BufferedInputStream(new java.io.ByteArrayInputStream(existingZip)));
+
+            try (ZipInputStream zis = new ZipInputStream(new BufferedInputStream(new FileInputStream(sourceZipFile)));
                  FileOutputStream fos = new FileOutputStream(cacheFile);
                  BufferedOutputStream bos = new BufferedOutputStream(fos);
                  ZipOutputStream zos = new ZipOutputStream(bos)) {
                 ZipEntry entry;
-                byte[] buffer = new byte[8192];
                 while ((entry = zis.getNextEntry()) != null) {
                     String entryName = entry.getName();
                     if (entryName.startsWith(newPrefix) || entryName.startsWith(String.format("account_%d/", account))) {
@@ -754,18 +778,20 @@ public final class SettingsBackupHelper {
                     ZipEntry copyEntry = new ZipEntry(entryName);
                     copyEntry.setTime(entry.getTime());
                     zos.putNextEntry(copyEntry);
-                    int count;
-                    while ((count = zis.read(buffer)) != -1) {
-                        zos.write(buffer, 0, count);
-                    }
+                    copyStream(zis, zos);
                     zos.closeEntry();
                     zis.closeEntry();
                 }
                 if (listener != null) listener.onProgress(60, "Appending current account data...");
                 backupAccountPackageToZip(account, zos, newPrefix, password, listener, 60, 95);
             }
+
             if (listener != null) listener.onProgress(100, "Append complete.");
             return cacheFile;
+        } finally {
+            if (sourceZipFile.exists()) {
+                sourceZipFile.delete();
+            }
         }
     }
 
