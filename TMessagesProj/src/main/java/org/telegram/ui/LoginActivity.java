@@ -1243,25 +1243,66 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         if (getParentActivity() == null) {
             return;
         }
-        try {
-            int targetAccount = tw.nekomimi.nekogram.helpers.SettingsBackupHelper.importUserConfig(getParentActivity(), uri, password);
-            UserConfig.getInstance(targetAccount).loadConfig();
-            if (!UserConfig.getInstance(targetAccount).isClientActivated()) {
-                tw.nekomimi.nekogram.utils.AlertUtil.showSimpleAlert(getParentActivity(), new IllegalArgumentException("Backup file does not contain an activated account."));
-                return;
+        AlertDialog progressDialog = new AlertDialog(getParentActivity(), 3);
+        progressDialog.setMessage(getString(R.string.Loading) + " (0%)");
+        progressDialog.setCanceledOnTouchOutside(false);
+        progressDialog.setCancelable(false);
+        progressDialog.show();
+
+        Utilities.globalQueue.postRunnable(() -> {
+            try {
+                int targetAccount = tw.nekomimi.nekogram.helpers.SettingsBackupHelper.importUserConfig(getParentActivity(), uri, password, (percent, statusText) -> AndroidUtilities.runOnUIThread(() -> {
+                    if (progressDialog.isShowing()) {
+                        progressDialog.setMessage(statusText + " (" + percent + "%)");
+                    }
+                }));
+                UserConfig.getInstance(targetAccount).loadConfig();
+                AndroidUtilities.runOnUIThread(() -> {
+                    try {
+                        if (progressDialog.isShowing()) {
+                            progressDialog.dismiss();
+                        }
+                    } catch (Exception ignore) {
+                    }
+                    if (getParentActivity() == null) {
+                        return;
+                    }
+                    if (!UserConfig.getInstance(targetAccount).isClientActivated()) {
+                        tw.nekomimi.nekogram.utils.AlertUtil.showSimpleAlert(getParentActivity(), new IllegalArgumentException("Backup file does not contain an activated account."));
+                        return;
+                    }
+                    UserConfig.selectedAccount = targetAccount;
+                    UserConfig.getInstance(targetAccount).saveConfig(false);
+
+                    String successMsg = getParentActivity().getString(R.string.AccountRestoreSuccess, 1);
+                    AlertDialog restartDialog = new AlertDialog(getParentActivity(), 0);
+                    restartDialog.setTitle(getString(R.string.NagramX));
+                    restartDialog.setMessage(successMsg + "\n\n" + getString(R.string.RestartAppToTakeEffect));
+                    restartDialog.setPositiveButton(getString(R.string.OK), (__, ___) -> tw.nekomimi.nekogram.helpers.AppRestartHelper.triggerRebirth(getParentActivity(), new Intent(getParentActivity(), LaunchActivity.class)));
+                    restartDialog.show();
+                });
+            } catch (Exception e) {
+                FileLog.e(e);
+                AndroidUtilities.runOnUIThread(() -> {
+                    try {
+                        if (progressDialog.isShowing()) {
+                            progressDialog.dismiss();
+                        }
+                    } catch (Exception ignore) {
+                    }
+                    if (getParentActivity() == null) {
+                        return;
+                    }
+                    if (e instanceof tw.nekomimi.nekogram.helpers.SettingsBackupHelper.BackupPasswordRequiredException) {
+                        promptRestorePassword(getString(R.string.AccountDecryptPasswordTitle), getString(R.string.AccountBackupPasswordHint), pwd -> attemptImportAccountBackup(uri, pwd));
+                    } else if (e instanceof tw.nekomimi.nekogram.helpers.SettingsBackupHelper.BackupPasswordInvalidException) {
+                        tw.nekomimi.nekogram.utils.AlertUtil.showSimpleAlert(getParentActivity(), new IllegalArgumentException(getString(R.string.AccountBackupPasswordInvalid)));
+                    } else {
+                        tw.nekomimi.nekogram.utils.AlertUtil.showSimpleAlert(getParentActivity(), e);
+                    }
+                });
             }
-            UserConfig.selectedAccount = targetAccount;
-            UserConfig.getInstance(targetAccount).saveConfig(false);
-            if (getParentActivity() instanceof LaunchActivity) {
-                ((LaunchActivity) getParentActivity()).switchToAccount(targetAccount, true);
-            }
-        } catch (tw.nekomimi.nekogram.helpers.SettingsBackupHelper.BackupPasswordRequiredException e) {
-            promptRestorePassword(getString(R.string.AccountDecryptPasswordTitle), getString(R.string.AccountBackupPasswordHint), pwd -> attemptImportAccountBackup(uri, pwd));
-        } catch (tw.nekomimi.nekogram.helpers.SettingsBackupHelper.BackupPasswordInvalidException e) {
-            tw.nekomimi.nekogram.utils.AlertUtil.showSimpleAlert(getParentActivity(), new IllegalArgumentException(getString(R.string.AccountBackupPasswordInvalid)));
-        } catch (Exception e) {
-            tw.nekomimi.nekogram.utils.AlertUtil.showSimpleAlert(getParentActivity(), e);
-        }
+        });
     }
 
     private void promptRestorePassword(String title, String message, java.util.function.Consumer<String> callback) {

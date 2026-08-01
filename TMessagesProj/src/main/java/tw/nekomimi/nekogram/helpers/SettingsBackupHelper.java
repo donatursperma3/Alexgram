@@ -565,8 +565,14 @@ public final class SettingsBackupHelper {
 
             byte[] configBytes = pkg.configBytes;
             if (pkg.configName != null && pkg.configName.endsWith(".enc")) {
-                if (password == null) throw new BackupPasswordRequiredException();
-                configBytes = decryptBackupData(configBytes, password);
+                if (password == null || password.isEmpty()) throw new BackupPasswordRequiredException();
+                try {
+                    configBytes = decryptBackupData(configBytes, password);
+                } catch (BackupPasswordRequiredException e) {
+                    throw e;
+                } catch (Exception e) {
+                    throw new BackupPasswordInvalidException();
+                }
             }
             String text = new String(configBytes, java.nio.charset.StandardCharsets.UTF_8);
             JsonObject root = GsonUtil.toJsonObject(text);
@@ -589,8 +595,14 @@ public final class SettingsBackupHelper {
                 String fileName = fileEntry.getKey();
                 byte[] fBytes = fileEntry.getValue();
                 if (fileName.endsWith(".enc")) {
-                    if (password == null) throw new BackupPasswordRequiredException();
-                    fBytes = decryptBackupData(fBytes, password);
+                    if (password == null || password.isEmpty()) throw new BackupPasswordRequiredException();
+                    try {
+                        fBytes = decryptBackupData(fBytes, password);
+                    } catch (BackupPasswordRequiredException e) {
+                        throw e;
+                    } catch (Exception e) {
+                        throw new BackupPasswordInvalidException();
+                    }
                     fileName = fileName.substring(0, fileName.length() - ".enc".length());
                 }
                 File destFile = new File(targetDir, fileName);
@@ -691,6 +703,20 @@ public final class SettingsBackupHelper {
             if (existingZip.length < 2 || existingZip[0] != 'P' || existingZip[1] != 'K') {
                 throw new IllegalArgumentException("Selected file is not a ZIP archive");
             }
+            boolean hasEncryptedEntries = false;
+            try (ZipInputStream zisCheck = new ZipInputStream(new BufferedInputStream(new java.io.ByteArrayInputStream(existingZip)))) {
+                ZipEntry eCheck;
+                while ((eCheck = zisCheck.getNextEntry()) != null) {
+                    if (eCheck.getName().endsWith(".enc")) {
+                        hasEncryptedEntries = true;
+                        break;
+                    }
+                }
+            } catch (Exception ignore) {
+            }
+            if (hasEncryptedEntries && (password == null || password.isEmpty())) {
+                throw new BackupPasswordRequiredException();
+            }
             if (listener != null) listener.onProgress(25, "Processing existing entries...");
             File cacheFile = new File(AndroidUtilities.getCacheDir(), String.format("alexgram-account-append-%d-%d.zip", account, System.currentTimeMillis()));
             try (ZipInputStream zis = new ZipInputStream(new BufferedInputStream(new java.io.ByteArrayInputStream(existingZip)));
@@ -742,19 +768,22 @@ public final class SettingsBackupHelper {
     }
 
     private static byte[] decryptBackupData(byte[] encryptedData, String password) throws Exception {
-        if (encryptedData.length < 28) {
+        if (encryptedData == null || encryptedData.length < 28) {
             throw new BackupPasswordInvalidException();
+        }
+        if (password == null || password.isEmpty()) {
+            throw new BackupPasswordRequiredException();
         }
         byte[] salt = Arrays.copyOfRange(encryptedData, 0, 16);
         byte[] iv = Arrays.copyOfRange(encryptedData, 16, 28);
         byte[] ciphertext = Arrays.copyOfRange(encryptedData, 28, encryptedData.length);
         byte[] keyBytes = Utilities.computePBKDF2(password.getBytes(java.nio.charset.StandardCharsets.UTF_8), salt);
         byte[] key = Arrays.copyOf(keyBytes, 32);
-        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-        cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(key, "AES"), new GCMParameterSpec(128, iv));
         try {
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(key, "AES"), new GCMParameterSpec(128, iv));
             return cipher.doFinal(ciphertext);
-        } catch (AEADBadTagException e) {
+        } catch (Exception e) {
             throw new BackupPasswordInvalidException();
         }
     }
