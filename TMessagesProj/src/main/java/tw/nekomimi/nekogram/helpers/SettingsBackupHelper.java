@@ -965,7 +965,43 @@ public final class SettingsBackupHelper {
             writePreferences(mainPreferences, mainData, mainTypes);
         }
 
-        UserConfig.getInstance(account).reloadConfig();
+        UserConfig userConfig = UserConfig.getInstance(account);
+        userConfig.reloadConfig();
+
+        if (!userConfig.isClientActivated()) {
+            long userId = getUserIdFromBackup(root);
+            if (userId != 0L) {
+                org.telegram.tgnet.TLRPC.TL_user user = new org.telegram.tgnet.TLRPC.TL_user();
+                user.id = userId;
+                if (data.has("user") && data.get("user").isJsonObject()) {
+                    JsonObject userObj = data.getAsJsonObject("user");
+                    if (userObj.has("first_name") && !userObj.get("first_name").isJsonNull()) user.first_name = userObj.get("first_name").getAsString();
+                    if (userObj.has("last_name") && !userObj.get("last_name").isJsonNull()) user.last_name = userObj.get("last_name").getAsString();
+                    if (userObj.has("username") && !userObj.get("username").isJsonNull()) user.username = userObj.get("username").getAsString();
+                    if (userObj.has("phone") && !userObj.get("phone").isJsonNull()) user.phone = userObj.get("phone").getAsString();
+                    if (userObj.has("access_hash") && !userObj.get("access_hash").isJsonNull()) user.access_hash = userObj.get("access_hash").getAsLong();
+                }
+                if (user.first_name == null) user.first_name = "User";
+
+                try {
+                    org.telegram.tgnet.SerializedData sData = new org.telegram.tgnet.SerializedData(user.getObjectSize());
+                    user.serializeToStream(sData);
+                    String userBase64 = android.util.Base64.encodeToString(sData.toByteArray(), android.util.Base64.DEFAULT);
+                    sData.cleanup();
+
+                    preferences.edit()
+                            .putString("user", userBase64)
+                            .putLong("3clientUserId_long", userId)
+                            .putInt("3clientUserId", (int) userId)
+                            .commit();
+
+                    userConfig.reloadConfig();
+                } catch (Exception e) {
+                    FileLog.e(e);
+                }
+            }
+        }
+
         AndroidUtilities.runOnUIThread(() -> {
             org.telegram.messenger.NotificationCenter.getGlobalInstance().postNotificationName(org.telegram.messenger.NotificationCenter.mainUserInfoChanged);
             org.telegram.messenger.NotificationCenter.getInstance(account).postNotificationName(org.telegram.messenger.NotificationCenter.mainUserInfoChanged);
@@ -1029,6 +1065,29 @@ public final class SettingsBackupHelper {
                         }
                     } else {
                         editor.putString(key, primitive.getAsString());
+                    }
+                }
+            } else if (element.isJsonObject()) {
+                if (key.equals("user")) {
+                    try {
+                        JsonObject userObj = element.getAsJsonObject();
+                        org.telegram.tgnet.TLRPC.TL_user user = new org.telegram.tgnet.TLRPC.TL_user();
+                        if (userObj.has("id")) user.id = userObj.get("id").getAsLong();
+                        if (userObj.has("first_name") && !userObj.get("first_name").isJsonNull()) user.first_name = userObj.get("first_name").getAsString();
+                        if (userObj.has("last_name") && !userObj.get("last_name").isJsonNull()) user.last_name = userObj.get("last_name").getAsString();
+                        if (userObj.has("username") && !userObj.get("username").isJsonNull()) user.username = userObj.get("username").getAsString();
+                        if (userObj.has("phone") && !userObj.get("phone").isJsonNull()) user.phone = userObj.get("phone").getAsString();
+                        if (userObj.has("access_hash") && !userObj.get("access_hash").isJsonNull()) user.access_hash = userObj.get("access_hash").getAsLong();
+                        if (user.first_name == null) user.first_name = "User";
+
+                        org.telegram.tgnet.SerializedData sData = new org.telegram.tgnet.SerializedData(user.getObjectSize());
+                        user.serializeToStream(sData);
+                        String userBase64 = android.util.Base64.encodeToString(sData.toByteArray(), android.util.Base64.DEFAULT);
+                        sData.cleanup();
+
+                        editor.putString("user", userBase64);
+                    } catch (Exception e) {
+                        FileLog.e(e);
                     }
                 }
             } else if (element.isJsonArray()) {
