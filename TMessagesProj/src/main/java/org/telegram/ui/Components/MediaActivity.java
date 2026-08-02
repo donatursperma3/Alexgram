@@ -24,6 +24,7 @@ import android.util.SparseArray;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.FrameLayout;
 import android.widget.HorizontalScrollView;
@@ -621,11 +622,6 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
             }
 
             @Override
-            protected boolean canShowSearchItem() {
-                return type != TYPE_STORIES && type != TYPE_ARCHIVED_CHANNEL_STORIES;
-            }
-
-            @Override
             protected int getInitialTab() {
                 return initialTab;
             }
@@ -949,7 +945,7 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
         }
 
         chatTypeFilterScrollView.addView(chatTypeFilterContainer);
-        fragmentView.addView(chatTypeFilterScrollView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP | Gravity.FILL_HORIZONTAL, 0, 0, 0, 0));
+        ((ViewGroup) fragmentView).addView(chatTypeFilterScrollView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP | Gravity.FILL_HORIZONTAL, 0, 0, 0, 0));
         updateChatFilterSelection();
     }
 
@@ -1012,7 +1008,7 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
             downloadFilterChips[i] = chip;
         }
 
-        fragmentView.addView(downloadFilterScrollView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP | Gravity.FILL_HORIZONTAL, 0, 0, 0, 0));
+        ((ViewGroup) fragmentView).addView(downloadFilterScrollView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP | Gravity.FILL_HORIZONTAL, 0, 0, 0, 0));
         downloadFilterScrollView.addView(downloadFilterContainer);
         updateDownloadFilterSelection();
     }
