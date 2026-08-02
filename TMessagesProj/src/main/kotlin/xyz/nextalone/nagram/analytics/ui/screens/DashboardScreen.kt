@@ -15,7 +15,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.autoMirrored.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -850,7 +849,7 @@ fun SessionInsightsCard(state: xyz.nextalone.nagram.analytics.ui.viewmodel.Dashb
             Spacer(Modifier.height(10.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 InsightTile(Modifier.weight(1f), "Media", si.totalMedia.toString(), NeonOrange, Icons.Default.Image)
-                InsightTile(Modifier.weight(1f), "Chats", si.uniqueChats.toString(), NeonGreen, Icons.AutoMirrored.Filled.Chat)
+                InsightTile(Modifier.weight(1f), "Chats", si.uniqueChats.toString(), NeonGreen, Icons.Filled.Chat)
             }
             if (si.totalTimeSeconds > 0) {
                 Spacer(Modifier.height(10.dp))
