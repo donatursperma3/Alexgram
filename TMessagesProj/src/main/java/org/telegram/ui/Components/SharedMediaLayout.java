@@ -763,6 +763,8 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
     public ImageView photoVideoOptionsItem;
     private RLottieImageView optionsSearchImageView;
     private ActionBarMenuItem forwardItem;
+    private ActionBarMenuItem copyLinkItem;
+    private ActionBarMenuItem specialForwardItem;
     private ActionBarMenuItem gotoItem;
     private ActionBarMenuItem pinItem;
     private ActionBarMenuItem unpinItem;
@@ -4147,6 +4149,19 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
             return "tg://openmessage?user_id=" + dialogId + "&message_id=" + messageObject.getId();
         }
         return "tg://openmessage?chat_id=" + (-dialogId) + "&message_id=" + messageObject.getId();
+    }
+
+    private boolean hasSelectedAyuDeletedMessage(ArrayList<MessageObject> selectedMessages) {
+        if (selectedMessages == null) {
+            return false;
+        }
+        for (int i = 0; i < selectedMessages.size(); i++) {
+            MessageObject messageObject = selectedMessages.get(i);
+            if (messageObject != null && messageObject.isAyuDeleted()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean hasNoforwardsMessage() {
