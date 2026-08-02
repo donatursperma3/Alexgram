@@ -171,7 +171,29 @@ public class TabsByTypeManager {
         // Custom folder fallback matching by flags or name
         String name = filter.name != null ? filter.name.toLowerCase() : "";
         int flags = filter.flags;
-        
+
+        if ((flags & MessagesController.DIALOG_FILTER_FLAG_ALL_CHATS) == MessagesController.DIALOG_FILTER_FLAG_ALL_CHATS &&
+                (flags & ~(MessagesController.DIALOG_FILTER_FLAG_ALL_CHATS
+                        | MessagesController.DIALOG_FILTER_FLAG_EXCLUDE_ARCHIVED
+                        | MessagesController.DIALOG_FILTER_FLAG_ONLY_ARCHIVED)) == 0) {
+            return TabsByTypeEntry.ALL_CHATS;
+        }
+        if ((flags & MessagesController.DIALOG_FILTER_FLAG_CHANNELS) != 0 &&
+                (flags & MessagesController.DIALOG_FILTER_FLAG_MY_CHANNELS) != 0 &&
+                (flags & ~(MessagesController.DIALOG_FILTER_FLAG_CHANNELS
+                        | MessagesController.DIALOG_FILTER_FLAG_MY_CHANNELS
+                        | MessagesController.DIALOG_FILTER_FLAG_EXCLUDE_ARCHIVED
+                        | MessagesController.DIALOG_FILTER_FLAG_ONLY_ARCHIVED)) == 0) {
+            return TabsByTypeEntry.MY_CHANNELS;
+        }
+        if ((flags & MessagesController.DIALOG_FILTER_FLAG_GROUPS) != 0 &&
+                (flags & MessagesController.DIALOG_FILTER_FLAG_MY_GROUPS) != 0 &&
+                (flags & ~(MessagesController.DIALOG_FILTER_FLAG_GROUPS
+                        | MessagesController.DIALOG_FILTER_FLAG_MY_GROUPS
+                        | MessagesController.DIALOG_FILTER_FLAG_EXCLUDE_ARCHIVED
+                        | MessagesController.DIALOG_FILTER_FLAG_ONLY_ARCHIVED)) == 0) {
+            return TabsByTypeEntry.MY_GROUPS;
+        }
         if ((flags & MessagesController.DIALOG_FILTER_FLAG_BOTS) != 0 || name.contains("bot")) {
             return TabsByTypeEntry.BOTS;
         }

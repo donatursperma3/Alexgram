@@ -10,13 +10,20 @@ import org.telegram.messenger.R;
  */
 public enum TabsByTypeEntry {
 
+    ALL_CHATS(
+            R.drawable.fork_filter_icon_albums,
+            MessagesController.DIALOG_FILTER_FLAG_ALL_CHATS
+                    | MessagesController.DIALOG_FILTER_FLAG_EXCLUDE_ARCHIVED,
+            false,
+            true
+    ),
     UNREAD(
             R.drawable.fork_filter_icon_bubble_point,
             MessagesController.DIALOG_FILTER_FLAG_ALL_CHATS
                     | MessagesController.DIALOG_FILTER_FLAG_EXCLUDE_READ
                     | MessagesController.DIALOG_FILTER_FLAG_EXCLUDE_ARCHIVED,
-            true,   // editable FAB
-            true    // enabled by default
+            true,
+            true
     ),
     PERSONAL(
             R.drawable.fork_filter_icon_user,
@@ -33,12 +40,28 @@ public enum TabsByTypeEntry {
             true,
             true
     ),
+    MY_GROUPS(
+            R.drawable.fork_filter_icon_chat_admin,
+            MessagesController.DIALOG_FILTER_FLAG_GROUPS
+                    | MessagesController.DIALOG_FILTER_FLAG_EXCLUDE_ARCHIVED
+                    | MessagesController.DIALOG_FILTER_FLAG_MY_GROUPS,
+            false,
+            false
+    ),
     CHANNELS(
             R.drawable.fork_filter_icon_channel,
             MessagesController.DIALOG_FILTER_FLAG_CHANNELS
                     | MessagesController.DIALOG_FILTER_FLAG_EXCLUDE_ARCHIVED,
             true,
             true
+    ),
+    MY_CHANNELS(
+            R.drawable.fork_filter_icon_channel,
+            MessagesController.DIALOG_FILTER_FLAG_CHANNELS
+                    | MessagesController.DIALOG_FILTER_FLAG_EXCLUDE_ARCHIVED
+                    | MessagesController.DIALOG_FILTER_FLAG_MY_CHANNELS,
+            false,
+            false
     ),
     BOTS(
             R.drawable.fork_filter_icon_bot,
@@ -74,19 +97,19 @@ public enum TabsByTypeEntry {
     MENTIONED_CHATS(
             R.drawable.fork_filter_icon_mentionbutton,
             MessagesController.DIALOG_FILTER_FLAG_EXCLUDE_ARCHIVED | 0x01000000,
-            true,   // editable FAB
+            true,
             false
     ),
     LIVE_CHATS(
             R.drawable.fork_filter_icon_voicechat,
             MessagesController.DIALOG_FILTER_FLAG_EXCLUDE_ARCHIVED | 0x00800000,
-            true,   // editable FAB
+            true,
             false
     ),
     DELETED_USERS(
             R.drawable.fork_ic_ghost_26,
             MessagesController.DIALOG_FILTER_FLAG_EXCLUDE_ARCHIVED | 0x02000000,
-            true,   // editable FAB
+            true,
             false
     ),
     FAVORITE(
@@ -116,10 +139,13 @@ public enum TabsByTypeEntry {
 
     public String getTitle(Context context) {
         switch (this) {
+            case ALL_CHATS:       return context.getString(R.string.TabsByTypeAllChats);
             case UNREAD:          return context.getString(R.string.TabsByTypeUnread);
             case PERSONAL:        return context.getString(R.string.TabsByTypePersonal);
             case GROUPS:          return context.getString(R.string.TabsByTypeGroups);
+            case MY_GROUPS:       return context.getString(R.string.TabsByTypeMyGroups);
             case CHANNELS:        return context.getString(R.string.TabsByTypeChannels);
+            case MY_CHANNELS:     return context.getString(R.string.TabsByTypeMyChannels);
             case BOTS:            return context.getString(R.string.TabsByTypeBots);
             case ADMIN:           return context.getString(R.string.TabsByTypeAdmin);
             case OWNER:           return context.getString(R.string.TabsByTypeOwner);

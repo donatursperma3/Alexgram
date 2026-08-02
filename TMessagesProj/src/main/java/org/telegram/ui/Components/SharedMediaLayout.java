@@ -322,6 +322,8 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
     private final int viewType;
     private long topicId;
 
+    private HorizontalScrollView actionModeButtonsScrollView;
+    private LinearLayout actionModeButtonsLayout;
     private UndoView undoView;
 
     public boolean checkPinchToZoom(MotionEvent ev) {

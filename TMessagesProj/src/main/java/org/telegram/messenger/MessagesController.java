@@ -1318,6 +1318,8 @@ public class MessagesController extends BaseController implements NotificationCe
     public static int DIALOG_FILTER_FLAG_EXCLUDE_ARCHIVED = 0x00000080;
     public static int DIALOG_FILTER_FLAG_ONLY_ARCHIVED = 0x00000100;
     public static int DIALOG_FILTER_FLAG_ALL_CHATS = DIALOG_FILTER_FLAG_CONTACTS | DIALOG_FILTER_FLAG_NON_CONTACTS | DIALOG_FILTER_FLAG_GROUPS | DIALOG_FILTER_FLAG_CHANNELS | DIALOG_FILTER_FLAG_BOTS;
+    public static int DIALOG_FILTER_FLAG_MY_GROUPS = 0x00100000;
+    public static int DIALOG_FILTER_FLAG_MY_CHANNELS = 0x00080000;
 
     public static int DIALOG_FILTER_FLAG_CHATLIST = 0x00000200;
     public static int DIALOG_FILTER_FLAG_CHATLIST_ADMIN = 0x00000400;
@@ -1446,10 +1448,16 @@ public class MessagesController extends BaseController implements NotificationCe
                     } else if (ChatObject.isChatCollapsedInCommunity(accountInstance.getCurrentAccount(), chat)) {
                         return false;
                     } else if (ChatObject.isChannel(chat) && !chat.megagroup) {
+                        if ((flags & DIALOG_FILTER_FLAG_MY_CHANNELS) != 0) {
+                            return ChatObject.hasAdminRights(chat) || chat.creator;
+                        }
                         if ((flags & DIALOG_FILTER_FLAG_CHANNELS) != 0) {
                             return true;
                         }
                     } else {
+                        if ((flags & DIALOG_FILTER_FLAG_MY_GROUPS) != 0) {
+                            return chat.creator || ChatObject.hasAdminRights(chat);
+                        }
                         if ((flags & DIALOG_FILTER_FLAG_GROUPS) != 0) {
                             return true;
                         }
