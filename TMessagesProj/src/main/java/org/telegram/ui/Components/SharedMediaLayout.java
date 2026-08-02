@@ -1615,6 +1615,8 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
 
     private final static int forward = 100;
     private final static int forward_noquote = 1001;
+    private final static int special_forward = 1002;
+    private final static int copy_link = 1003;
     private final static int delete = 101;
     private final static int gotochat = 102;
     private final static int pin = 103;
@@ -2354,6 +2356,22 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                 actionModeViews.add(gotoItem);
                 gotoItem.setOnClickListener(v -> onActionBarItemClick(v, gotochat));
 
+                copyLinkItem = new ActionBarMenuItem(context, null, getThemedColor(Theme.key_actionBarActionModeDefaultSelector), getThemedColor(Theme.key_actionBarActionModeDefaultIcon), false);
+                copyLinkItem.setIcon(R.drawable.msg_link);
+                copyLinkItem.setContentDescription(getString(R.string.CopyLink));
+                copyLinkItem.setDuplicateParentStateEnabled(false);
+                actionModeLayout.addView(copyLinkItem, new LinearLayout.LayoutParams(dp(54), ViewGroup.LayoutParams.MATCH_PARENT));
+                actionModeViews.add(copyLinkItem);
+                copyLinkItem.setOnClickListener(v -> onActionBarItemClick(v, copy_link));
+
+                specialForwardItem = new ActionBarMenuItem(context, null, getThemedColor(Theme.key_actionBarActionModeDefaultSelector), getThemedColor(Theme.key_actionBarActionModeDefaultIcon), false);
+                specialForwardItem.setIcon(R.drawable.nk_special_forward);
+                specialForwardItem.setContentDescription(getString(R.string.SpecialForward));
+                specialForwardItem.setDuplicateParentStateEnabled(false);
+                actionModeLayout.addView(specialForwardItem, new LinearLayout.LayoutParams(dp(54), ViewGroup.LayoutParams.MATCH_PARENT));
+                actionModeViews.add(specialForwardItem);
+                specialForwardItem.setOnClickListener(v -> onActionBarItemClick(v, special_forward));
+
                 forwardItem = new ActionBarMenuItem(context, null, getThemedColor(Theme.key_actionBarActionModeDefaultSelector), getThemedColor(Theme.key_actionBarActionModeDefaultIcon), false);
                 forwardItem.setIcon(R.drawable.msg_forward);
                 forwardItem.setContentDescription(getString(R.string.Forward));
@@ -2608,6 +2626,12 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                             if (forwardNoQuoteItem != null) {
                                 forwardNoQuoteItem.setVisibility(getClosestTab() != TAB_STORIES && getClosestTab() != TAB_BOT_PREVIEWS ? View.VISIBLE : View.GONE);
                             }
+                            if (copyLinkItem != null) {
+                                copyLinkItem.setVisibility(getClosestTab() != TAB_STORIES && getClosestTab() != TAB_BOT_PREVIEWS ? View.VISIBLE : View.GONE);
+                            }
+                            if (specialForwardItem != null) {
+                                specialForwardItem.setVisibility(getClosestTab() != TAB_STORIES && getClosestTab() != TAB_BOT_PREVIEWS && xyz.nextalone.nagram.NaConfig.INSTANCE.getSpecialForward().Bool() ? View.VISIBLE : View.GONE);
+                            }
                             if (selectRangeItem != null) {
                                 int closestTab = getClosestTab();
                                 selectRangeItem.setVisibility(tw.nekomimi.nekogram.NekoConfig.enableSelectRangeInSharedMedia.Bool() &&
@@ -2663,6 +2687,12 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                             }
                             if (forwardNoQuoteItem != null) {
                                 forwardNoQuoteItem.setVisibility(getClosestTab() != TAB_STORIES && getClosestTab() != TAB_BOT_PREVIEWS ? View.VISIBLE : View.GONE);
+                            }
+                            if (copyLinkItem != null) {
+                                copyLinkItem.setVisibility(getClosestTab() != TAB_STORIES && getClosestTab() != TAB_BOT_PREVIEWS ? View.VISIBLE : View.GONE);
+                            }
+                            if (specialForwardItem != null) {
+                                specialForwardItem.setVisibility(getClosestTab() != TAB_STORIES && getClosestTab() != TAB_BOT_PREVIEWS && xyz.nextalone.nagram.NaConfig.INSTANCE.getSpecialForward().Bool() ? View.VISIBLE : View.GONE);
                             }
                             if (selectRangeItem != null) {
                                 int closestTab = getClosestTab();
@@ -4063,14 +4093,62 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         boolean noforwards = profileActivity.getMessagesController().isPeerNoForwards(dialog_id) && !xyz.nextalone.nagram.NaConfig.INSTANCE.getAllowForwardingRestriction().Bool();
         forwardItem.setAlpha(noforwards ? 0.5f : 1f);
         forwardNoQuoteItem.setAlpha(noforwards ? 0.5f : 1f);
+        if (specialForwardItem != null) {
+            specialForwardItem.setAlpha(noforwards ? 0.5f : 1f);
+        }
+        if (copyLinkItem != null) {
+            copyLinkItem.setAlpha(1f);
+        }
         if (noforwards) {
             if (forwardItem.getBackground() != null) forwardItem.setBackground(null);
             if (forwardNoQuoteItem.getBackground() != null) forwardNoQuoteItem.setBackground(null);
+            if (specialForwardItem != null && specialForwardItem.getBackground() != null) specialForwardItem.setBackground(null);
         } else if (forwardItem.getBackground() == null) {
             forwardItem.setBackground(Theme.createSelectorDrawable(getThemedColor(Theme.key_actionBarActionModeDefaultSelector), 5));
             forwardNoQuoteItem.setBackground(Theme.createSelectorDrawable(getThemedColor(Theme.key_actionBarActionModeDefaultSelector), 5));
+            if (specialForwardItem != null) {
+                specialForwardItem.setBackground(Theme.createSelectorDrawable(getThemedColor(Theme.key_actionBarActionModeDefaultSelector), 5));
+            }
+            if (copyLinkItem != null) {
+                copyLinkItem.setBackground(Theme.createSelectorDrawable(getThemedColor(Theme.key_actionBarActionModeDefaultSelector), 5));
+            }
         }
     }
+    private ArrayList<MessageObject> getSelectedMessagesForActionMode() {
+        ArrayList<MessageObject> result = new ArrayList<>();
+        for (int a = 1; a >= 0; a--) {
+            ArrayList<Integer> ids = new ArrayList<>();
+            for (int b = 0; b < selectedFiles[a].size(); b++) {
+                ids.add(selectedFiles[a].keyAt(b));
+            }
+            Collections.sort(ids);
+            for (Integer id1 : ids) {
+                if (id1 <= 0) {
+                    continue;
+                }
+                MessageObject messageObject = selectedFiles[a].get(id1);
+                if (messageObject != null) {
+                    result.add(messageObject);
+                }
+            }
+        }
+        return result;
+    }
+
+    private String buildMessageLink(MessageObject messageObject) {
+        if (messageObject == null || messageObject.getId() <= 0) {
+            return null;
+        }
+        long dialogId = messageObject.getDialogId();
+        if (DialogObject.isEncryptedDialog(dialogId)) {
+            return null;
+        }
+        if (DialogObject.isUserDialog(dialogId)) {
+            return "tg://openmessage?user_id=" + dialogId + "&message_id=" + messageObject.getId();
+        }
+        return "tg://openmessage?chat_id=" + (-dialogId) + "&message_id=" + messageObject.getId();
+    }
+
     private boolean hasNoforwardsMessage() {
         boolean hasNoforwardsMessage = false;
         for (int a = 1; a >= 0; a--) {
@@ -5627,6 +5705,53 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                 return true;
             });
             profileActivity.presentFragment(fragment);
+        } else if (id == copy_link) {
+            try {
+                ArrayList<MessageObject> selectedMessages = getSelectedMessagesForActionMode();
+                if (selectedMessages.isEmpty()) {
+                    BulletinFactory.of(profileActivity).createErrorBulletin(getString(R.string.ErrorOccurred)).show();
+                    return;
+                }
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < selectedMessages.size(); i++) {
+                    MessageObject messageObject = selectedMessages.get(i);
+                    String link = buildMessageLink(messageObject);
+                    if (TextUtils.isEmpty(link)) {
+                        continue;
+                    }
+                    if (sb.length() > 0) {
+                        sb.append("\n");
+                    }
+                    sb.append(link);
+                }
+                if (sb.length() == 0) {
+                    BulletinFactory.of(profileActivity).createErrorBulletin(getString(R.string.ErrorOccurred)).show();
+                    return;
+                }
+                AndroidUtilities.addToClipboard(sb.toString());
+                BulletinFactory.of(profileActivity).createCopyLinkBulletin().show();
+                closeActionMode(false);
+            } catch (Exception e) {
+                FileLog.e(e);
+                BulletinFactory.of(profileActivity).createErrorBulletin(getString(R.string.ErrorOccurred)).show();
+            }
+        } else if (id == special_forward) {
+            try {
+                ArrayList<MessageObject> selectedMessages = getSelectedMessagesForActionMode();
+                if (selectedMessages.isEmpty()) {
+                    BulletinFactory.of(profileActivity).createErrorBulletin(getString(R.string.ErrorOccurred)).show();
+                    return;
+                }
+                if (hasSelectedAyuDeletedMessage(selectedMessages) && !xyz.nextalone.nagram.NaConfig.INSTANCE.getAllowForwardingRestriction().Bool()) {
+                    BulletinFactory.of(profileActivity).createErrorBulletin(getString(R.string.ForwardsRestrictedInfoAyuDeleted)).show();
+                    return;
+                }
+                profileActivity.presentFragment(new SpecialForwardActivity(selectedMessages));
+                closeActionMode(false);
+            } catch (Exception e) {
+                FileLog.e(e);
+                BulletinFactory.of(profileActivity).createErrorBulletin(getString(R.string.ErrorOccurred)).show();
+            }
         } else if (id == gotochat) {
             if (selectedFiles[0].size() + selectedFiles[1].size() != 1) {
                 return;
@@ -6368,6 +6493,12 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         }
         if (forwardNoQuoteItem != null) {
             forwardNoQuoteItem.setVisibility(getClosestTab() != TAB_STORIES && getClosestTab() != TAB_BOT_PREVIEWS && getClosestTab() != TAB_GIFTS ? View.VISIBLE : View.GONE);
+        }
+        if (copyLinkItem != null) {
+            copyLinkItem.setVisibility(getClosestTab() != TAB_STORIES && getClosestTab() != TAB_BOT_PREVIEWS && getClosestTab() != TAB_GIFTS ? View.VISIBLE : View.GONE);
+        }
+        if (specialForwardItem != null) {
+            specialForwardItem.setVisibility(getClosestTab() != TAB_STORIES && getClosestTab() != TAB_BOT_PREVIEWS && getClosestTab() != TAB_GIFTS && xyz.nextalone.nagram.NaConfig.INSTANCE.getSpecialForward().Bool() ? View.VISIBLE : View.GONE);
         }
         updateStoriesPinButton();
 
