@@ -449,10 +449,18 @@ static void fastBlur565(int32_t w, int32_t h, int32_t stride, uint8_t *pix, int3
     delete[] rgb;
 }
 
-JNIEXPORT int Java_org_telegram_messenger_Utilities_needInvert(JNIEnv *env, jclass clazz, jobject bitmap, jint unpin, jint width, jint height, jint stride) {
+JNIEXPORT int Java_org_telegram_messenger_Utilities_needInvert(JNIEnv *env, jclass clazz, jobject bitmap) {
     if (!bitmap) {
         return 0;
     }
+
+    AndroidBitmapInfo info{};
+    if (__builtin_expect(AndroidBitmap_getInfo(env, bitmap, &info) != ANDROID_BITMAP_RESULT_SUCCESS, 0)) {
+        return 0;
+    }
+    uint32_t width = info.width;
+    uint32_t height = info.height;
+    uint32_t stride = info.stride;
 
     if (!width || !height || !stride || stride != width * 4 || width * height > 150 * 150) {
         return 0;
@@ -509,16 +517,22 @@ JNIEXPORT int Java_org_telegram_messenger_Utilities_needInvert(JNIEnv *env, jcla
             }
         }
     }
-    if (unpin) {
-        AndroidBitmap_unlockPixels(env, bitmap);
-    }
+    AndroidBitmap_unlockPixels(env, bitmap);
     return hasAlpha && matching / total > 0.85;
 }
 
-JNIEXPORT void Java_org_telegram_messenger_Utilities_blurBitmap(JNIEnv *env, jclass clazz, jobject bitmap, jint radius, jint unpin, jint width, jint height, jint stride) {
+JNIEXPORT void Java_org_telegram_messenger_Utilities_blurBitmap(JNIEnv *env, jclass clazz, jobject bitmap, jint radius) {
     if (!bitmap) {
         return;
     }
+
+    AndroidBitmapInfo info{};
+    if (__builtin_expect(AndroidBitmap_getInfo(env, bitmap, &info) != ANDROID_BITMAP_RESULT_SUCCESS, 0)) {
+        return;
+    }
+    uint32_t width = info.width;
+    uint32_t height = info.height;
+    uint32_t stride = info.stride;
 
     if (!width || !height || !stride) {
         return;
@@ -541,9 +555,7 @@ JNIEXPORT void Java_org_telegram_messenger_Utilities_blurBitmap(JNIEnv *env, jcl
             fastBlurMore(width, height, stride, (uint8_t *) pixels, radius);
         }
     }
-    if (unpin) {
-        AndroidBitmap_unlockPixels(env, bitmap);
-    }
+    AndroidBitmap_unlockPixels(env, bitmap);
 }
 
 const uint32_t PGPhotoEnhanceHistogramBins = 256;
@@ -639,21 +651,6 @@ JNIEXPORT void Java_org_telegram_messenger_Utilities_calcCDT(JNIEnv *env, jclass
             result[index + 3] = 255;
         }
     }
-}
-
-JNIEXPORT jint Java_org_telegram_messenger_Utilities_pinBitmap(JNIEnv *env, jclass clazz, jobject bitmap) {
-    if (bitmap == nullptr) {
-        return 0;
-    }
-    void *pixels;
-    return AndroidBitmap_lockPixels(env, bitmap, &pixels) >= 0 ? 1 : 0;
-}
-
-JNIEXPORT void Java_org_telegram_messenger_Utilities_unpinBitmap(JNIEnv *env, jclass clazz, jobject bitmap) {
-    if (bitmap == nullptr) {
-        return;
-    }
-    AndroidBitmap_unlockPixels(env, bitmap);
 }
 
 #define SQUARE(i) ((i)*(i))
@@ -1148,7 +1145,16 @@ JNIEXPORT void Java_org_telegram_messenger_Utilities_generateGradient(JNIEnv *en
         return;
     }
 
-    if (!width || !height) {
+    AndroidBitmapInfo info{};
+    if (__builtin_expect(AndroidBitmap_getInfo(env, bitmap, &info) != ANDROID_BITMAP_RESULT_SUCCESS, 0)) {
+        return;
+    }
+    // Use parameters from function signature if provided, otherwise get from bitmap info
+    uint32_t actualWidth = width > 0 ? width : info.width;
+    uint32_t actualHeight = height > 0 ? height : info.height;
+    uint32_t actualStride = stride > 0 ? stride : info.stride;
+
+    if (!actualWidth || !actualHeight) {
         return;
     }
 
@@ -1178,35 +1184,35 @@ JNIEXPORT void Java_org_telegram_messenger_Utilities_generateGradient(JNIEnv *en
     auto colorsArray = (uint8_t *) env->GetIntArrayElements(colors, nullptr);
     float *newPixelCache = nullptr;
 
-    if (width * height != pixelCacheSize && pixelCache != nullptr) {
+    if (actualWidth * actualHeight != pixelCacheSize && pixelCache != nullptr) {
         delete[] pixelCache;
         pixelCache = nullptr;
     }
-    pixelCacheSize = width * height;
+    pixelCacheSize = actualWidth * actualHeight;
 
     if (pixelCache == nullptr) {
-        newPixelCache = new float[width * height * 2];
+        newPixelCache = new float[actualWidth * actualHeight * 2];
     }
     float directPixelY;
     float centerDistanceY;
     float centerDistanceY2;
     int32_t colorsCount = colorsArray[12] == 0 && colorsArray[13] == 0 && colorsArray[14] == 0 && colorsArray[15] == 0 ? 3 : 4;
 
-    for (int y = 0; y < height; y++) {
+    for (int y = 0; y < actualHeight; y++) {
         if (pixelCache == nullptr) {
-            directPixelY = (float) y / (float) height;
+            directPixelY = (float) y / (float) actualHeight;
             centerDistanceY = directPixelY - 0.5f;
             centerDistanceY2 = centerDistanceY * centerDistanceY;
         }
-        uint32_t offset = y * stride;
-        for (int x = 0; x < width; x++) {
+        uint32_t offset = y * actualStride;
+        for (int x = 0; x < actualWidth; x++) {
             float pixelX;
             float pixelY;
             if (pixelCache != nullptr) {
-                pixelX = pixelCache[(y * width + x) * 2];
-                pixelY = pixelCache[(y * width + x) * 2 + 1];
+                pixelX = pixelCache[(y * actualWidth + x) * 2];
+                pixelY = pixelCache[(y * actualWidth + x) * 2 + 1];
             } else {
-                float directPixelX = (float) x / (float) width;
+                float directPixelX = (float) x / (float) actualWidth;
 
                 float centerDistanceX = directPixelX - 0.5f;
                 float centerDistance = sqrtf(centerDistanceX * centerDistanceX + centerDistanceY2);
@@ -1216,8 +1222,8 @@ JNIEXPORT void Java_org_telegram_messenger_Utilities_generateGradient(JNIEnv *en
                 float sinTheta = sinf(theta);
                 float cosTheta = cosf(theta);
 
-                pixelX = newPixelCache[(y * width + x) * 2] = std::max(0.0f, std::min(1.0f, 0.5f + centerDistanceX * cosTheta - centerDistanceY * sinTheta));
-                pixelY = newPixelCache[(y * width + x) * 2 + 1] = std::max(0.0f, std::min(1.0f, 0.5f + centerDistanceX * sinTheta + centerDistanceY * cosTheta));
+                pixelX = newPixelCache[(y * actualWidth + x) * 2] = std::max(0.0f, std::min(1.0f, 0.5f + centerDistanceX * cosTheta - centerDistanceY * sinTheta));
+                pixelY = newPixelCache[(y * actualWidth + x) * 2 + 1] = std::max(0.0f, std::min(1.0f, 0.5f + centerDistanceX * sinTheta + centerDistanceY * cosTheta));
             }
 
             float distanceSum = 0.0f;
@@ -1255,7 +1261,7 @@ JNIEXPORT void Java_org_telegram_messenger_Utilities_generateGradient(JNIEnv *en
 
     env->ReleaseIntArrayElements(colors, (jint *) colorsArray, JNI_ABORT);
 
-    if (unpin) {
+    if (!unpin) {
         AndroidBitmap_unlockPixels(env, bitmap);
     }
 }

@@ -30,3 +30,8 @@ build_verify.log
 debug_build.log
 build_log.txt
 build_log*.txt
+TMessagesProj_App/afat/
+TMessagesProj_AppHockeyApp/afat/
+TMessagesProj_AppStandalone/afat/
+TMessagesProj_AppHuawei/afat/
+TMessagesProj/jni/ffmpeg/build_android
