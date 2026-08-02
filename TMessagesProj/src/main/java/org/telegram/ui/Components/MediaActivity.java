@@ -520,7 +520,8 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
             });
         }
 
-        if (type == TYPE_MEDIA && dialogId == getUserConfig().getClientUserId() && topicId == 0 && !getMessagesController().getSavedMessagesController().unsupported && getMessagesController().getSavedMessagesController().hasDialogs()) {
+        int requestedTab = getArguments().getInt("start_from", -1);
+        if (requestedTab == SharedMediaLayout.TAB_SAVED_DIALOGS) {
             initialTab = SharedMediaLayout.TAB_SAVED_DIALOGS;
         }
         sharedMediaLayout = new SharedMediaLayout(context, dialogId, sharedMediaPreloader, 0, null, currentChatInfo, currentUserInfo, initialTab, 0, this, new SharedMediaLayout.Delegate() {
@@ -613,7 +614,8 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
 
             @Override
             protected boolean includeSavedDialogs() {
-                return type == TYPE_MEDIA && dialogId == getUserConfig().getClientUserId() && topicId == 0;
+                return type == TYPE_MEDIA && dialogId == getUserConfig().getClientUserId() && topicId == 0
+                        && getArguments().getInt("start_from", -1) == SharedMediaLayout.TAB_SAVED_DIALOGS;
             }
 
             @Override
