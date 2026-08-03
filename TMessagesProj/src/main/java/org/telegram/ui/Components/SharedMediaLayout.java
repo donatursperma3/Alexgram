@@ -273,6 +273,10 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         }
     }
 
+    public int getFilesFilterState() {
+        return filesFilterState;
+    }
+
     private void applyFilesFilter() {
         try {
             SharedMediaData data = sharedMediaData[TAB_FILES];
@@ -5190,6 +5194,36 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         }
         sharedMediaData[selectedType].loading = true;
         profileActivity.getMediaDataController().loadMedia(dialog_id, 50, 0, sharedMediaData[selectedType].min_id, type, topicId, 1, profileActivity.getClassGuid(), sharedMediaData[selectedType].requestIndex, null, null);
+    }
+
+    public void reloadCurrentTab() {
+        int selectedType = getClosestTab();
+        if (selectedType < 0 || selectedType >= sharedMediaData.length) {
+            return;
+        }
+        int type;
+        if (selectedType == TAB_PHOTOVIDEO) {
+            type = MEDIA_PHOTOVIDEO;
+            if (sharedMediaData[0].filterType == FILTER_PHOTOS_ONLY) {
+                type = MediaDataController.MEDIA_PHOTOS_ONLY;
+            } else if (sharedMediaData[0].filterType == FILTER_VIDEOS_ONLY) {
+                type = MediaDataController.MEDIA_VIDEOS_ONLY;
+            }
+        } else if (selectedType == TAB_FILES) {
+            type = MediaDataController.MEDIA_FILE;
+        } else if (selectedType == TAB_VOICE) {
+            type = MediaDataController.MEDIA_AUDIO;
+        } else if (selectedType == TAB_AUDIO) {
+            type = MediaDataController.MEDIA_MUSIC;
+        } else if (selectedType == TAB_GIF) {
+            type = MediaDataController.MEDIA_GIF;
+        } else {
+            type = MediaDataController.MEDIA_URL;
+        }
+        if (sharedMediaData[selectedType] != null) {
+            sharedMediaData[selectedType].loading = true;
+        }
+        profileActivity.getMediaDataController().loadMedia(dialog_id, 50, 0, 0, type, topicId, 1, profileActivity.getClassGuid(), sharedMediaData[selectedType].requestIndex, null, null);
     }
 
     public ActionBarMenuItem getSearchItem() {

@@ -94,6 +94,7 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
     private AnimatedTextView selectedTextView;
     private ActionBarMenuItem optionsItem;
     private ActionBarMenuItem deleteItem;
+    private ActionBarMenuItem reloadItem;
     private SparseArray<MessageObject> actionModeMessageObjects;
     private ActionBarMenuSubItem showPhotosItem, showVideosItem;
     private boolean filterPhotos = true, filterVideos = true;
@@ -112,6 +113,7 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
     private final String[] downloadFilterLabels = {"All", "Downloaded", "Pending"};
     private int chatFilterType = 0;
     private int downloadFilterType = 0;
+    private LinearLayout filtersContainer;
     private HorizontalScrollView chatTypeFilterScrollView;
     private LinearLayout chatTypeFilterContainer;
     private TextView[] chatTypeFilterChips;
@@ -233,6 +235,10 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
                 } else if (id == 11) {
                     sharedMediaLayout.closeActionMode(true);
                     sharedMediaLayout.getSearchItem().openSearch(false);
+                } else if (id == 12) {
+                    if (sharedMediaLayout != null) {
+                        sharedMediaLayout.reloadCurrentTab();
+                    }
                 }
             }
         });
@@ -241,18 +247,20 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
 
             @Override
             protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-                FrameLayout.LayoutParams lp = (LayoutParams) sharedMediaLayout.getLayoutParams();
-                lp.topMargin = ActionBar.getCurrentActionBarHeight() + (actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0) + AndroidUtilities.dp(44);
-
-                lp = (LayoutParams) avatarContainer.getLayoutParams();
+                FrameLayout.LayoutParams lp = (LayoutParams) avatarContainer.getLayoutParams();
                 lp.topMargin = actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0;
                 lp.height = ActionBar.getCurrentActionBarHeight();
 
                 int textTop;
-                if (chatTypeFilterScrollView != null) {
-                    FrameLayout.LayoutParams filterLp = (LayoutParams) chatTypeFilterScrollView.getLayoutParams();
-                    filterLp.topMargin = ActionBar.getCurrentActionBarHeight() + (actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0);
+                int topMargin = ActionBar.getCurrentActionBarHeight() + (actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0);
+                if (filtersContainer != null) {
+                    FrameLayout.LayoutParams filterLp = (LayoutParams) filtersContainer.getLayoutParams();
+                    filterLp.topMargin = topMargin;
+                    filtersContainer.measure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
                 }
+                int filterHeight = filtersContainer != null ? filtersContainer.getMeasuredHeight() : 0;
+                FrameLayout.LayoutParams sharedMediaLp = (LayoutParams) sharedMediaLayout.getLayoutParams();
+                sharedMediaLp.topMargin = topMargin + AndroidUtilities.dp(44) + filterHeight;
                 for (int i = 0; i < 2; ++i) {
                     if (nameTextView[i] != null) {
                         textTop = (ActionBar.getCurrentActionBarHeight() / 2 - dp(22)) / 2 + dp(!AndroidUtilities.isTablet() && getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE ? 4 : 5);
@@ -292,12 +300,11 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
         this.fragmentView = fragmentView;
         fragmentView.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundGray));
 
-        if (type == TYPE_MEDIA) {
-            createChatTypeFilterView(context);
-            createDownloadStatusFilterView(context);
-        }
-
         ActionBarMenu menu2 = actionBar.createMenu();
+        if (type == TYPE_MEDIA) {
+            reloadItem = menu2.addItem(12, R.drawable.msg_retry);
+            reloadItem.setContentDescription(LocaleController.getString(R.string.Refresh));
+        }
         if (type == TYPE_STORIES || type == TYPE_ARCHIVED_CHANNEL_STORIES) {
             FrameLayout menu = new FrameLayout(context);
             actionBar.addView(menu, LayoutHelper.createFrame(56, 56, Gravity.RIGHT | Gravity.BOTTOM));
@@ -565,6 +572,8 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
             protected void onSelectedTabChanged() {
                 super.onSelectedTabChanged();
                 updateMediaCount();
+                updateDownloadFilterVisibility();
+                updateDownloadFilterSelection();
             }
 
             @Override
@@ -767,6 +776,13 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
         } else {
             fragmentView.addView(sharedMediaLayout);
         }
+
+        if (type == TYPE_MEDIA) {
+            createMediaFiltersContainer(context);
+            createChatTypeFilterView(context);
+            createDownloadStatusFilterView(context);
+        }
+
         fragmentView.addView(actionBar);
         fragmentView.addView(avatarContainer);
         fragmentView.blurBehindViews.add(sharedMediaLayout);
@@ -867,6 +883,8 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
 
         if (type == TYPE_MEDIA) {
             sharedMediaLayout.setFilesFilterState(downloadFilterType);
+            updateDownloadFilterVisibility();
+            updateDownloadFilterSelection();
         }
         if (type == TYPE_STORIES && initialTab == SharedMediaLayout.TAB_ARCHIVED_STORIES) {
             sharedMediaLayout.onTabProgress(9f);
@@ -905,8 +923,18 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
 
     private int lastTab;
 
-    private void createChatTypeFilterView(Context context) {
+    private void createMediaFiltersContainer(Context context) {
         if (fragmentView == null) {
+            return;
+        }
+        filtersContainer = new LinearLayout(context);
+        filtersContainer.setOrientation(LinearLayout.VERTICAL);
+        int topMargin = ActionBar.getCurrentActionBarHeight() + (actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0);
+        ((ViewGroup) fragmentView).addView(filtersContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP | Gravity.FILL_HORIZONTAL, 0, topMargin, 0, 0));
+    }
+
+    private void createChatTypeFilterView(Context context) {
+        if (filtersContainer == null) {
             return;
         }
         chatTypeFilterScrollView = new HorizontalScrollView(context);
@@ -947,7 +975,7 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
         }
 
         chatTypeFilterScrollView.addView(chatTypeFilterContainer);
-        ((ViewGroup) fragmentView).addView(chatTypeFilterScrollView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP | Gravity.FILL_HORIZONTAL, 0, 0, 0, 0));
+        filtersContainer.addView(chatTypeFilterScrollView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
         updateChatFilterSelection();
     }
 
@@ -1010,7 +1038,7 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
             downloadFilterChips[i] = chip;
         }
 
-        ((ViewGroup) fragmentView).addView(downloadFilterScrollView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP | Gravity.FILL_HORIZONTAL, 0, 0, 0, 0));
+        filtersContainer.addView(downloadFilterScrollView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
         downloadFilterScrollView.addView(downloadFilterContainer);
         updateDownloadFilterSelection();
     }
@@ -1018,6 +1046,9 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
     private void updateDownloadFilterSelection() {
         if (downloadFilterChips == null) {
             return;
+        }
+        if (sharedMediaLayout != null) {
+            downloadFilterType = sharedMediaLayout.getFilesFilterState();
         }
         for (int i = 0; i < downloadFilterChips.length; i++) {
             TextView chip = downloadFilterChips[i];
@@ -1027,6 +1058,17 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
             boolean selected = i == downloadFilterType;
             chip.setBackgroundResource(selected ? R.drawable.bg_file_manager_chip_selected : R.drawable.bg_file_manager_chip);
             chip.setTextColor(selected ? Color.WHITE : 0xff354B63);
+        }
+    }
+
+    private void updateDownloadFilterVisibility() {
+        if (downloadFilterScrollView == null || sharedMediaLayout == null) {
+            return;
+        }
+        boolean show = sharedMediaLayout.getClosestTab() != SharedMediaLayout.TAB_LINKS;
+        downloadFilterScrollView.setVisibility(show ? View.VISIBLE : View.GONE);
+        if (fragmentView != null) {
+            fragmentView.requestLayout();
         }
     }
 
