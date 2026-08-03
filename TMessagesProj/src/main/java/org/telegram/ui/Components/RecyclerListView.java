@@ -1270,18 +1270,8 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
                 if (currentChildView instanceof ViewGroup) {
                     float x = event.getX() - currentChildView.getLeft();
                     float y = event.getY() - currentChildView.getTop();
-                    ViewGroup viewGroup = (ViewGroup) currentChildView;
-                    final int count = viewGroup.getChildCount();
-                    for (int i = count - 1; i >= 0; i--) {
-                        final View child = viewGroup.getChildAt(i);
-                        if (x >= child.getLeft() && x <= child.getRight() && y >= child.getTop() && y <= child.getBottom()) {
-                            if (child.isClickable()) {
-                                // todo: recursion search ???
-
-                                currentChildView = null;
-                                break;
-                            }
-                        }
+                    if (isClickableChildAt((ViewGroup) currentChildView, x, y)) {
+                        currentChildView = null;
                     }
                 }
                 currentChildPosition = -1;
@@ -1415,6 +1405,33 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
 
     protected boolean allowSelectChildAtPosition(View child) {
         return true;
+    }
+
+    private boolean isClickableChildAt(ViewGroup viewGroup, float x, float y) {
+        final int count = viewGroup.getChildCount();
+        for (int i = count - 1; i >= 0; i--) {
+            final View child = viewGroup.getChildAt(i);
+            if (child.getVisibility() != VISIBLE) {
+                continue;
+            }
+            float translationX = child.getTranslationX();
+            float translationY = child.getTranslationY();
+            float childLeft = child.getLeft() + translationX;
+            float childTop = child.getTop() + translationY;
+            float childRight = child.getRight() + translationX;
+            float childBottom = child.getBottom() + translationY;
+            if (x >= childLeft && x <= childRight && y >= childTop && y <= childBottom) {
+                if (child.isClickable()) {
+                    return true;
+                }
+                if (child instanceof ViewGroup) {
+                    if (isClickableChildAt((ViewGroup) child, x - childLeft, y - childTop)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     private void removeSelection(View pressedChild, MotionEvent event) {
