@@ -8903,7 +8903,7 @@ public class MessageObject {
             for (int i = 0; i < quoteSpans.length; ++i) {
                 quoteSpans[i].adaptLineHeight = false;
             }
-            hasSingleQuote = quoteSpans.length == 1 && spanned.getSpanStart(quoteSpans[0]) == 0 && spanned.getSpanEnd(quoteSpans[0]) == spanned.length();
+            hasSingleQuote = quoteSpans.length == 1 && spanned.getSpanStart(quoteSpans[0]) == 0 && (spanned.getSpanEnd(quoteSpans[0]) >= spanned.length() - 1 || spanned.getSpanEnd(quoteSpans[0]) == spanned.length());
 
             CodeHighlighting.Span[] codeSpans = spanned.getSpans(0, spanned.length(), CodeHighlighting.Span.class);
             hasSingleCode = codeSpans.length == 1 && spanned.getSpanStart(codeSpans[0]) == 0 && spanned.getSpanEnd(codeSpans[0]) == spanned.length();
@@ -9105,12 +9105,14 @@ public class MessageObject {
                 blockMaxWidth -= dp(15);
             }
             if (blocksCount == 1) {
-                if (block.code && !block.quote && textLayout.getText() instanceof Spannable) {
+                if ((block.code && !block.quote && textLayout.getText() instanceof Spannable) || (block.quote && !hasSingleQuote)) {
                     SpannableString sb;
-                    if (!TextUtils.isEmpty(range.language)) {
+                    if (block.code && !TextUtils.isEmpty(range.language)) {
                         sb = CodeHighlighting.getHighlighted(blockText.toString(), range.language);
+                    } else if (blockText instanceof SpannableString) {
+                        sb = (SpannableString) blockText;
                     } else {
-                        sb = new SpannableString(blockText.toString());
+                        sb = new SpannableString(blockText);
                     }
                     block.originalWidth = textLayoutOriginalWidth = blockMaxWidth;
                     textLayout = makeStaticLayout(sb, layoutPaint, blockMaxWidth, 1f, totalAnimatedEmojiCount >= 4 ? -1 : 0, emojiOnlyCount > 0);
@@ -9410,7 +9412,7 @@ public class MessageObject {
                 for (int i = 0; i < quoteSpans.length; ++i) {
                     quoteSpans[i].adaptLineHeight = false;
                 }
-                hasSingleQuote = quoteSpans.length == 1 && spanned.getSpanStart(quoteSpans[0]) == 0 && spanned.getSpanEnd(quoteSpans[0]) == spanned.length();
+                hasSingleQuote = quoteSpans.length == 1 && spanned.getSpanStart(quoteSpans[0]) == 0 && (spanned.getSpanEnd(quoteSpans[0]) >= spanned.length() - 1 || spanned.getSpanEnd(quoteSpans[0]) == spanned.length());
 
                 CodeHighlighting.Span[] codeSpans = spanned.getSpans(0, spanned.length(), CodeHighlighting.Span.class);
                 hasSingleCode = codeSpans.length == 1 && spanned.getSpanStart(codeSpans[0]) == 0 && spanned.getSpanEnd(codeSpans[0]) == spanned.length();
@@ -9583,12 +9585,15 @@ public class MessageObject {
                     blockMaxWidth -= dp(15);
                 }
                 if (blocksCount == 1) {
-                    if (block.code && !block.quote && textLayout.getText() instanceof Spannable) {
+                    if ((block.code && !block.quote && textLayout.getText() instanceof Spannable) || (block.quote && !hasSingleQuote)) {
                         SpannableString sb;
-                        if (!TextUtils.isEmpty(range.language)) {
-                            sb = CodeHighlighting.getHighlighted(text.subSequence(range.start, range.end).toString(), range.language);
+                        CharSequence seq = text.subSequence(range.start, range.end);
+                        if (block.code && !TextUtils.isEmpty(range.language)) {
+                            sb = CodeHighlighting.getHighlighted(seq.toString(), range.language);
+                        } else if (seq instanceof SpannableString) {
+                            sb = (SpannableString) seq;
                         } else {
-                            sb = new SpannableString(text.subSequence(range.start, range.end));
+                            sb = new SpannableString(seq);
                         }
                         block.originalWidth = textLayoutOriginalWidth = blockMaxWidth;
                         textLayout = makeStaticLayout(sb, layoutPaint, blockMaxWidth, 1f, 0f, false);
