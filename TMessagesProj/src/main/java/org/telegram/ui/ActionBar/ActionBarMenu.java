@@ -126,13 +126,6 @@ public class ActionBarMenu extends LinearLayout {
         ActionBarMenuItem menuItem = new ActionBarMenuItem(getContext(), this, backgroundColor, isActionMode ? parentActionBar.itemsActionModeColor : parentActionBar.itemsColor, text != null, resourcesProvider);
         menuItem.setTag(id);
 
-        if (isCenteredTitle) {
-            menuItem.setAlpha(0f);
-            menuItem.setVisibility(GONE);
-            menuItem.setClickable(false);
-            menuItem.setEnabled(false);
-        }
-
         if (text != null) {
             menuItem.textView.setText(text);
             LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(width != 0 ? width : ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT);
