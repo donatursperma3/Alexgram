@@ -776,6 +776,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
     private ActionBarMenuItem gotoItem;
     private ActionBarMenuItem pinItem;
     private ActionBarMenuItem unpinItem;
+    private ActionBarMenuItem bookmarkItem;
     private int searchItemState;
     private Drawable pinnedHeaderShadowDrawable;
     private boolean ignoreSearchCollapse;
@@ -2430,7 +2431,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         selectRangeItem.setOnClickListener(v -> performSelectBetween());
 
         if (NaConfig.INSTANCE.getShowAddToBookmark().Bool()) {
-            ActionBarMenuItem bookmarkItem = new ActionBarMenuItem(context, null, getThemedColor(Theme.key_actionBarActionModeDefaultSelector), getThemedColor(Theme.key_actionBarActionModeDefaultIcon), false);
+            bookmarkItem = new ActionBarMenuItem(context, null, getThemedColor(Theme.key_actionBarActionModeDefaultSelector), getThemedColor(Theme.key_actionBarActionModeDefaultIcon), false);
             bookmarkItem.setIcon(R.drawable.msg_fave);
             bookmarkItem.setContentDescription(getString(R.string.AddBookmark));
             bookmarkItem.setDuplicateParentStateEnabled(false);
@@ -2629,34 +2630,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                         }
                         if (!isActionModeShowed) {
                             AndroidUtilities.hideKeyboard(profileActivity.getParentActivity().getCurrentFocus());
-                            deleteItem.setVisibility(cantDeleteMessagesCount == 0 ? View.VISIBLE : View.GONE);
-                            if (gotoItem != null) {
-                                gotoItem.setVisibility(getClosestTab() != TAB_STORIES && getClosestTab() != TAB_BOT_PREVIEWS ? View.VISIBLE : View.GONE);
-                            }
-                            if (pinItem != null) {
-                                pinItem.setVisibility(View.GONE);
-                            }
-                            if (unpinItem != null) {
-                                unpinItem.setVisibility(View.GONE);
-                            }
-                            if (forwardItem != null) {
-                                forwardItem.setVisibility(getClosestTab() != TAB_STORIES && getClosestTab() != TAB_BOT_PREVIEWS ? View.VISIBLE : View.GONE);
-                            }
-                            if (forwardNoQuoteItem != null) {
-                                forwardNoQuoteItem.setVisibility(getClosestTab() != TAB_STORIES && getClosestTab() != TAB_BOT_PREVIEWS ? View.VISIBLE : View.GONE);
-                            }
-                            if (copyLinkItem != null) {
-                                copyLinkItem.setVisibility(getClosestTab() != TAB_STORIES && getClosestTab() != TAB_BOT_PREVIEWS ? View.VISIBLE : View.GONE);
-                            }
-                            if (specialForwardItem != null) {
-                                specialForwardItem.setVisibility(getClosestTab() != TAB_STORIES && getClosestTab() != TAB_BOT_PREVIEWS && xyz.nextalone.nagram.NaConfig.INSTANCE.getSpecialForward().Bool() ? View.VISIBLE : View.GONE);
-                            }
-                            if (selectRangeItem != null) {
-                                int closestTab = getClosestTab();
-                                selectRangeItem.setVisibility(tw.nekomimi.nekogram.NekoConfig.enableSelectRangeInSharedMedia.Bool() &&
-                                        closestTab != TAB_STORIES && closestTab != TAB_BOT_PREVIEWS && closestTab != TAB_GIFTS && closestTab != TAB_COMMON_GROUPS && closestTab != TAB_GROUPUSERS && closestTab != TAB_FRIENDS_ACTIVITIES
-                                        ? View.VISIBLE : View.GONE);
-                            }
+                            updateActionModeButtonsVisibility();
                             selectedMessagesCountTextView.setNumber(selectedFiles[0].size() + selectedFiles[1].size(), false);
                             AnimatorSet animatorSet = new AnimatorSet();
                             ArrayList<Animator> animators = new ArrayList<>();
@@ -2691,34 +2665,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                             AndroidUtilities.hideKeyboard(profileActivity.getParentActivity().getCurrentFocus());
                             selectedFiles[0].clear();
                             selectedFiles[1].clear();
-                            deleteItem.setVisibility(cantDeleteMessagesCount == 0 ? View.VISIBLE : View.GONE);
-                            if (gotoItem != null) {
-                                gotoItem.setVisibility(getClosestTab() != TAB_STORIES && getClosestTab() != TAB_BOT_PREVIEWS ? View.VISIBLE : View.GONE);
-                            }
-                            if (pinItem != null) {
-                                pinItem.setVisibility(View.GONE);
-                            }
-                            if (unpinItem != null) {
-                                unpinItem.setVisibility(View.GONE);
-                            }
-                            if (forwardItem != null) {
-                                forwardItem.setVisibility(getClosestTab() != TAB_STORIES && getClosestTab() != TAB_BOT_PREVIEWS ? View.VISIBLE : View.GONE);
-                            }
-                            if (forwardNoQuoteItem != null) {
-                                forwardNoQuoteItem.setVisibility(getClosestTab() != TAB_STORIES && getClosestTab() != TAB_BOT_PREVIEWS ? View.VISIBLE : View.GONE);
-                            }
-                            if (copyLinkItem != null) {
-                                copyLinkItem.setVisibility(getClosestTab() != TAB_STORIES && getClosestTab() != TAB_BOT_PREVIEWS ? View.VISIBLE : View.GONE);
-                            }
-                            if (specialForwardItem != null) {
-                                specialForwardItem.setVisibility(getClosestTab() != TAB_STORIES && getClosestTab() != TAB_BOT_PREVIEWS && xyz.nextalone.nagram.NaConfig.INSTANCE.getSpecialForward().Bool() ? View.VISIBLE : View.GONE);
-                            }
-                            if (selectRangeItem != null) {
-                                int closestTab = getClosestTab();
-                                selectRangeItem.setVisibility(tw.nekomimi.nekogram.NekoConfig.enableSelectRangeInSharedMedia.Bool() &&
-                                        closestTab != TAB_STORIES && closestTab != TAB_BOT_PREVIEWS && closestTab != TAB_GIFTS && closestTab != TAB_COMMON_GROUPS && closestTab != TAB_GROUPUSERS && closestTab != TAB_FRIENDS_ACTIVITIES
-                                        ? View.VISIBLE : View.GONE);
-                            }
+                            updateActionModeButtonsVisibility();
                             AnimatorSet animatorSet = new AnimatorSet();
                             ArrayList<Animator> animators = new ArrayList<>();
                             for (int i = 0; i < actionModeViews.size(); i++) {
@@ -4132,6 +4079,35 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                 copyLinkItem.setBackground(Theme.createSelectorDrawable(getThemedColor(Theme.key_actionBarActionModeDefaultSelector), 5));
             }
         }
+    }
+
+    private void updateActionModeButtonsVisibility() {
+        deleteItem.setVisibility(cantDeleteMessagesCount == 0 ? View.VISIBLE : View.GONE);
+        int closestTab = getClosestTab();
+        boolean validTab = closestTab != TAB_STORIES && closestTab != TAB_BOT_PREVIEWS && closestTab != TAB_GIFTS && closestTab != TAB_COMMON_GROUPS && closestTab != TAB_GROUPUSERS && closestTab != TAB_FRIENDS_ACTIVITIES;
+        int count = selectedFiles[0].size() + selectedFiles[1].size();
+        if (gotoItem != null) {
+            gotoItem.setVisibility(validTab && count == 1 ? View.VISIBLE : View.GONE);
+        }
+        if (forwardItem != null) {
+            forwardItem.setVisibility(validTab ? View.VISIBLE : View.GONE);
+        }
+        if (forwardNoQuoteItem != null) {
+            forwardNoQuoteItem.setVisibility(validTab ? View.VISIBLE : View.GONE);
+        }
+        if (copyLinkItem != null) {
+            copyLinkItem.setVisibility(validTab ? View.VISIBLE : View.GONE);
+        }
+        if (specialForwardItem != null) {
+            specialForwardItem.setVisibility(validTab && xyz.nextalone.nagram.NaConfig.INSTANCE.getSpecialForward().Bool() ? View.VISIBLE : View.GONE);
+        }
+        if (bookmarkItem != null) {
+            bookmarkItem.setVisibility(validTab && xyz.nextalone.nagram.NaConfig.INSTANCE.getShowAddToBookmark().Bool() ? View.VISIBLE : View.GONE);
+        }
+        if (selectRangeItem != null) {
+            selectRangeItem.setVisibility(tw.nekomimi.nekogram.NekoConfig.enableSelectRangeInSharedMedia.Bool() && validTab ? View.VISIBLE : View.GONE);
+        }
+        updateStoriesPinButton();
     }
     private ArrayList<MessageObject> getSelectedMessagesForActionMode() {
         ArrayList<MessageObject> result = new ArrayList<>();
@@ -6546,23 +6522,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         }
 
         selectedMessagesCountTextView.setNumber(selectedFiles[0].size() + selectedFiles[1].size(), true);
-        deleteItem.setVisibility(cantDeleteMessagesCount == 0 ? View.VISIBLE : View.GONE);
-        if (gotoItem != null) {
-            gotoItem.setVisibility(getClosestTab() != TAB_STORIES && getClosestTab() != TAB_BOT_PREVIEWS && getClosestTab() != TAB_GIFTS && selectedFiles[0].size() == 1 ? View.VISIBLE : View.GONE);
-        }
-        if (forwardItem != null) {
-            forwardItem.setVisibility(getClosestTab() != TAB_STORIES && getClosestTab() != TAB_BOT_PREVIEWS && getClosestTab() != TAB_GIFTS ? View.VISIBLE : View.GONE);
-        }
-        if (forwardNoQuoteItem != null) {
-            forwardNoQuoteItem.setVisibility(getClosestTab() != TAB_STORIES && getClosestTab() != TAB_BOT_PREVIEWS && getClosestTab() != TAB_GIFTS ? View.VISIBLE : View.GONE);
-        }
-        if (copyLinkItem != null) {
-            copyLinkItem.setVisibility(getClosestTab() != TAB_STORIES && getClosestTab() != TAB_BOT_PREVIEWS && getClosestTab() != TAB_GIFTS ? View.VISIBLE : View.GONE);
-        }
-        if (specialForwardItem != null) {
-            specialForwardItem.setVisibility(getClosestTab() != TAB_STORIES && getClosestTab() != TAB_BOT_PREVIEWS && getClosestTab() != TAB_GIFTS && xyz.nextalone.nagram.NaConfig.INSTANCE.getSpecialForward().Bool() ? View.VISIBLE : View.GONE);
-        }
-        updateStoriesPinButton();
+        updateActionModeButtonsVisibility();
 
         for (int i = 0; i < mediaPages.length; i++) {
             int count = mediaPages[i].listView.getChildCount();
@@ -8290,22 +8250,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         if (!item.canDeleteMessage(false, null)) {
             cantDeleteMessagesCount++;
         }
-        deleteItem.setVisibility(cantDeleteMessagesCount == 0 ? View.VISIBLE : View.GONE);
-        if (gotoItem != null) {
-            gotoItem.setVisibility(getClosestTab() != TAB_STORIES && getClosestTab() != TAB_BOT_PREVIEWS && getClosestTab() != TAB_GIFTS ? View.VISIBLE : View.GONE);
-        }
-        if (forwardItem != null) {
-            forwardItem.setVisibility(getClosestTab() != TAB_STORIES && getClosestTab() != TAB_BOT_PREVIEWS && getClosestTab() != TAB_GIFTS ? View.VISIBLE : View.GONE);
-        }
-        if (forwardNoQuoteItem != null) {
-            forwardNoQuoteItem.setVisibility(getClosestTab() != TAB_STORIES && getClosestTab() != TAB_BOT_PREVIEWS && getClosestTab() != TAB_GIFTS ? View.VISIBLE : View.GONE);
-        }
-        if (selectRangeItem != null) {
-            int closestTab = getClosestTab();
-            selectRangeItem.setVisibility(tw.nekomimi.nekogram.NekoConfig.enableSelectRangeInSharedMedia.Bool() &&
-                    closestTab != TAB_STORIES && closestTab != TAB_BOT_PREVIEWS && closestTab != TAB_GIFTS && closestTab != TAB_COMMON_GROUPS && closestTab != TAB_GROUPUSERS && closestTab != TAB_FRIENDS_ACTIVITIES
-                    ? View.VISIBLE : View.GONE);
-        }
+        updateActionModeButtonsVisibility();
         selectedMessagesCountTextView.setNumber(1, false);
         AnimatorSet animatorSet = new AnimatorSet();
         ArrayList<Animator> animators = new ArrayList<>();
@@ -8370,23 +8315,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                 showActionMode(false);
             } else {
                 selectedMessagesCountTextView.setNumber(selectedFiles[0].size() + selectedFiles[1].size(), true);
-                deleteItem.setVisibility(cantDeleteMessagesCount == 0 ? View.VISIBLE : View.GONE);
-                if (gotoItem != null) {
-                    gotoItem.setVisibility(getClosestTab() != TAB_STORIES && getClosestTab() != TAB_BOT_PREVIEWS && getClosestTab() != TAB_GIFTS && selectedFiles[0].size() == 1 ? View.VISIBLE : View.GONE);
-                }
-                if (forwardItem != null) {
-                    forwardItem.setVisibility(getClosestTab() != TAB_STORIES && getClosestTab() != TAB_BOT_PREVIEWS && getClosestTab() != TAB_GIFTS ? View.VISIBLE : View.GONE);
-                }
-                if (forwardNoQuoteItem != null) {
-                    forwardNoQuoteItem.setVisibility(getClosestTab() != TAB_STORIES && getClosestTab() != TAB_BOT_PREVIEWS && getClosestTab() != TAB_GIFTS ? View.VISIBLE : View.GONE);
-                }
-                if (selectRangeItem != null) {
-                    int closestTab = getClosestTab();
-                    selectRangeItem.setVisibility(tw.nekomimi.nekogram.NekoConfig.enableSelectRangeInSharedMedia.Bool() &&
-                            closestTab != TAB_STORIES && closestTab != TAB_BOT_PREVIEWS && closestTab != TAB_GIFTS && closestTab != TAB_COMMON_GROUPS && closestTab != TAB_GROUPUSERS && closestTab != TAB_FRIENDS_ACTIVITIES
-                            ? View.VISIBLE : View.GONE);
-                }
-                updateStoriesPinButton();
+                updateActionModeButtonsVisibility();
             }
             scrolling = false;
             if (view instanceof SharedDocumentCell) {
@@ -12178,6 +12107,18 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         if (forwardItem != null) {
             arrayList.add(new ThemeDescription(forwardItem.getIconView(), ThemeDescription.FLAG_IMAGECOLOR, null, null, null, null, Theme.key_actionBarActionModeDefaultIcon));
             arrayList.add(new ThemeDescription(forwardItem, ThemeDescription.FLAG_BACKGROUNDFILTER, null, null, null, null, Theme.key_actionBarActionModeDefaultSelector));
+        }
+        if (specialForwardItem != null) {
+            arrayList.add(new ThemeDescription(specialForwardItem.getIconView(), ThemeDescription.FLAG_IMAGECOLOR, null, null, null, null, Theme.key_actionBarActionModeDefaultIcon));
+            arrayList.add(new ThemeDescription(specialForwardItem, ThemeDescription.FLAG_BACKGROUNDFILTER, null, null, null, null, Theme.key_actionBarActionModeDefaultSelector));
+        }
+        if (copyLinkItem != null) {
+            arrayList.add(new ThemeDescription(copyLinkItem.getIconView(), ThemeDescription.FLAG_IMAGECOLOR, null, null, null, null, Theme.key_actionBarActionModeDefaultIcon));
+            arrayList.add(new ThemeDescription(copyLinkItem, ThemeDescription.FLAG_BACKGROUNDFILTER, null, null, null, null, Theme.key_actionBarActionModeDefaultSelector));
+        }
+        if (bookmarkItem != null) {
+            arrayList.add(new ThemeDescription(bookmarkItem.getIconView(), ThemeDescription.FLAG_IMAGECOLOR, null, null, null, null, Theme.key_actionBarActionModeDefaultIcon));
+            arrayList.add(new ThemeDescription(bookmarkItem, ThemeDescription.FLAG_BACKGROUNDFILTER, null, null, null, null, Theme.key_actionBarActionModeDefaultSelector));
         }
         arrayList.add(new ThemeDescription(closeButton, ThemeDescription.FLAG_IMAGECOLOR, null, null, new Drawable[]{backDrawable}, null, Theme.key_actionBarActionModeDefaultIcon));
         arrayList.add(new ThemeDescription(closeButton, ThemeDescription.FLAG_BACKGROUNDFILTER, null, null, null, null, Theme.key_actionBarActionModeDefaultSelector));
