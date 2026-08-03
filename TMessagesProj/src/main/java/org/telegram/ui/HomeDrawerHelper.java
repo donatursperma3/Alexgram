@@ -814,7 +814,7 @@ public class HomeDrawerHelper {
         } else if (id == DrawerLayoutAdapter.nkbtnFileManager) {
             try {
                 Bundle args = new Bundle();
-                args.putLong("dialog_id", UserConfig.getInstance(activity.currentAccount).getClientUserId());
+                args.putLong("dialog_id", 0);
                 args.putInt("type", MediaActivity.TYPE_MEDIA);
                 args.putInt("start_from", SharedMediaLayout.TAB_PHOTOVIDEO);
                 activity.presentFragment(new MediaActivity(args, null));

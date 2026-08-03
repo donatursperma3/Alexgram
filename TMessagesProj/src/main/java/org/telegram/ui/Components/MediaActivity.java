@@ -854,7 +854,7 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
             sharedMediaLayout.animateSearchToOptions(!sharedMediaLayout.isSearchItemVisible(), false);
             sharedMediaLayout.getSearchOptionsItem().setVisibility(View.VISIBLE);
         }
-        if (sharedMediaLayout.isCalendarItemVisible() && type != TYPE_STORIES) {
+        if (sharedMediaLayout.isOptionsItemVisible() && type != TYPE_STORIES) {
             sharedMediaLayout.photoVideoOptionsItem.setVisibility(View.VISIBLE);
         } else {
             sharedMediaLayout.photoVideoOptionsItem.setVisibility(View.INVISIBLE);

@@ -364,7 +364,7 @@ public class FileManagerActivity extends AppCompatActivity {
 
         try {
             Bundle args = new Bundle();
-            args.putLong("dialog_id", UserConfig.getInstance(UserConfig.selectedAccount).getClientUserId());
+            args.putLong("dialog_id", 0);
             args.putInt("type", MediaActivity.TYPE_MEDIA);
             args.putInt("start_from", getInitialTab());
             args.putInt("chat_filter_type", selectedChatType);
