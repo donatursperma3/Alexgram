@@ -789,9 +789,9 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
             createDownloadStatusFilterView(context);
             // Adjust SharedMediaLayout topInset to account for filter container height
             // This reduces the excessive gap between download filter and media filter tabs
-            // Set to 110dp to position media tabs closer to the download filter
+            // Set to 70dp to position media tabs closer to the download filter
             if (dialogId == 0) {
-                sharedMediaLayout.setAdditionalTopInset(dp(110));
+                sharedMediaLayout.setAdditionalTopInset(dp(70));
             }
         }
 
@@ -894,18 +894,19 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
         updateColors();
 
         if (type == TYPE_MEDIA) {
+            // Update visual selection first to ensure consistency, then apply filter state
+            updateDownloadFilterSelection();
             sharedMediaLayout.setFilesFilterState(downloadFilterType);
             // Only apply chat filter when in file manager context (dialog_id == 0)
             if (dialogId == 0) {
-                sharedMediaLayout.setChatFilterState(chatFilterType);
                 updateChatFilterSelection();
+                sharedMediaLayout.setChatFilterState(chatFilterType);
                 updateChatFilterVisibility();
             } else {
                 // Reset chat filter for normal shared media views
                 sharedMediaLayout.resetChatFilterState();
             }
             updateDownloadFilterVisibility();
-            updateDownloadFilterSelection();
         }
         if (type == TYPE_STORIES && initialTab == SharedMediaLayout.TAB_ARCHIVED_STORIES) {
             sharedMediaLayout.onTabProgress(9f);
@@ -993,7 +994,15 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
             chip.setAllCaps(false);
             chip.setOnClickListener(v -> {
                 chatFilterType = index;
-                updateChatFilterSelection();
+                // Update visual selection immediately for responsiveness
+                for (int j = 0; j < chatTypeFilterChips.length; j++) {
+                    TextView c = chatTypeFilterChips[j];
+                    if (c != null) {
+                        boolean selected = j == index;
+                        c.setBackgroundResource(selected ? R.drawable.bg_file_manager_chip_selected : R.drawable.bg_file_manager_chip);
+                        c.setTextColor(selected ? Color.WHITE : 0xff354B63);
+                    }
+                }
                 if (sharedMediaLayout != null) {
                     sharedMediaLayout.setChatFilterState(index);
                 }
@@ -1016,6 +1025,7 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
         if (dialogId != 0) {
             return;
         }
+        // Sync with SharedMediaLayout state to ensure consistency
         if (sharedMediaLayout != null) {
             chatFilterType = sharedMediaLayout.getChatFilterState();
         }
@@ -1065,7 +1075,15 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
             chip.setAllCaps(false);
             chip.setOnClickListener(v -> {
                 downloadFilterType = index;
-                updateDownloadFilterSelection();
+                // Update visual selection immediately for responsiveness
+                for (int j = 0; j < downloadFilterChips.length; j++) {
+                    TextView c = downloadFilterChips[j];
+                    if (c != null) {
+                        boolean selected = j == index;
+                        c.setBackgroundResource(selected ? R.drawable.bg_file_manager_chip_selected : R.drawable.bg_file_manager_chip);
+                        c.setTextColor(selected ? Color.WHITE : 0xff354B63);
+                    }
+                }
                 if (sharedMediaLayout != null) {
                     sharedMediaLayout.setFilesFilterState(index);
                 }

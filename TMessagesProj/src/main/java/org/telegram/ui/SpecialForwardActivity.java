@@ -22,7 +22,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.collection.LongSparseArray;
-import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -2668,6 +2667,8 @@ public class SpecialForwardActivity extends ChatActivity {
     }
 
     private LinearLayout sideNavLayout;
+    private int keyboardHeight = 0;
+    private int originalViewHeight = 0;
 
     private void setupSideNavButtons() {
         if (getParentActivity() == null) {
@@ -2723,11 +2724,32 @@ public class SpecialForwardActivity extends ChatActivity {
             sideNavLayout.addView(btnGoToLast, lpLast);
 
             // Position buttons with proper bottom margin to avoid keyboard overlap
-            // Use inherited WindowInsetsStateHolder from ChatActivity to track keyboard height changes
+            // Use ViewTreeObserver to detect keyboard height changes without accessing private APIs
             int baseMargin = AndroidUtilities.dp(64);
-            int keyboardOffset = windowInsetsStateHolder != null ? windowInsetsStateHolder.getInsets(WindowInsetsCompat.Type.ime()).bottom : 0;
-            FrameLayout.LayoutParams containerLp = LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.RIGHT | Gravity.BOTTOM, 0, 0, 12, baseMargin + keyboardOffset);
+            FrameLayout.LayoutParams containerLp = LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.RIGHT | Gravity.BOTTOM, 0, 0, 12, baseMargin + keyboardHeight);
             ((ViewGroup) parentView).addView(sideNavLayout, containerLp);
+
+            // Setup keyboard detection using ViewTreeObserver
+            if (fragmentView != null) {
+                originalViewHeight = fragmentView.getHeight();
+                fragmentView.getViewTreeObserver().addOnGlobalLayoutListener(new android.view.ViewTreeObserver.OnGlobalLayoutListener() {
+                    @Override
+                    public void onGlobalLayout() {
+                        int currentHeight = fragmentView.getHeight();
+                        int heightDiff = originalViewHeight - currentHeight;
+                        
+                        // If height decreased significantly (more than 100dp), keyboard is likely visible
+                        // This is a common heuristic for keyboard detection
+                        if (heightDiff > AndroidUtilities.dp(100)) {
+                            keyboardHeight = heightDiff;
+                        } else {
+                            keyboardHeight = 0;
+                        }
+                        
+                        updateSideNavButtonsPosition();
+                    }
+                });
+            }
         } catch (Throwable e) {
             FileLog.e(e);
         }
@@ -2741,16 +2763,22 @@ public class SpecialForwardActivity extends ChatActivity {
         if (lp != null) {
             // Base margin plus keyboard height to avoid overlap
             int baseMargin = AndroidUtilities.dp(64);
-            int keyboardOffset = windowInsetsStateHolder != null ? windowInsetsStateHolder.getInsets(WindowInsetsCompat.Type.ime()).bottom : 0;
-            lp.bottomMargin = baseMargin + keyboardOffset;
+            lp.bottomMargin = baseMargin + keyboardHeight;
             sideNavLayout.setLayoutParams(lp);
         }
     }
 
-    @Override
-    protected void checkInsets() {
-        super.checkInsets();
-        updateSideNavButtonsPosition();
+    private void updateSideNavButtonsPosition() {
+        if (sideNavLayout == null || sideNavLayout.getParent() == null) {
+            return;
+        }
+        ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) sideNavLayout.getLayoutParams();
+        if (lp != null) {
+            // Base margin plus keyboard height to avoid overlap
+            int baseMargin = AndroidUtilities.dp(64);
+            lp.bottomMargin = baseMargin + keyboardHeight;
+            sideNavLayout.setLayoutParams(lp);
+        }
     }
 
     private void scrollToFirstMessage() {
