@@ -181,6 +181,7 @@ android {
         buildConfigField 'String', 'APP_HASH', '"' + appHash + '"'
         buildConfigField 'long', 'BUILD_TIMESTAMP', buildTimestamp + 'L'
         buildConfigField 'boolean', 'DEBUG_PRIVATE_VERSION', 'false'
+        buildConfigField 'String', 'COMMIT_ID', '"' + (commitId ?: 'unknown') + '"'
 
         externalNativeBuild {
             cmake {

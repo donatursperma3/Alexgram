@@ -22,6 +22,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.collection.LongSparseArray;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -2721,11 +2722,35 @@ public class SpecialForwardActivity extends ChatActivity {
             sideNavLayout.addView(btnGoToFirst, lpFirst);
             sideNavLayout.addView(btnGoToLast, lpLast);
 
-            FrameLayout.LayoutParams containerLp = LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.RIGHT | Gravity.BOTTOM, 0, 0, 12, 64);
+            // Position buttons with proper bottom margin to avoid keyboard overlap
+            // Use inherited WindowInsetsStateHolder from ChatActivity to track keyboard height changes
+            int baseMargin = AndroidUtilities.dp(64);
+            int keyboardOffset = windowInsetsStateHolder != null ? windowInsetsStateHolder.getInsets(WindowInsetsCompat.Type.ime()).bottom : 0;
+            FrameLayout.LayoutParams containerLp = LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.RIGHT | Gravity.BOTTOM, 0, 0, 12, baseMargin + keyboardOffset);
             ((ViewGroup) parentView).addView(sideNavLayout, containerLp);
         } catch (Throwable e) {
             FileLog.e(e);
         }
+    }
+
+    private void updateSideNavButtonsPosition() {
+        if (sideNavLayout == null || sideNavLayout.getParent() == null) {
+            return;
+        }
+        ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) sideNavLayout.getLayoutParams();
+        if (lp != null) {
+            // Base margin plus keyboard height to avoid overlap
+            int baseMargin = AndroidUtilities.dp(64);
+            int keyboardOffset = windowInsetsStateHolder != null ? windowInsetsStateHolder.getInsets(WindowInsetsCompat.Type.ime()).bottom : 0;
+            lp.bottomMargin = baseMargin + keyboardOffset;
+            sideNavLayout.setLayoutParams(lp);
+        }
+    }
+
+    @Override
+    protected void checkInsets() {
+        super.checkInsets();
+        updateSideNavButtonsPosition();
     }
 
     private void scrollToFirstMessage() {
