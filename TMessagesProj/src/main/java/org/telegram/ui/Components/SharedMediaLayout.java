@@ -2458,7 +2458,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
 //        actionModeLayout.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
         actionModeLayout.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundGray));
         actionModeLayout.setAlpha(0.0f);
-        actionModeLayout.setClickable(true);
+        actionModeLayout.setClickable(false);
         actionModeLayout.setVisibility(INVISIBLE);
 
         closeButton = new ImageView(context);
@@ -2488,6 +2488,8 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         actionModeLayout.addView(actionModeButtonsScrollView, LayoutHelper.createLinear(0, LayoutHelper.MATCH_PARENT, 1.0f, 0, 0, 0, 0));
         actionModeButtonsScrollView.setVisibility(View.VISIBLE);
         actionModeButtonsLayout.setVisibility(View.VISIBLE);
+        // Ensure the scroll view has minimum width to be clickable
+        actionModeButtonsScrollView.setMinimumWidth(AndroidUtilities.dp(200));
 
         if (!DialogObject.isEncryptedDialog(dialog_id)) {
             if (!isStoriesView()) {
@@ -2496,6 +2498,8 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                 forwardNoQuoteItem.setContentDescription(LocaleController.getString("NoQuoteForward", R.string.NoQuoteForward));
                 forwardNoQuoteItem.setDuplicateParentStateEnabled(false);
                 forwardNoQuoteItem.setVisibility(View.VISIBLE);
+                forwardNoQuoteItem.setMinimumWidth(dp(54));
+                forwardNoQuoteItem.setMinimumHeight(dp(48));
                 actionModeButtonsLayout.addView(forwardNoQuoteItem, new LinearLayout.LayoutParams(dp(54), ViewGroup.LayoutParams.MATCH_PARENT));
                 actionModeViews.add(forwardNoQuoteItem);
                 forwardNoQuoteItem.setOnClickListener(v -> onActionBarItemClick(v, forward_noquote));
@@ -4092,6 +4096,8 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
             searchTagsList.setShown(0f);
             addView(searchTagsList, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 38, Gravity.LEFT | Gravity.TOP, 0, 4 + getEffectiveTopInset(), 0, 0));
             addView(actionModeLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 48, Gravity.LEFT | Gravity.TOP, 0, getEffectiveTopInset(), 0, 0));
+            // Ensure actionModeLayout is brought to front so buttons are clickable
+            actionModeLayout.bringToFront();
         }
 
         updateTabs(false);
@@ -4249,6 +4255,11 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         updateStoriesPinButton();
         // Ensure the scroll view and layout are visible when action mode is shown
         if (isActionModeShowed) {
+            actionModeButtonsScrollView.setVisibility(View.VISIBLE);
+            actionModeButtonsLayout.setVisibility(View.VISIBLE);
+        }
+        // Also ensure the scroll view is visible if we have valid items
+        if (validTab && (forwardItem != null || forwardNoQuoteItem != null || copyLinkItem != null)) {
             actionModeButtonsScrollView.setVisibility(View.VISIBLE);
             actionModeButtonsLayout.setVisibility(View.VISIBLE);
         }

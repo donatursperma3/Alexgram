@@ -162,7 +162,7 @@ public class BookmarkManagerActivity extends BaseFragment {
         }
         // Tab shift value controls how much the filter tabs are moved upward from the default position
         // Increased from 6dp to 36dp to reduce excessive spacing between header and filter tabs
-        final int tabShift = dp(54);
+        final int tabShift = dp(63);
         // Calculate the top content offset by subtracting the tab shift from the action bar height
         // This positions the tabs container closer to the header
         final int topContentOffset = Math.max(0, getTopContentOffset() - tabShift);
