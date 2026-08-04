@@ -2768,19 +2768,6 @@ public class SpecialForwardActivity extends ChatActivity {
         }
     }
 
-    private void updateSideNavButtonsPosition() {
-        if (sideNavLayout == null || sideNavLayout.getParent() == null) {
-            return;
-        }
-        ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) sideNavLayout.getLayoutParams();
-        if (lp != null) {
-            // Base margin plus keyboard height to avoid overlap
-            int baseMargin = AndroidUtilities.dp(64);
-            lp.bottomMargin = baseMargin + keyboardHeight;
-            sideNavLayout.setLayoutParams(lp);
-        }
-    }
-
     private void scrollToFirstMessage() {
         try {
             int count = chatAdapter != null ? chatAdapter.getItemCount() : (messages != null ? messages.size() : 0);
