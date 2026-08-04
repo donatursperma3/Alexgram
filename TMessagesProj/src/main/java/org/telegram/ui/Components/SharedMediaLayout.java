@@ -238,6 +238,14 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
 
     private int filesFilterState = FILES_FILTER_ALL;
 
+    public static final int CHAT_FILTER_ALL = 0;
+    public static final int CHAT_FILTER_USERS = 1;
+    public static final int CHAT_FILTER_GROUPS = 2;
+    public static final int CHAT_FILTER_CHANNELS = 3;
+    public static final int CHAT_FILTER_BOTS = 4;
+
+    private int chatFilterState = CHAT_FILTER_ALL;
+
     public static final int VIEW_TYPE_MEDIA_ACTIVITY = 0;
     public static final int VIEW_TYPE_PROFILE_ACTIVITY = 1;
 
@@ -265,9 +273,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         filesFilterState = state;
         try {
             applyFilesFilter();
-            if (documentsAdapter != null) {
-                documentsAdapter.notifyDataSetChanged();
-            }
+            notifyDataSetChangedForAllAdapters();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -275,6 +281,33 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
 
     public int getFilesFilterState() {
         return filesFilterState;
+    }
+
+    public void setChatFilterState(int state) {
+        if (state < CHAT_FILTER_ALL || state > CHAT_FILTER_BOTS) {
+            state = CHAT_FILTER_ALL;
+        }
+        chatFilterState = state;
+        try {
+            applyChatFilter();
+            notifyDataSetChangedForAllAdapters();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void resetChatFilterState() {
+        chatFilterState = CHAT_FILTER_ALL;
+        try {
+            applyChatFilter();
+            notifyDataSetChangedForAllAdapters();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public int getChatFilterState() {
+        return chatFilterState;
     }
 
     private void applyFilesFilter() {
@@ -304,6 +337,86 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
             }
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    private void applyChatFilter() {
+        try {
+            if (chatFilterState == CHAT_FILTER_ALL) {
+                for (int i = 0; i < sharedMediaData.length; i++) {
+                    SharedMediaData data = sharedMediaData[i];
+                    if (data != null) {
+                        data.setListFrozen(false);
+                    }
+                }
+            } else {
+                for (int i = 0; i < sharedMediaData.length; i++) {
+                    SharedMediaData data = sharedMediaData[i];
+                    if (data == null) continue;
+                    
+                    ArrayList<MessageObject> filtered = new ArrayList<>();
+                    for (MessageObject mo : data.messages) {
+                        try {
+                            if (mo == null || mo.getDialogId() == 0) continue;
+                            
+                            long dialogId = mo.getDialogId();
+                            boolean matchesFilter = false;
+                            
+                            switch (chatFilterState) {
+                                case CHAT_FILTER_USERS:
+                                    matchesFilter = DialogObject.isUserDialog(dialogId);
+                                    break;
+                                case CHAT_FILTER_GROUPS:
+                                    matchesFilter = DialogObject.isChatDialog(dialogId) && !DialogObject.isChannelDialog(dialogId);
+                                    break;
+                                case CHAT_FILTER_CHANNELS:
+                                    matchesFilter = DialogObject.isChannelDialog(dialogId);
+                                    break;
+                                case CHAT_FILTER_BOTS:
+                                    if (profileActivity != null && profileActivity.getMessagesController() != null) {
+                                        TLRPC.User user = profileActivity.getMessagesController().getUser(dialogId);
+                                        matchesFilter = user != null && user.bot;
+                                    }
+                                    break;
+                            }
+                            
+                            if (matchesFilter) {
+                                filtered.add(mo);
+                            }
+                        } catch (Exception ignore) {
+                        }
+                    }
+                    
+                    data.setListFrozen(true);
+                    data.frozenMessages.clear();
+                    data.frozenMessages.addAll(filtered);
+                    data.frozenStartOffset = 0;
+                    data.frozenEndLoadingStubs = 0;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void notifyDataSetChangedForAllAdapters() {
+        if (photoVideoAdapter != null) {
+            photoVideoAdapter.notifyDataSetChanged();
+        }
+        if (documentsAdapter != null) {
+            documentsAdapter.notifyDataSetChanged();
+        }
+        if (voiceAdapter != null) {
+            voiceAdapter.notifyDataSetChanged();
+        }
+        if (audioAdapter != null) {
+            audioAdapter.notifyDataSetChanged();
+        }
+        if (linksAdapter != null) {
+            linksAdapter.notifyDataSetChanged();
+        }
+        if (gifAdapter != null) {
+            gifAdapter.notifyDataSetChanged();
         }
     }
 
@@ -5204,6 +5317,11 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
             sharedMediaData[selectedType].loading = true;
         }
         profileActivity.getMediaDataController().loadMedia(dialog_id, 50, 0, 0, type, topicId, 1, profileActivity.getClassGuid(), sharedMediaData[selectedType].requestIndex, null, null);
+        
+        // Reapply filters after reload
+        applyFilesFilter();
+        applyChatFilter();
+        notifyDataSetChangedForAllAdapters();
     }
 
     public ActionBarMenuItem getSearchItem() {

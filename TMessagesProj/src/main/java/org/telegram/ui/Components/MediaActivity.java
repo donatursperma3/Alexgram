@@ -574,6 +574,9 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
                 updateMediaCount();
                 updateDownloadFilterVisibility();
                 updateDownloadFilterSelection();
+                if (dialogId == 0) {
+                    updateChatFilterVisibility();
+                }
             }
 
             @Override
@@ -779,7 +782,10 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
 
         if (type == TYPE_MEDIA) {
             createMediaFiltersContainer(context);
-            createChatTypeFilterView(context);
+            // Only show chat filter when opened from FileManagerActivity (dialog_id == 0)
+            if (dialogId == 0) {
+                createChatTypeFilterView(context);
+            }
             createDownloadStatusFilterView(context);
         }
 
@@ -883,6 +889,15 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
 
         if (type == TYPE_MEDIA) {
             sharedMediaLayout.setFilesFilterState(downloadFilterType);
+            // Only apply chat filter when in file manager context (dialog_id == 0)
+            if (dialogId == 0) {
+                sharedMediaLayout.setChatFilterState(chatFilterType);
+                updateChatFilterSelection();
+                updateChatFilterVisibility();
+            } else {
+                // Reset chat filter for normal shared media views
+                sharedMediaLayout.resetChatFilterState();
+            }
             updateDownloadFilterVisibility();
             updateDownloadFilterSelection();
         }
@@ -937,6 +952,10 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
         if (filtersContainer == null) {
             return;
         }
+        // Only create chat filter view when in file manager context (dialog_id == 0)
+        if (dialogId != 0) {
+            return;
+        }
         chatTypeFilterScrollView = new HorizontalScrollView(context);
         chatTypeFilterScrollView.setOverScrollMode(View.OVER_SCROLL_NEVER);
         chatTypeFilterScrollView.setHorizontalScrollBarEnabled(false);
@@ -969,6 +988,9 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
             chip.setOnClickListener(v -> {
                 chatFilterType = index;
                 updateChatFilterSelection();
+                if (sharedMediaLayout != null) {
+                    sharedMediaLayout.setChatFilterState(index);
+                }
             });
             chatTypeFilterContainer.addView(chip);
             chatTypeFilterChips[i] = chip;
@@ -977,11 +999,19 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
         chatTypeFilterScrollView.addView(chatTypeFilterContainer);
         filtersContainer.addView(chatTypeFilterScrollView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
         updateChatFilterSelection();
+        updateChatFilterVisibility();
     }
 
     private void updateChatFilterSelection() {
         if (chatTypeFilterChips == null) {
             return;
+        }
+        // Only update chat filter selection when in file manager context (dialog_id == 0)
+        if (dialogId != 0) {
+            return;
+        }
+        if (sharedMediaLayout != null) {
+            chatFilterType = sharedMediaLayout.getChatFilterState();
         }
         for (int i = 0; i < chatTypeFilterChips.length; i++) {
             TextView chip = chatTypeFilterChips[i];
@@ -1067,6 +1097,18 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
         }
         boolean show = sharedMediaLayout.getClosestTab() != SharedMediaLayout.TAB_LINKS;
         downloadFilterScrollView.setVisibility(show ? View.VISIBLE : View.GONE);
+        if (fragmentView != null) {
+            fragmentView.requestLayout();
+        }
+    }
+
+    private void updateChatFilterVisibility() {
+        if (chatTypeFilterScrollView == null) {
+            return;
+        }
+        // Only show chat filter in file manager context (dialog_id == 0)
+        boolean show = dialogId == 0;
+        chatTypeFilterScrollView.setVisibility(show ? View.VISIBLE : View.GONE);
         if (fragmentView != null) {
             fragmentView.requestLayout();
         }
