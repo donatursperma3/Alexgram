@@ -4644,10 +4644,7 @@ public class ChatActivity extends BaseFragment implements
 			@Override
 			protected void openSearch() {
 				openSearchWithText(isSupportedTags() ? "" : null);
-			}
-
-
-
+			}		
 			@Override
 			protected boolean isCentered() {
 				return isTitleCentered();
@@ -8136,10 +8133,6 @@ public class ChatActivity extends BaseFragment implements
 				fragmentContextView.setSupportsCalls(false);
 			}
 		}
-
-
-
-
 		messagesSearchListContainer = new FrameLayout(context);
 
 		BlurredBackgroundDrawable searchContainerDrawable = glassBackgroundDrawableFactoryFrosted.create(messagesSearchListContainer, blurredBackgroundColorProviderWhite);
@@ -29475,10 +29468,7 @@ public class ChatActivity extends BaseFragment implements
 			bottomChannelButtonsLayout.setVisibility(View.GONE);
 			chatActivityEnterView.setVisibility(View.VISIBLE);
 			chatActivityEnterView.setBotInfo(botInfo);
-		}
-
-
-
+		}	
 		bottomOverlayChatText.setTextColorKey(accentTextButton ? Theme.key_featuredStickers_buttonText : Theme.key_glass_defaultText);
 
 		bottomChannelButtonsLayout.setCenterAccentBackground(accentTextButton, animated);
@@ -46816,14 +46806,18 @@ public class ChatActivity extends BaseFragment implements
 		if (item == null) {
 			return;
 		}
-		// The default click listener set by ActionBarMenu.addItemAt() already
-		// handles hasSubMenu() → toggleSubMenu() correctly, even with lazily-added
-		// items (hasSubMenu() checks lazyList dynamically). Do NOT override it here.
-		// Only ensure the item is in the correct interactive state.
 		item.setVisibility(View.VISIBLE);
 		item.setEnabled(true);
 		item.setClickable(true);
 		item.setFocusable(true);
+		// Set long click enabled to allow submenu to open on long press
+		item.setLongClickEnabled(true);
+		// Ensure the item has proper size to receive touch events
+		ViewGroup.LayoutParams lp = item.getLayoutParams();
+		if (lp != null && lp.width == ViewGroup.LayoutParams.WRAP_CONTENT) {
+			lp.width = AndroidUtilities.dp(48);
+			item.setLayoutParams(lp);
+		}
 	}
 
 	private void nkbtn_onclick_actionbar(int id) {
@@ -50602,10 +50596,6 @@ public class ChatActivity extends BaseFragment implements
 		final int scrollBy = (int) (cellBottom - cellBottomTarget);
 
 
-
-
-
-
 		final MessageObject messageObject = cell.getMessageObject();
 
 		if (pollAddOptionFieldLayout == null) {
@@ -50841,9 +50831,6 @@ public class ChatActivity extends BaseFragment implements
 			return 0;
 		}
 	}
-
-
-
 	private final Rect clipBoundsTmp = new Rect();
 	private void invalidateClipRectForBackgroundAndChatList() {
 		if (contentView == null) {
@@ -51814,3 +51801,5 @@ public class ChatActivity extends BaseFragment implements
 	}
 	// [Alexgram: Special Forward Multi-Chat Hooks] - End
 }
+
+
