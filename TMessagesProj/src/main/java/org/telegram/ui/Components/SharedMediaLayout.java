@@ -326,6 +326,8 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
     private final int viewType;
     private long topicId;
 
+    private final int topInset;
+
     private HorizontalScrollView actionModeButtonsScrollView;
     private LinearLayout actionModeButtonsLayout;
     private UndoView undoView;
@@ -1680,6 +1682,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
 
         this.viewType = viewType;
         this.resourcesProvider = resourcesProvider;
+        topInset = viewType == VIEW_TYPE_MEDIA_ACTIVITY ? ActionBar.getCurrentActionBarHeight() : 0;
 
         globalGradientView = new FlickerLoadingView(context);
         globalGradientView.setIsSingleCell(true);
@@ -3830,15 +3833,15 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         }
 
         if (storiesContainer != null) {
-            addView(storiesContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 42, Gravity.TOP, 0, 48, 0, 0));
+            addView(storiesContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 42, Gravity.TOP, 0, 48 + topInset, 0, 0));
         }
 
         floatingDateView = new ChatActionCell(context);
         floatingDateView.setCustomDate((int) (System.currentTimeMillis() / 1000), false, false);
         floatingDateView.setAlpha(0.0f);
         floatingDateView.setOverrideColor(Theme.key_chat_mediaTimeBackground, Theme.key_chat_mediaTimeText);
-        floatingDateView.setTranslationY(-dp(48));
-        addView(floatingDateView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP | Gravity.CENTER_HORIZONTAL, 0, 48 + 4, 0, 0));
+        floatingDateView.setTranslationY(-(dp(48) + topInset));
+        addView(floatingDateView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP | Gravity.CENTER_HORIZONTAL, 0, 48 + 4 + topInset, 0, 0));
 
         if (!customTabs()) {
             if (SHOW_CONTEXT_VIEW_AS_BUBBLE) {
@@ -3857,7 +3860,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                     topLayoutPadding = (int) topPanelLayout.getAnimatedHeightWithPadding(dp(14));
 
                     if (giftsContainer != null) {
-                        giftsContainer.setPaddingTop(dp(48) + (int) topPanelLayout.getAnimatedHeightWithPadding(dp(7)));
+                        giftsContainer.setPaddingTop(dp(48) + topInset + (int) topPanelLayout.getAnimatedHeightWithPadding(dp(7)));
                     }
                     if (mediaPages != null) {
                         for (MediaPage page : mediaPages) {
@@ -3885,9 +3888,9 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                 };
                 fragmentContextView.isInsideBubble = true;
                 fragmentContextViewWrapper.addView(fragmentContextView);
-                addView(topPanelLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP, 0, 48 -14, 0, 0));
+                addView(topPanelLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP, 0, 48 - 14 + topInset, 0, 0));
             } else {
-                addView(fragmentContextView = new FragmentContextView(context, parent, this, false, resourcesProvider), LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 38, Gravity.TOP | Gravity.LEFT, 0, 48, 0, 0));
+                addView(fragmentContextView = new FragmentContextView(context, parent, this, false, resourcesProvider), LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 38, Gravity.TOP | Gravity.LEFT, 0, 48 + topInset, 0, 0));
             }
             fragmentContextView.setDelegate((start, show) -> {
                 if (!start) {
@@ -3905,9 +3908,9 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                 scrollSlidingTextTabStrip.setBackground(null);
                 scrollSlidingTextTabStrip.setBlurredBackground(filterTabsViewBackground);
                 scrollSlidingTextTabStrip.setOpen(false);
-                addView(scrollSlidingTextTabStrip, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, 50, Gravity.CENTER_HORIZONTAL | Gravity.TOP, -2, 0, -2, 0));
+                addView(scrollSlidingTextTabStrip, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, 50, Gravity.CENTER_HORIZONTAL | Gravity.TOP, -2, topInset, -2, 0));
             } else {
-                addView(scrollSlidingTextTabStrip, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 48, Gravity.LEFT | Gravity.TOP));
+                addView(scrollSlidingTextTabStrip, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 48, Gravity.LEFT | Gravity.TOP, 0, topInset, 0, 0));
             }
             searchTagsList = new SearchTagsList(getContext(), profileActivity, profileActivity.getCurrentAccount(), includeSavedDialogs() ? 0 : dialog_id, resourcesProvider) {
                 @Override
@@ -3952,8 +3955,8 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                 }
             };
             searchTagsList.setShown(0f);
-            addView(searchTagsList, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 38, Gravity.LEFT | Gravity.TOP, 0, 4, 0, 0));
-            addView(actionModeLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 48, Gravity.LEFT | Gravity.TOP));
+            addView(searchTagsList, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 38, Gravity.LEFT | Gravity.TOP, 0, 4 + topInset, 0, 0));
+            addView(actionModeLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 48, Gravity.LEFT | Gravity.TOP, 0, topInset, 0, 0));
         }
 
         updateTabs(false);
@@ -12724,6 +12727,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
 
     private int getPagePaddingTop(int type) {
         return (
+            topInset +
             dp(48 + 6) +
             topLayoutPadding +
             (int) (storiesContainer != null && (isStoryAlbumPageType(type) || type == TAB_STORIES) ? storiesContainer.getVisibilityFactor() * dp(40) : 0) +
