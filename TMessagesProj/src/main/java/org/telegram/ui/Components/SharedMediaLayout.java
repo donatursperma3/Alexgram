@@ -4082,9 +4082,10 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
     }
 
     private void updateActionModeButtonsVisibility() {
-        deleteItem.setVisibility(cantDeleteMessagesCount == 0 ? View.VISIBLE : View.GONE);
-        int closestTab = getClosestTab();
-        boolean validTab = closestTab != TAB_STORIES && closestTab != TAB_BOT_PREVIEWS && closestTab != TAB_GIFTS && closestTab != TAB_COMMON_GROUPS && closestTab != TAB_GROUPUSERS && closestTab != TAB_FRIENDS_ACTIVITIES;
+        int selectedTab = getSelectedTab();
+        boolean storyOrBotPreviewTab = isAnyStoryPageType(selectedTab) || selectedTab == TAB_BOT_PREVIEWS;
+        deleteItem.setVisibility(storyOrBotPreviewTab || cantDeleteMessagesCount == 0 ? View.VISIBLE : View.GONE);
+        boolean validTab = !isAnyStoryPageType(selectedTab) && selectedTab != TAB_BOT_PREVIEWS && selectedTab != TAB_GIFTS && selectedTab != TAB_COMMON_GROUPS && selectedTab != TAB_GROUPUSERS && selectedTab != TAB_FRIENDS_ACTIVITIES;
         int count = selectedFiles[0].size() + selectedFiles[1].size();
         if (gotoItem != null) {
             gotoItem.setVisibility(validTab && count == 1 ? View.VISIBLE : View.GONE);
