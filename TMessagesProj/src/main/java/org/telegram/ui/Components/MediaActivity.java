@@ -787,6 +787,12 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
                 createChatTypeFilterView(context);
             }
             createDownloadStatusFilterView(context);
+            // Adjust SharedMediaLayout topInset to account for filter container height
+            // This reduces the excessive gap between download filter and media filter tabs
+            // Set to 110dp to position media tabs closer to the download filter
+            if (dialogId == 0) {
+                sharedMediaLayout.setAdditionalTopInset(dp(110));
+            }
         }
 
         fragmentView.addView(actionBar);

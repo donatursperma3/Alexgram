@@ -367,10 +367,10 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                                     matchesFilter = DialogObject.isUserDialog(dialogId);
                                     break;
                                 case CHAT_FILTER_GROUPS:
-                                    matchesFilter = DialogObject.isChatDialog(dialogId) && !DialogObject.isChannelDialog(dialogId);
+                                    matchesFilter = DialogObject.isChatDialog(dialogId) && !ChatObject.isChannel(dialogId, profileActivity.getCurrentAccount());
                                     break;
                                 case CHAT_FILTER_CHANNELS:
-                                    matchesFilter = DialogObject.isChannelDialog(dialogId);
+                                    matchesFilter = ChatObject.isChannel(dialogId, profileActivity.getCurrentAccount());
                                     break;
                                 case CHAT_FILTER_BOTS:
                                     if (profileActivity != null && profileActivity.getMessagesController() != null) {
@@ -440,6 +440,19 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
     private long topicId;
 
     private final int topInset;
+    // Additional top inset to account for filter containers in file manager mode
+    // This reduces excessive spacing between download filter and media filter tabs
+    private int additionalTopInset = 0;
+
+    // Set additional top inset when filter containers are present above the media tabs
+    public void setAdditionalTopInset(int inset) {
+        this.additionalTopInset = inset;
+    }
+
+    // Get the effective top inset including any additional offset for filter containers
+    private int getEffectiveTopInset() {
+        return topInset + additionalTopInset;
+    }
 
     private HorizontalScrollView actionModeButtonsScrollView;
     private LinearLayout actionModeButtonsLayout;
@@ -3946,15 +3959,15 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         }
 
         if (storiesContainer != null) {
-            addView(storiesContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 42, Gravity.TOP, 0, 48 + topInset, 0, 0));
+            addView(storiesContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 42, Gravity.TOP, 0, 48 + getEffectiveTopInset(), 0, 0));
         }
 
         floatingDateView = new ChatActionCell(context);
         floatingDateView.setCustomDate((int) (System.currentTimeMillis() / 1000), false, false);
         floatingDateView.setAlpha(0.0f);
         floatingDateView.setOverrideColor(Theme.key_chat_mediaTimeBackground, Theme.key_chat_mediaTimeText);
-        floatingDateView.setTranslationY(-(dp(48) + topInset));
-        addView(floatingDateView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP | Gravity.CENTER_HORIZONTAL, 0, 48 + 4 + topInset, 0, 0));
+        floatingDateView.setTranslationY(-(dp(48) + getEffectiveTopInset()));
+        addView(floatingDateView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP | Gravity.CENTER_HORIZONTAL, 0, 48 + 4 + getEffectiveTopInset(), 0, 0));
 
         if (!customTabs()) {
             if (SHOW_CONTEXT_VIEW_AS_BUBBLE) {
@@ -3973,7 +3986,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                     topLayoutPadding = (int) topPanelLayout.getAnimatedHeightWithPadding(dp(14));
 
                     if (giftsContainer != null) {
-                        giftsContainer.setPaddingTop(dp(48) + topInset + (int) topPanelLayout.getAnimatedHeightWithPadding(dp(7)));
+                        giftsContainer.setPaddingTop(dp(48) + getEffectiveTopInset() + (int) topPanelLayout.getAnimatedHeightWithPadding(dp(7)));
                     }
                     if (mediaPages != null) {
                         for (MediaPage page : mediaPages) {
@@ -4001,9 +4014,9 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                 };
                 fragmentContextView.isInsideBubble = true;
                 fragmentContextViewWrapper.addView(fragmentContextView);
-                addView(topPanelLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP, 0, 48 - 14 + topInset, 0, 0));
+                addView(topPanelLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP, 0, 48 - 14 + getEffectiveTopInset(), 0, 0));
             } else {
-                addView(fragmentContextView = new FragmentContextView(context, parent, this, false, resourcesProvider), LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 38, Gravity.TOP | Gravity.LEFT, 0, 48 + topInset, 0, 0));
+                addView(fragmentContextView = new FragmentContextView(context, parent, this, false, resourcesProvider), LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 38, Gravity.TOP | Gravity.LEFT, 0, 48 + getEffectiveTopInset(), 0, 0));
             }
             fragmentContextView.setDelegate((start, show) -> {
                 if (!start) {
@@ -4021,9 +4034,9 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                 scrollSlidingTextTabStrip.setBackground(null);
                 scrollSlidingTextTabStrip.setBlurredBackground(filterTabsViewBackground);
                 scrollSlidingTextTabStrip.setOpen(false);
-                addView(scrollSlidingTextTabStrip, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, 50, Gravity.CENTER_HORIZONTAL | Gravity.TOP, -2, topInset, -2, 0));
+                addView(scrollSlidingTextTabStrip, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, 50, Gravity.CENTER_HORIZONTAL | Gravity.TOP, -2, getEffectiveTopInset(), -2, 0));
             } else {
-                addView(scrollSlidingTextTabStrip, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 48, Gravity.LEFT | Gravity.TOP, 0, topInset, 0, 0));
+                addView(scrollSlidingTextTabStrip, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 48, Gravity.LEFT | Gravity.TOP, 0, getEffectiveTopInset(), 0, 0));
             }
             searchTagsList = new SearchTagsList(getContext(), profileActivity, profileActivity.getCurrentAccount(), includeSavedDialogs() ? 0 : dialog_id, resourcesProvider) {
                 @Override
@@ -4068,8 +4081,8 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                 }
             };
             searchTagsList.setShown(0f);
-            addView(searchTagsList, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 38, Gravity.LEFT | Gravity.TOP, 0, 4 + topInset, 0, 0));
-            addView(actionModeLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 48, Gravity.LEFT | Gravity.TOP, 0, topInset, 0, 0));
+            addView(searchTagsList, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 38, Gravity.LEFT | Gravity.TOP, 0, 4 + getEffectiveTopInset(), 0, 0));
+            addView(actionModeLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 48, Gravity.LEFT | Gravity.TOP, 0, getEffectiveTopInset(), 0, 0));
         }
 
         updateTabs(false);
@@ -12845,7 +12858,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
 
     private int getPagePaddingTop(int type) {
         return (
-            topInset +
+            getEffectiveTopInset() +
             dp(48 + 6) +
             topLayoutPadding +
             (int) (storiesContainer != null && (isStoryAlbumPageType(type) || type == TAB_STORIES) ? storiesContainer.getVisibilityFactor() * dp(40) : 0) +

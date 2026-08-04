@@ -160,10 +160,15 @@ public class BookmarkManagerActivity extends BaseFragment {
         if (tabsContainer == null || emptyView == null || viewPages == null) {
             return;
         }
-        final int tabShift = dp(6);
+        // Tab shift value controls how much the filter tabs are moved upward from the default position
+        // Increased from 6dp to 36dp to reduce excessive spacing between header and filter tabs
+        final int tabShift = dp(36);
+        // Calculate the top content offset by subtracting the tab shift from the action bar height
+        // This positions the tabs container closer to the header
         final int topContentOffset = Math.max(0, getTopContentOffset() - tabShift);
         final int tabsHeight = dp(TABS_CONTAINER_HEIGHT_DP);
 
+        // Set the top margin of the tabs container to position it closer to the header
         ViewGroup.LayoutParams params = tabsContainer.getLayoutParams();
         if (params instanceof FrameLayout.LayoutParams) {
             FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) params;
@@ -173,6 +178,7 @@ public class BookmarkManagerActivity extends BaseFragment {
             }
         }
 
+        // Position the empty view below the tabs container
         params = emptyView.getLayoutParams();
         if (params instanceof FrameLayout.LayoutParams) {
             FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) params;
@@ -183,6 +189,8 @@ public class BookmarkManagerActivity extends BaseFragment {
             }
         }
 
+        // Set list padding to ensure content starts below the header and tabs
+        // This prevents content from being hidden behind the tabs or header
         final int listPaddingTop = tabsHeight + topContentOffset;
         for (int i = 0; i < viewPages.length; i++) {
             ViewPage page = viewPages[i];
