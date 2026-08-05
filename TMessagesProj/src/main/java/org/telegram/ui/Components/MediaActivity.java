@@ -788,10 +788,15 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
             }
             createDownloadStatusFilterView(context);
             // Adjust SharedMediaLayout topInset to account for filter container height
-            // This reduces the excessive gap between download filter and media filter tabs
-            // Set to 70dp to position media tabs closer to the download filter
-            // Apply for both file manager (dialogId == 0) and normal shared media (dialogId != 0)
-            sharedMediaLayout.setAdditionalTopInset(dp(70));
+            // Calculate based on which filters are actually shown
+            int filterHeight = 0;
+            // Download filter is always present: 36dp chip + 16dp padding = 52dp
+            filterHeight += dp(52);
+            // Chat filter is only present in file manager mode (dialogId == 0): another 52dp
+            if (dialogId == 0) {
+                filterHeight += dp(52);
+            }
+            sharedMediaLayout.setAdditionalTopInset(filterHeight);
         }
 
         fragmentView.addView(actionBar);
