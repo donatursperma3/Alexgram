@@ -100,8 +100,24 @@ public class MessageHelper extends BaseController {
     private static final CharsetDecoder utf8Decoder = StandardCharsets.UTF_8.newDecoder();
     private static final String DELETE_OWN_LIMIT_KEY = "delete_own_limit";
     private static final String DELETE_OWN_ORDER_KEY = "delete_own_order";
+    private static final String DELETE_OWN_FILTER_KEY = "delete_own_filter";
     private static final int DELETE_ORDER_NEWEST = 0;
     private static final int DELETE_ORDER_OLDEST = 1;
+    
+    // Message type filter constants
+    private static final int FILTER_ALL = 0;
+    private static final int FILTER_TEXT = 1;
+    private static final int FILTER_VIDEO = 2;
+    private static final int FILTER_IMAGE = 3;
+    private static final int FILTER_STICKER = 4;
+    private static final int FILTER_FILES = 5;
+    private static final int FILTER_GIF = 6;
+    private static final int FILTER_POLL = 7;
+    private static final int FILTER_LOCATION = 8;
+    private static final int FILTER_CONTACT = 9;
+    private static final int FILTER_OTHER = 10;
+    private static final int FILTER_REACTIONS = 11;
+    private static final int FILTER_PHOTO_VIDEO = 12;
 
     public MessageHelper(int num) {
         super(num);
@@ -563,6 +579,63 @@ public class MessageHelper extends BaseController {
         );
         orderRow.addView(orderValue, orderValueParams);
 
+        // Message type filter UI
+        TextView filterLabel = new TextView(context);
+        filterLabel.setTextColor(Theme.getColor(Theme.key_actionBarDefaultSubmenuItem, resourcesProvider));
+        filterLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+        filterLabel.setGravity(Gravity.CENTER_VERTICAL);
+        filterLabel.setIncludeFontPadding(false);
+        filterLabel.setText("Type:");
+
+        final int[] selectedFilter = new int[1];
+        try {
+            int savedFilter = NekoConfig.getPreferences().getInt(DELETE_OWN_FILTER_KEY, FILTER_ALL);
+            selectedFilter[0] = savedFilter;
+        } catch (Exception e) {
+            FileLog.e(e);
+            selectedFilter[0] = FILTER_ALL;
+        }
+
+        final String[] filterNames = {
+            "All", "Text", "Video", "Image", "Sticker", 
+            "Files", "GIF", "Poll", "Location", "Contact", "Other", "Reactions", "Photo/Video"
+        };
+
+        TextView filterValue = new TextView(context);
+        filterValue.setTextColor(Theme.getColor(Theme.key_dialogTextBlack, resourcesProvider));
+        filterValue.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+        filterValue.setGravity(Gravity.CENTER_VERTICAL);
+        filterValue.setSingleLine(true);
+        filterValue.setEllipsize(TextUtils.TruncateAt.END);
+        filterValue.setText(filterNames[selectedFilter[0]]);
+        filterValue.setPadding(0, 0, AndroidUtilities.dp(4), 0);
+        filterValue.setOnClickListener(v -> {
+            AlertDialog.Builder filterBuilder = new AlertDialog.Builder(context);
+            filterBuilder.setTitle("Select Message Type");
+            filterBuilder.setItems(filterNames, (dialog, which) -> {
+                selectedFilter[0] = which;
+                filterValue.setText(filterNames[which]);
+            });
+            filterBuilder.show();
+        });
+
+        LinearLayout filterRow = new LinearLayout(context);
+        filterRow.setOrientation(LinearLayout.HORIZONTAL);
+        filterRow.setGravity(Gravity.CENTER_VERTICAL);
+
+        LinearLayout.LayoutParams filterLabelParams = new LinearLayout.LayoutParams(
+            labelWidth,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        filterLabelParams.setMargins(0, 0, AndroidUtilities.dp(6), 0);
+        filterRow.addView(filterLabel, filterLabelParams);
+
+        LinearLayout.LayoutParams filterValueParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        filterRow.addView(filterValue, filterValueParams);
+
         LinearLayout contentLayout = new LinearLayout(context);
         contentLayout.setOrientation(LinearLayout.VERTICAL);
         contentLayout.setPadding(AndroidUtilities.dp(24), AndroidUtilities.dp(120), AndroidUtilities.dp(24), 0);
@@ -574,6 +647,8 @@ public class MessageHelper extends BaseController {
         );
         rowParams.topMargin = AndroidUtilities.dp(8);
         contentLayout.addView(orderRow, rowParams);
+        rowParams.topMargin = AndroidUtilities.dp(8);
+        contentLayout.addView(filterRow, rowParams);
         frameLayout.addView(contentLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, 0, 0, 0, 0));
 
         AvatarDrawable avatarDrawable = new AvatarDrawable();
@@ -637,6 +712,7 @@ public class MessageHelper extends BaseController {
                 NekoConfig.getPreferences().edit()
                     .putInt(DELETE_OWN_LIMIT_KEY, limit)
                     .putInt(DELETE_OWN_ORDER_KEY, deleteNewestFirst[0] ? DELETE_ORDER_NEWEST : DELETE_ORDER_OLDEST)
+                    .putInt(DELETE_OWN_FILTER_KEY, selectedFilter[0])
                     .apply();
             } catch (Exception e) {
                 FileLog.e(e);
@@ -645,18 +721,20 @@ public class MessageHelper extends BaseController {
             }
 
             final boolean newestFirst = deleteNewestFirst[0];
+            final int messageTypeFilter = selectedFilter[0];
             if (cell != null && cell.isChecked()) {
                 final int finalLimit = limit;
                 showDeleteHistoryBulletin(fragment, 0, false, () -> {
-                    if (finalLimit <= 0) {
+                    if (finalLimit <= 0 && messageTypeFilter == FILTER_ALL) {
+                        // Use direct API call only if no limit and no specific filter
                         getMessagesController().deleteUserChannelHistory(chat, getUserConfig().getCurrentUser(), null, 0);
                     } else {
-                        // delete with limit: use search-based deletion to respect limit
-                        deleteUserHistoryWithSearch(fragment, -chat.id, forumTopic != null ? forumTopic.id : 0, mergeDialogId, before == -1 ? getConnectionsManager().getCurrentTime() : before, finalLimit, newestFirst, (count, deleteAction) -> deleteAction.run());
+                        // Use search-based deletion to respect limit and/or filter
+                        deleteUserHistoryWithSearch(fragment, -chat.id, forumTopic != null ? forumTopic.id : 0, mergeDialogId, before == -1 ? getConnectionsManager().getCurrentTime() : before, finalLimit, newestFirst, messageTypeFilter, (count, deleteAction) -> deleteAction.run());
                     }
                 }, resourcesProvider);
             } else {
-                deleteUserHistoryWithSearch(fragment, -chat.id, forumTopic != null ? forumTopic.id : 0, mergeDialogId, before == -1 ? getConnectionsManager().getCurrentTime() : before, limit, newestFirst, (count, deleteAction) -> showDeleteHistoryBulletin(fragment, count, true, deleteAction, resourcesProvider));
+                deleteUserHistoryWithSearch(fragment, -chat.id, forumTopic != null ? forumTopic.id : 0, mergeDialogId, before == -1 ? getConnectionsManager().getCurrentTime() : before, limit, newestFirst, messageTypeFilter, (count, deleteAction) -> showDeleteHistoryBulletin(fragment, count, true, deleteAction, resourcesProvider));
             }
         });
         builder.setNegativeButton(getString(R.string.Cancel), null);
@@ -756,14 +834,14 @@ public class MessageHelper extends BaseController {
         Bulletin.make(fragment, buttonLayout, Bulletin.DURATION_PROLONG).show();
     }
 
-    private void deleteUserHistoryWithSearch(BaseFragment fragment, final long dialogId, int replyMessageId, final long mergeDialogId, int before, int limit, boolean newestFirst, SearchMessagesResultCallback callback) {
+    private void deleteUserHistoryWithSearch(BaseFragment fragment, final long dialogId, int replyMessageId, final long mergeDialogId, int before, int limit, boolean newestFirst, int messageTypeFilter, SearchMessagesResultCallback callback) {
         Utilities.globalQueue.postRunnable(() -> {
             try {
                 ArrayList<Integer> messageIds = new ArrayList<>();
                 var latch = new CountDownLatch(1);
                 var peer = getMessagesController().getInputPeer(dialogId);
                 var fromId = MessagesController.getInputPeer(getUserConfig().getCurrentUser());
-                doSearchMessages(fragment, latch, messageIds, peer, replyMessageId, fromId, before, Integer.MAX_VALUE, 0, limit, newestFirst);
+                doSearchMessages(fragment, latch, messageIds, peer, replyMessageId, fromId, before, Integer.MAX_VALUE, 0, limit, newestFirst, messageTypeFilter);
                 try {
                     latch.await();
                 } catch (Exception e) {
@@ -799,7 +877,7 @@ public class MessageHelper extends BaseController {
                     AndroidUtilities.runOnUIThread(result);
                 }
                 if (mergeDialogId != 0) {
-                    deleteUserHistoryWithSearch(fragment, mergeDialogId, 0, 0, before, 0, newestFirst, null);
+                    deleteUserHistoryWithSearch(fragment, mergeDialogId, 0, 0, before, 0, newestFirst, messageTypeFilter, null);
                 }
             } catch (Exception e) {
                 FileLog.e(e);
@@ -816,13 +894,16 @@ public class MessageHelper extends BaseController {
         void run(int count, Runnable deleteAction);
     }
 
-    private void doSearchMessages(BaseFragment fragment, CountDownLatch latch, ArrayList<Integer> messageIds, TLRPC.InputPeer peer, int replyMessageId, TLRPC.InputPeer fromId, int before, int offsetId, long hash, int limit, boolean newestFirst) {
+    private void doSearchMessages(BaseFragment fragment, CountDownLatch latch, ArrayList<Integer> messageIds, TLRPC.InputPeer peer, int replyMessageId, TLRPC.InputPeer fromId, int before, int offsetId, long hash, int limit, boolean newestFirst, int messageTypeFilter) {
         var req = new TLRPC.TL_messages_search();
         req.peer = peer;
         req.limit = 100;
         req.q = "";
         req.offset_id = offsetId;
-        req.filter = new TLRPC.TL_inputMessagesFilterEmpty();
+        
+        // Apply message type filter based on selection
+        req.filter = getMessageTypeFilter(messageTypeFilter);
+        
         long dialogId = DialogObject.getPeerDialogId(peer);
         boolean isMonoForum = getMessagesStorage().isMonoForum(dialogId);
         if (!isMonoForum) {
@@ -851,6 +932,10 @@ public class MessageHelper extends BaseController {
                     if (!message.out || message.post || message.date >= before) {
                         continue;
                     }
+                    // Apply local filtering for message types that don't have dedicated Telegram filters
+                    if (!matchesMessageTypeFilter(message, messageTypeFilter)) {
+                        continue;
+                    }
                     messageIds.add(message.id);
                     if (!newestFirst && limit > 0 && messageIds.size() > limit) {
                         // keep only the oldest messages when searching from newest to oldest
@@ -862,7 +947,7 @@ public class MessageHelper extends BaseController {
                         return;
                     }
                 }
-                doSearchMessages(fragment, latch, messageIds, peer, replyMessageId, fromId, before, newOffsetId, calcMessagesHash(res.messages), limit, newestFirst);
+                doSearchMessages(fragment, latch, messageIds, peer, replyMessageId, fromId, before, newOffsetId, calcMessagesHash(res.messages), limit, newestFirst, messageTypeFilter);
             } else {
                 if (error != null) {
                     AndroidUtilities.runOnUIThread(() -> AlertsCreator.showSimpleAlert(fragment, getString(R.string.ErrorOccurred) + "\n" + error.text));
@@ -870,6 +955,68 @@ public class MessageHelper extends BaseController {
                 latch.countDown();
             }
         }, ConnectionsManager.RequestFlagFailOnServerErrors);
+    }
+    
+    private TLRPC.InputMessagesFilter getMessageTypeFilter(int filterType) {
+        switch (filterType) {
+            case FILTER_TEXT:
+                return new TLRPC.TL_inputMessagesFilterText();
+            case FILTER_VIDEO:
+                return new TLRPC.TL_inputMessagesFilterVideo();
+            case FILTER_IMAGE:
+                return new TLRPC.TL_inputMessagesFilterPhotos();
+            case FILTER_PHOTO_VIDEO:
+                return new TLRPC.TL_inputMessagesFilterPhotoVideo();
+            case FILTER_STICKER:
+                return new TLRPC.TL_inputMessagesFilterSticker();
+            case FILTER_FILES:
+                return new TLRPC.TL_inputMessagesFilterDocument();
+            case FILTER_GIF:
+                return new TLRPC.TL_inputMessagesFilterGif();
+            case FILTER_POLL:
+                // Telegram doesn't have a dedicated poll filter, use empty filter and filter locally
+                return new TLRPC.TL_inputMessagesFilterEmpty();
+            case FILTER_LOCATION:
+                return new TLRPC.TL_inputMessagesFilterGeo();
+            case FILTER_CONTACT:
+                return new TLRPC.TL_inputMessagesFilterContacts();
+            case FILTER_REACTIONS:
+                // Telegram doesn't have a dedicated reactions filter, use empty filter and filter locally
+                return new TLRPC.TL_inputMessagesFilterEmpty();
+            case FILTER_OTHER:
+                return new TLRPC.TL_inputMessagesFilterChatPhotos(); // Fallback for other
+            case FILTER_ALL:
+            default:
+                return new TLRPC.TL_inputMessagesFilterEmpty();
+        }
+    }
+    
+    private boolean matchesMessageTypeFilter(TLRPC.Message message, int filterType) {
+        if (filterType == FILTER_ALL) {
+            return true;
+        }
+        
+        try {
+            // Additional local filtering for message types that don't have dedicated Telegram filters
+            if (filterType == FILTER_POLL) {
+                return message.media != null && message.media.poll != null;
+            }
+            
+            if (filterType == FILTER_REACTIONS) {
+                return message.reactions != null && !message.reactions.results.isEmpty();
+            }
+            
+            // Local filtering for PHOTO_VIDEO since it's combined in Telegram filter
+            if (filterType == FILTER_PHOTO_VIDEO) {
+                if (message.media == null) return false;
+                return message.media.photo != null || message.media.document != null && (message.media.document.mime_type != null && message.media.document.mime_type.startsWith("video/"));
+            }
+            
+            return true; // For other types, rely on the Telegram filter
+        } catch (Exception e) {
+            FileLog.e(e);
+            return true; // Fail-safe: include message if filtering fails
+        }
     }
 
     private long calcMessagesHash(ArrayList<TLRPC.Message> messages) {
