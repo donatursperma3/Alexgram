@@ -89,6 +89,7 @@ import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import tw.nekomimi.nekogram.NekoConfig;
 import tw.nekomimi.nekogram.filters.AyuFilter;
@@ -957,37 +958,41 @@ public class MessageHelper extends BaseController {
         }, ConnectionsManager.RequestFlagFailOnServerErrors);
     }
     
-    private TLRPC.InputMessagesFilter getMessageTypeFilter(int filterType) {
-        switch (filterType) {
-            case FILTER_TEXT:
-                return new TLRPC.TL_inputMessagesFilterText();
-            case FILTER_VIDEO:
-                return new TLRPC.TL_inputMessagesFilterVideo();
-            case FILTER_IMAGE:
-                return new TLRPC.TL_inputMessagesFilterPhotos();
-            case FILTER_PHOTO_VIDEO:
-                return new TLRPC.TL_inputMessagesFilterPhotoVideo();
-            case FILTER_STICKER:
-                return new TLRPC.TL_inputMessagesFilterSticker();
-            case FILTER_FILES:
-                return new TLRPC.TL_inputMessagesFilterDocument();
-            case FILTER_GIF:
-                return new TLRPC.TL_inputMessagesFilterGif();
-            case FILTER_POLL:
-                // Telegram doesn't have a dedicated poll filter, use empty filter and filter locally
-                return new TLRPC.TL_inputMessagesFilterEmpty();
-            case FILTER_LOCATION:
-                return new TLRPC.TL_inputMessagesFilterGeo();
-            case FILTER_CONTACT:
-                return new TLRPC.TL_inputMessagesFilterContacts();
-            case FILTER_REACTIONS:
-                // Telegram doesn't have a dedicated reactions filter, use empty filter and filter locally
-                return new TLRPC.TL_inputMessagesFilterEmpty();
-            case FILTER_OTHER:
-                return new TLRPC.TL_inputMessagesFilterChatPhotos(); // Fallback for other
-            case FILTER_ALL:
-            default:
-                return new TLRPC.TL_inputMessagesFilterEmpty();
+    private TLRPC.MessagesFilter getMessageTypeFilter(int filterType) {
+        try {
+            switch (filterType) {
+                case FILTER_TEXT:
+                    return new TLRPC.TL_inputMessagesFilterEmpty(); // Text messages with empty filter
+                case FILTER_VIDEO:
+                    return new TLRPC.TL_inputMessagesFilterVideo();
+                case FILTER_IMAGE:
+                    return new TLRPC.TL_inputMessagesFilterPhotos();
+                case FILTER_PHOTO_VIDEO:
+                    return new TLRPC.TL_inputMessagesFilterPhotoVideo();
+                case FILTER_STICKER:
+                    return new TLRPC.TL_inputMessagesFilterEmpty(); // Stickers with empty filter
+                case FILTER_FILES:
+                    return new TLRPC.TL_inputMessagesFilterDocument();
+                case FILTER_GIF:
+                    return new TLRPC.TL_inputMessagesFilterGif();
+                case FILTER_POLL:
+                    return new TLRPC.TL_inputMessagesFilterPoll();
+                case FILTER_LOCATION:
+                    return new TLRPC.TL_inputMessagesFilterGeo();
+                case FILTER_CONTACT:
+                    return new TLRPC.TL_inputMessagesFilterContacts();
+                case FILTER_REACTIONS:
+                    // Telegram doesn't have a dedicated reactions filter, use empty filter and filter locally
+                    return new TLRPC.TL_inputMessagesFilterEmpty();
+                case FILTER_OTHER:
+                    return new TLRPC.TL_inputMessagesFilterChatPhotos(); // Fallback for other
+                case FILTER_ALL:
+                default:
+                    return new TLRPC.TL_inputMessagesFilterEmpty();
+            }
+        } catch (Exception e) {
+            FileLog.e(e);
+            return new TLRPC.TL_inputMessagesFilterEmpty(); // Fallback to empty filter on error
         }
     }
     
@@ -998,8 +1003,30 @@ public class MessageHelper extends BaseController {
         
         try {
             // Additional local filtering for message types that don't have dedicated Telegram filters
+            if (filterType == FILTER_TEXT) {
+                // Text messages: no media or has message text
+                return message.media == null && message.message != null && !message.message.isEmpty();
+            }
+            
+            if (filterType == FILTER_STICKER) {
+                // Stickers: document with sticker attribute
+                if (message.media == null || message.media.document == null || message.media.document.attributes == null) {
+                    return false;
+                }
+                for (TLRPC.DocumentAttribute attr : message.media.document.attributes) {
+                    if (attr instanceof TLRPC.TL_documentAttributeSticker) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            
             if (filterType == FILTER_POLL) {
-                return message.media != null && message.media.poll != null;
+                if (message.media == null) return false;
+                if (message.media instanceof TLRPC.TL_messageMediaPoll) {
+                    return ((TLRPC.TL_messageMediaPoll) message.media).poll != null;
+                }
+                return false;
             }
             
             if (filterType == FILTER_REACTIONS) {
