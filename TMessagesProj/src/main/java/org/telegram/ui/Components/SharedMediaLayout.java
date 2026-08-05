@@ -2458,7 +2458,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
 //        actionModeLayout.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
         actionModeLayout.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundGray));
         actionModeLayout.setAlpha(0.0f);
-        actionModeLayout.setClickable(false);
+        actionModeLayout.setClickable(true);
         actionModeLayout.setVisibility(INVISIBLE);
 
         closeButton = new ImageView(context);
@@ -2488,8 +2488,6 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         actionModeLayout.addView(actionModeButtonsScrollView, LayoutHelper.createLinear(0, LayoutHelper.MATCH_PARENT, 1.0f, 0, 0, 0, 0));
         actionModeButtonsScrollView.setVisibility(View.VISIBLE);
         actionModeButtonsLayout.setVisibility(View.VISIBLE);
-        // Ensure the scroll view has minimum width to be clickable
-        actionModeButtonsScrollView.setMinimumWidth(AndroidUtilities.dp(200));
 
         if (!DialogObject.isEncryptedDialog(dialog_id)) {
             if (!isStoriesView()) {
@@ -2498,8 +2496,6 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                 forwardNoQuoteItem.setContentDescription(LocaleController.getString("NoQuoteForward", R.string.NoQuoteForward));
                 forwardNoQuoteItem.setDuplicateParentStateEnabled(false);
                 forwardNoQuoteItem.setVisibility(View.VISIBLE);
-                forwardNoQuoteItem.setMinimumWidth(dp(54));
-                forwardNoQuoteItem.setMinimumHeight(dp(48));
                 actionModeButtonsLayout.addView(forwardNoQuoteItem, new LinearLayout.LayoutParams(dp(54), ViewGroup.LayoutParams.MATCH_PARENT));
                 actionModeViews.add(forwardNoQuoteItem);
                 forwardNoQuoteItem.setOnClickListener(v -> onActionBarItemClick(v, forward_noquote));
@@ -6580,6 +6576,12 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         }
         if (show) {
             actionModeLayout.setVisibility(VISIBLE);
+            if (actionModeButtonsScrollView != null) {
+                actionModeButtonsScrollView.setVisibility(VISIBLE);
+            }
+            if (actionModeButtonsLayout != null) {
+                actionModeButtonsLayout.setVisibility(VISIBLE);
+            }
         }
         actionModeAnimation = new AnimatorSet();
         actionModeAnimation.playTogether(ObjectAnimator.ofFloat(actionModeLayout, View.ALPHA, show ? 1.0f : 0.0f));
