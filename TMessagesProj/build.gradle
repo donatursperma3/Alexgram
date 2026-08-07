@@ -209,6 +209,11 @@ android {
             arg('ksp.incremental.intermodule', 'true')
         }
 
+        // D8 memory configuration
+        tasks.withType(com.android.build.gradle.internal.tasks.DexArchiveBuilderTask).configureEach {
+            it.jvmArgs '-Xmx6g', '-XX:MaxMetaspaceSize=1g'
+        }
+
         buildFeatures {
             compose = true
         }
@@ -234,11 +239,6 @@ android {
             keyAlias alias
             keyPassword pwd
         }
-    }
-
-    dexOptions {
-        javaMaxHeapSize "6g"
-        preDexLibraries = false
     }
 
     buildTypes {
