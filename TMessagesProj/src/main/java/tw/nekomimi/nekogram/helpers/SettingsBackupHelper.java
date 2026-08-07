@@ -67,6 +67,8 @@ import tw.nekomimi.nekogram.utils.AlertUtil;
 import tw.nekomimi.nekogram.utils.FileUtil;
 import tw.nekomimi.nekogram.utils.GsonUtil;
 import tw.nekomimi.nekogram.utils.ShareUtil;
+import tw.nekomimi.nekogram.helpers.FavoriteChatsFilterHelper;
+import tw.nekomimi.nekogram.tabs.TabsByTypeSettings;
 import xyz.nextalone.nagram.NaConfig;
 import xyz.nextalone.nagram.helper.BookmarksHelper;
 import xyz.nextalone.nagram.helper.LocalPeerColorHelper;
@@ -78,6 +80,7 @@ public final class SettingsBackupHelper {
     }
 
     public static String backupSettingsJson(boolean isCloud, int indentSpaces, boolean includeApiKeys) throws JSONException {
+        FileLog.d("SettingsBackup", "Starting settings backup. isCloud=" + isCloud + ", includeApiKeys=" + includeApiKeys);
 
         JSONObject configJson = new JSONObject();
 
@@ -153,7 +156,25 @@ public final class SettingsBackupHelper {
         spToJSON("mainconfig", configJson, mainconfig::contains);
         if (!isCloud) spToJSON("themeconfig", configJson, null);
         spToJSON("nkmrcfg", configJson, null, includeApiKeys);
+        // Backup TabsByType settings
+        try {
+            spToJSON("tabsByType", configJson, null);
+            FileLog.d("SettingsBackup", "TabsByType settings backed up successfully");
+        } catch (Exception e) {
+            FileLog.e(e);
+            FileLog.d("SettingsBackup", "Failed to backup TabsByType settings: " + e.getMessage());
+        }
 
+        // Backup Favorite Chats settings
+        try {
+            spToJSON("favorite_chats_config", configJson, null);
+            FileLog.d("SettingsBackup", "Favorite Chats settings backed up successfully");
+        } catch (Exception e) {
+            FileLog.e(e);
+            FileLog.d("SettingsBackup", "Failed to backup Favorite Chats settings: " + e.getMessage());
+        }
+
+        FileLog.d("SettingsBackup", "Settings backup completed successfully. Total sections: " + configJson.length());
         return configJson.toString(indentSpaces);
     }
 
@@ -193,7 +214,9 @@ public final class SettingsBackupHelper {
 
     public static void importSettingsConfirmed(Context context, File settingsFile) {
         try {
+            FileLog.d("SettingsBackup", "Starting settings import from file: " + settingsFile.getAbsolutePath());
             JsonObject configJson = GsonUtil.toJsonObject(FileUtil.readUtf8String(settingsFile));
+            FileLog.d("SettingsBackup", "Settings JSON parsed successfully. Sections: " + configJson.size());
             importSettings(configJson);
 
             AlertDialog restart = new AlertDialog(context, 0);
@@ -202,17 +225,22 @@ public final class SettingsBackupHelper {
             restart.setPositiveButton(getString(R.string.OK), (__, ___) -> AppRestartHelper.triggerRebirth(context, new Intent(context, LaunchActivity.class)));
             restart.show();
         } catch (Exception e) {
+            FileLog.e(e);
+            FileLog.d("SettingsBackup", "Settings import failed: " + e.getMessage());
             AlertUtil.showSimpleAlert(context, e);
         }
     }
 
     @SuppressLint("ApplySharedPref")
     public static void importSettings(JsonObject configJson) throws JSONException {
+        FileLog.d("SettingsBackup", "Starting settings import process");
         Set<String> allowedKeys = new HashSet<>();
         try {
             allowedKeys.addAll(NekoConfig.getAllKeys());
             allowedKeys.addAll(NaConfig.INSTANCE.getAllKeys());
+            FileLog.d("SettingsBackup", "Allowed keys loaded: " + allowedKeys.size());
         } catch (Throwable ignore) {
+            FileLog.e(ignore);
         }
         String[] preservePrefixes = {
                 AyuGhostPreferences.ghostReadExclusionPrefix,
@@ -223,16 +251,27 @@ public final class SettingsBackupHelper {
                 DialogConfig.customForumTabPrefix,
                 LocalPeerColorHelper.KEY_PREFIX,
                 LocalPremiumStatusHelper.KEY_PREFIX,
-                BookmarksHelper.KEY_PREFIX
+                BookmarksHelper.KEY_PREFIX,
+                "tabsByType_",
+                "favorite_ids_"
         };
+        FileLog.d("SettingsBackup", "Preserve prefixes configured: " + preservePrefixes.length);
+
+        int totalSections = 0;
+        int totalKeys = 0;
 
         for (Map.Entry<String, JsonElement> element : configJson.entrySet()) {
             String spName = element.getKey();
+            FileLog.d("SettingsBackup", "Processing section: " + spName);
+            totalSections++;
             SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences(spName, Activity.MODE_PRIVATE);
             SharedPreferences.Editor editor = preferences.edit();
+            int sectionKeys = 0;
             for (Map.Entry<String, JsonElement> config : ((JsonObject) element.getValue()).entrySet()) {
                 String key = config.getKey();
                 JsonPrimitive value = (JsonPrimitive) config.getValue();
+                
+                // Handle special sections
                 if ("nkmrcfg".equals(spName)) {
                     boolean shouldSkip = true;
                     for (String prefix : preservePrefixes) {
@@ -254,6 +293,8 @@ public final class SettingsBackupHelper {
                         continue;
                     }
                 }
+                
+                // Import based on value type
                 if (value.isBoolean()) {
                     editor.putBoolean(key, value.getAsBoolean());
                 } else if (value.isNumber()) {
@@ -276,9 +317,21 @@ public final class SettingsBackupHelper {
                 } else {
                     editor.putString(key, value.getAsString());
                 }
+                sectionKeys++;
             }
             editor.commit();
+            totalKeys += sectionKeys;
+            
+            // Special logging for important sections
+            if ("tabsByType".equals(spName)) {
+                FileLog.d("SettingsBackup", "TabsByType settings imported successfully (" + sectionKeys + " keys)");
+            } else if ("favorite_chats_config".equals(spName)) {
+                FileLog.d("SettingsBackup", "Favorite Chats settings imported successfully (" + sectionKeys + " keys)");
+            } else {
+                FileLog.d("SettingsBackup", "Section " + spName + " imported " + sectionKeys + " keys");
+            }
         }
+        FileLog.d("SettingsBackup", "Settings import completed. Total sections: " + totalSections + ", Total keys: " + totalKeys);
     }
 
     public static JsonObject backupUserConfig(int account) {

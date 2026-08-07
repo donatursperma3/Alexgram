@@ -17,12 +17,15 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     env:
       # LOCAL_PROPERTIES should contain base64(local.properties)
       LOCAL_PROPERTIES: ${{ secrets.LOCAL_PROPERTIES }}
       GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
       TELEGRAM_APP_ID: ${{ secrets.APP_ID }}
       TELEGRAM_APP_HASH: ${{ secrets.APP_HASH }}
+      GRADLE_OPTS: "-Xmx4g -XX:MaxMetaspaceSize=512m"
+      ANDROID_SDK_ROOT: /opt/android-sdk
 
     steps:
       - name: Checkout Code
@@ -57,6 +60,8 @@ jobs:
           mkdir -p "$ANDROID_SDK_ROOT"
           echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+          echo "Configuring gradle.properties for CI"
+          echo "org.gradle.jvmargs=-Xmx4G -XX:MaxMetaspaceSize=512m -XX:+UseParallelGC -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8" >> gradle.properties
 
       - name: Decode google-services.json (optional)
         run: |
@@ -83,6 +88,9 @@ jobs:
       # - main -> assembleRelease
       # - dev  -> assembleStaging
       # - lainnya -> assembleDebug
+      - name: Clean build artifacts
+        run: ./gradlew clean --no-daemon
+
       - name: Build APK (select task by branch)
         env:
           GIT_REF_NAME: ${{ github.ref_name }}
@@ -90,12 +98,13 @@ jobs:
           export ENABLE_ABI_SPLITS="${ENABLE_ABI_SPLITS:-false}"
           echo "Building on branch: ${GIT_REF_NAME}"
           echo "ENABLE_ABI_SPLITS=${ENABLE_ABI_SPLITS}"
+          echo "GRADLE_OPTS=${GRADLE_OPTS}"
           if [ "${GIT_REF_NAME}" = "main" ]; then
-            ./gradlew TMessagesProj:assembleRelease --no-daemon
+            ./gradlew TMessagesProj:assembleRelease --no-daemon --stacktrace
           elif [ "${GIT_REF_NAME}" = "dev" ]; then
-            ./gradlew TMessagesProj:assembleStaging --no-daemon
+            ./gradlew TMessagesProj:assembleStaging --no-daemon --stacktrace
           else
-            ./gradlew TMessagesProj:assembleDebug --no-daemon
+            ./gradlew TMessagesProj:assembleDebug --no-daemon --stacktrace
           fi
 
       - name: Prepare artifact name
