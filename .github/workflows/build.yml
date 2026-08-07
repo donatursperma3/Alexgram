@@ -24,7 +24,6 @@ jobs:
       GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
       TELEGRAM_APP_ID: ${{ secrets.APP_ID }}
       TELEGRAM_APP_HASH: ${{ secrets.APP_HASH }}
-      GRADLE_OPTS: "-Xmx6g -XX:MaxMetaspaceSize=1g"
       ANDROID_SDK_ROOT: /opt/android-sdk
 
     steps:
@@ -98,13 +97,12 @@ jobs:
           export ENABLE_ABI_SPLITS="${ENABLE_ABI_SPLITS:-false}"
           echo "Building on branch: ${GIT_REF_NAME}"
           echo "ENABLE_ABI_SPLITS=${ENABLE_ABI_SPLITS}"
-          echo "GRADLE_OPTS=${GRADLE_OPTS}"
           if [ "${GIT_REF_NAME}" = "main" ]; then
-            ./gradlew TMessagesProj:assembleRelease --no-daemon --stacktrace
+            ./gradlew TMessagesProj:assembleRelease --stacktrace
           elif [ "${GIT_REF_NAME}" = "dev" ]; then
-            ./gradlew TMessagesProj:assembleStaging --no-daemon --stacktrace
+            ./gradlew TMessagesProj:assembleStaging --stacktrace
           else
-            ./gradlew TMessagesProj:assembleDebug --no-daemon --stacktrace
+            ./gradlew TMessagesProj:assembleDebug --stacktrace
           fi
 
       - name: Prepare artifact name
