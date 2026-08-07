@@ -209,9 +209,11 @@ android {
             arg('ksp.incremental.intermodule', 'true')
         }
 
-        // D8 memory configuration
+        // D8 memory configuration (AGP 9+ may not expose task-level jvmArgs)
         tasks.withType(com.android.build.gradle.internal.tasks.DexArchiveBuilderTask).configureEach {
-            it.jvmArgs = ['-Xmx6g', '-XX:MaxMetaspaceSize=1g']
+            if (it.metaClass.getMetaProperty('jvmArgs') != null) {
+                it.jvmArgs = ['-Xmx6g', '-XX:MaxMetaspaceSize=1g']
+            }
         }
 
         buildFeatures {
