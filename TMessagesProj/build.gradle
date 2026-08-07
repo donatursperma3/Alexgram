@@ -203,6 +203,12 @@ android {
             }
         }
 
+        ksp {
+            arg('room.schemaLocation', "$projectDir/schemas".toString())
+            arg('ksp.incremental', 'true')
+            arg('ksp.incremental.intermodule', 'true')
+        }
+
         buildFeatures {
             compose = true
         }
@@ -228,6 +234,11 @@ android {
             keyAlias alias
             keyPassword pwd
         }
+    }
+
+    dexOptions {
+        javaMaxHeapSize "6g"
+        preDexLibraries = false
     }
 
     buildTypes {
