@@ -211,7 +211,7 @@ android {
 
         // D8 memory configuration
         tasks.withType(com.android.build.gradle.internal.tasks.DexArchiveBuilderTask).configureEach {
-            it.jvmArgs '-Xmx6g', '-XX:MaxMetaspaceSize=1g'
+            it.jvmArgs = ['-Xmx6g', '-XX:MaxMetaspaceSize=1g']
         }
 
         buildFeatures {
