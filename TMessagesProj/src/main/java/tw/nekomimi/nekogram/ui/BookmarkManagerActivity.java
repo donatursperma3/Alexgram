@@ -14,6 +14,7 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.os.Build;
+import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.MotionEvent;
@@ -22,6 +23,7 @@ import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.view.ViewParent;
+import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
@@ -36,6 +38,7 @@ import org.telegram.messenger.FileLog;
 import org.telegram.messenger.LiteMode;
 import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.MessagesStorage;
+import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.R;
 import org.telegram.messenger.SharedConfig;
 import org.telegram.messenger.UserObject;
@@ -46,9 +49,11 @@ import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.ActionBarMenu;
 import org.telegram.ui.ActionBar.ActionBarMenuItem;
 import org.telegram.ui.ActionBar.ActionBarMenuSubItem;
+import org.telegram.ui.ActionBar.ActionBarPopupWindow;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.ChatActivity;
 import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.FilterTabsView;
@@ -56,6 +61,7 @@ import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.RecyclerListView;
 import org.telegram.ui.Components.SizeNotifierFrameLayout;
 import org.telegram.ui.Components.ViewPagerFixed;
+import org.telegram.ui.Components.ChatScrimPopupContainerLayout;
 import org.telegram.ui.Components.blur3.BlurredBackgroundDrawableViewFactory;
 import org.telegram.ui.Components.blur3.DownscaleScrollableNoiseSuppressor;
 import org.telegram.ui.Components.blur3.ViewGroupPartRenderer;
@@ -83,6 +89,12 @@ public class BookmarkManagerActivity extends BaseFragment {
     private static final int SEARCH_BUTTON = 1;
     private static final int OPTIONS_BUTTON = 2;
     private static final int CLEAR_ALL_BOOKMARKS = 3;
+    
+    // Menu options for chat items
+    private static final int MENU_OPEN_CHAT = 10;
+    private static final int MENU_REMOVE_BOOKMARKS = 11;
+    private static final int MENU_VIEW_BOOKMARKS = 12;
+    private static final int MENU_CLEAR_THIS_CHAT_BOOKMARKS = 13;
 
     private static final int TAB_ALL = 0;
     private static final int TAB_CHANNELS = 1;
@@ -98,6 +110,7 @@ public class BookmarkManagerActivity extends BaseFragment {
     private SearchTabsAndFiltersLayout tabsContainer;
     private ViewPagerFixed.TabsView tabsView;
     private BlurredBackgroundDrawable tabsContainerBackground;
+    private ActionBarPopupWindow scrimPopupWindow;
     private int selectedTabId = TAB_ALL;
     private String searchQuery = "";
     private int loadRequestId;
@@ -959,6 +972,268 @@ public class BookmarkManagerActivity extends BaseFragment {
                 BookmarkChatItem item = items.get(position);
                 presentFragment(new BookmarksActivity(item.dialogId));
             });
+            
+            listView.setOnItemLongClickListener((view, position, x, y) -> {
+                if (position < 0 || position >= items.size()) {
+                    return false;
+                }
+                BookmarkChatItem item = items.get(position);
+                showChatMenu(view, item, x, y);
+                return true;
+            });
+        }
+    }
+
+    private void showChatMenu(View view, BookmarkChatItem item, float x, float y) {
+        if (getParentActivity() == null || item == null) {
+            return;
+        }
+
+        try {
+            FileLog.d("BookmarkManager", "Showing chat menu for dialogId: " + item.dialogId);
+            
+            ArrayList<CharSequence> items = new ArrayList<>();
+            ArrayList<Integer> icons = new ArrayList<>();
+            ArrayList<Integer> options = new ArrayList<>();
+
+            // Open Chat
+            items.add(getString(R.string.Open));
+            icons.add(R.drawable.msg_openin);
+            options.add(MENU_OPEN_CHAT);
+
+            // View Bookmarks
+            items.add(getString(R.string.BookmarksManager));
+            icons.add(R.drawable.msg_saved);
+            options.add(MENU_VIEW_BOOKMARKS);
+
+            // Remove All Bookmarks for this chat
+            items.add(getString(R.string.ClearHistory));
+            icons.add(R.drawable.msg_unfave);
+            options.add(MENU_CLEAR_THIS_CHAT_BOOKMARKS);
+
+            // Create popup layout
+            ActionBarPopupWindow.ActionBarPopupWindowLayout popupLayout = new ActionBarPopupWindow.ActionBarPopupWindowLayout(
+                getParentActivity(), 
+                R.drawable.popup_fixed_alert4, 
+                resourceProvider, 
+                0
+            );
+            popupLayout.setMinimumWidth(dp(200));
+            popupLayout.setBackgroundColor(getThemedColor(Theme.key_actionBarDefaultSubmenuBackground));
+
+            // Add menu items
+            for (int a = 0, N = items.size(); a < N; ++a) {
+                ActionBarMenuSubItem cell = new ActionBarMenuSubItem(
+                    getParentActivity(), 
+                    a == 0, 
+                    a == N - 1, 
+                    resourceProvider
+                );
+                cell.setMinimumWidth(dp(200));
+                cell.setTextAndIcon(items.get(a), icons.get(a));
+                final Integer option = options.get(a);
+                popupLayout.addView(cell);
+                cell.setOnClickListener(v1 -> {
+                    FileLog.d("BookmarkManager", "Menu option selected: " + option + " for dialogId: " + item.dialogId);
+                    handleMenuOption(option, item);
+                    if (scrimPopupWindow != null) {
+                        scrimPopupWindow.dismiss();
+                    }
+                });
+            }
+
+            // Create popup container
+            ChatScrimPopupContainerLayout scrimPopupContainerLayout = new ChatScrimPopupContainerLayout(fragmentView.getContext()) {
+                @Override
+                public boolean dispatchTouchEvent(MotionEvent ev) {
+                    if (ev.getAction() == MotionEvent.ACTION_DOWN && !scrimPopupWindow.isShowing()) {
+                        return false;
+                    }
+                    boolean b = super.dispatchTouchEvent(ev);
+                    if (ev.getAction() == MotionEvent.ACTION_DOWN && !b) {
+                        closeMenu();
+                    }
+                    return b;
+                }
+
+                private void closeMenu() {
+                    if (scrimPopupWindow != null) {
+                        scrimPopupWindow.dismiss();
+                    }
+                }
+            };
+            scrimPopupContainerLayout.addView(popupLayout, LayoutHelper.createLinearRelatively(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT, 0, 0, 0, 0));
+            scrimPopupContainerLayout.setPopupWindowLayout(popupLayout);
+
+            // Create popup window
+            scrimPopupWindow = new ActionBarPopupWindow(scrimPopupContainerLayout, LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT) {
+                @Override
+                public void dismiss() {
+                    super.dismiss();
+                    if (scrimPopupWindow != this) {
+                        return;
+                    }
+                    scrimPopupWindow = null;
+                    dimBehindView(false);
+                }
+            };
+            scrimPopupWindow.setPauseNotifications(true);
+            scrimPopupWindow.setDismissAnimationDuration(220);
+            scrimPopupWindow.setOutsideTouchable(true);
+            scrimPopupWindow.setClippingEnabled(true);
+            scrimPopupWindow.setInputMethodMode(ActionBarPopupWindow.INPUT_METHOD_NOT_NEEDED);
+            scrimPopupWindow.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_UNSPECIFIED);
+
+            // Calculate position
+            int[] location = new int[2];
+            view.getLocationOnScreen(location);
+            float finalPopupX = location[0] + x;
+            float finalPopupY = location[1] + y;
+
+            // Adjust position to keep menu on screen
+            int popupWidth = dp(200);
+            int popupHeight = items.size() * dp(48);
+            int screenWidth = getParentActivity().getResources().getDisplayMetrics().widthPixels;
+            int screenHeight = getParentActivity().getResources().getDisplayMetrics().heightPixels;
+
+            if (finalPopupX + popupWidth > screenWidth) {
+                finalPopupX = screenWidth - popupWidth - dp(10);
+            }
+            if (finalPopupY + popupHeight > screenHeight) {
+                finalPopupY = finalPopupY - popupHeight - dp(10);
+            }
+
+            scrimPopupWindow.showAtLocation(fragmentView, Gravity.LEFT | Gravity.TOP, (int) finalPopupX, (int) finalPopupY);
+            dimBehindView(true);
+
+        } catch (Exception e) {
+            FileLog.e(e);
+            FileLog.d("BookmarkManager", "Error showing chat menu: " + e.getMessage());
+        }
+    }
+
+    private void handleMenuOption(int option, BookmarkChatItem item) {
+        try {
+            FileLog.d("BookmarkManager", "Handling menu option: " + option + " for dialogId: " + item.dialogId);
+            
+            switch (option) {
+                case MENU_OPEN_CHAT:
+                    openChat(item);
+                    break;
+                case MENU_VIEW_BOOKMARKS:
+                    viewBookmarks(item);
+                    break;
+                case MENU_CLEAR_THIS_CHAT_BOOKMARKS:
+                    clearChatBookmarks(item);
+                    break;
+                default:
+                    FileLog.d("BookmarkManager", "Unknown menu option: " + option);
+                    break;
+            }
+        } catch (Exception e) {
+            FileLog.e(e);
+            FileLog.d("BookmarkManager", "Error handling menu option: " + e.getMessage());
+            BulletinFactory.of(this).createErrorBulletin(getString(R.string.ErrorOccurred)).show();
+        }
+    }
+
+    private void openChat(BookmarkChatItem item) {
+        try {
+            FileLog.d("BookmarkManager", "Opening chat for dialogId: " + item.dialogId);
+            
+            Bundle args = new Bundle();
+            long dialogId = item.dialogId;
+            
+            if (DialogObject.isEncryptedDialog(dialogId)) {
+                args.putInt("enc_id", DialogObject.getEncryptedChatId(dialogId));
+            } else if (DialogObject.isUserDialog(dialogId)) {
+                args.putLong("user_id", dialogId);
+            } else {
+                TLRPC.Chat chat = getMessagesController().getChat(-dialogId);
+                if (chat != null && chat.migrated_to != null) {
+                    args.putLong("migrated_to", dialogId);
+                    dialogId = -chat.migrated_to.channel_id;
+                }
+                args.putLong("chat_id", -dialogId);
+            }
+            
+            NotificationCenter.getInstance(getCurrentAccount()).postNotificationName(NotificationCenter.closeChats);
+            presentFragment(new ChatActivity(args), false, false);
+            
+        } catch (Exception e) {
+            FileLog.e(e);
+            FileLog.d("BookmarkManager", "Error opening chat: " + e.getMessage());
+            BulletinFactory.of(this).createErrorBulletin(getString(R.string.ErrorOccurred)).show();
+        }
+    }
+
+    private void viewBookmarks(BookmarkChatItem item) {
+        try {
+            FileLog.d("BookmarkManager", "Viewing bookmarks for dialogId: " + item.dialogId);
+            presentFragment(new BookmarksActivity(item.dialogId));
+        } catch (Exception e) {
+            FileLog.e(e);
+            FileLog.d("BookmarkManager", "Error viewing bookmarks: " + e.getMessage());
+            BulletinFactory.of(this).createErrorBulletin(getString(R.string.ErrorOccurred)).show();
+        }
+    }
+
+    private void clearChatBookmarks(BookmarkChatItem item) {
+        try {
+            FileLog.d("BookmarkManager", "Clearing bookmarks for dialogId: " + item.dialogId);
+            
+            Context ctx = getParentActivity();
+            if (ctx == null) {
+                return;
+            }
+            
+            AlertUtil.showConfirm(
+                ctx, 
+                getString(R.string.AreYouSure), 
+                getString(R.string.ClearHistory) + " " + item.title + "?", 
+                R.drawable.msg_delete, 
+                getString(R.string.Clear), 
+                true, 
+                () -> {
+                    final int accountId = getCurrentAccount();
+                    AlertDialog progressDialog = new AlertDialog(getContext(), AlertDialog.ALERT_TYPE_SPINNER);
+                    progressDialog.setCanCancel(false);
+                    progressDialog.show();
+                    
+                    Utilities.globalQueue.postRunnable(() -> {
+                        try {
+                            // Get all bookmarked message IDs for this dialog
+                            int[] bookmarkedMessageIds = BookmarksHelper.getBookmarkedMessageIds(accountId, item.dialogId);
+                            if (bookmarkedMessageIds != null && bookmarkedMessageIds.length > 0) {
+                                // Remove all bookmarks for this dialog
+                                BookmarksHelper.removeBookmarks(accountId, item.dialogId, bookmarkedMessageIds);
+                            }
+                            AndroidUtilities.runOnUIThread(() -> {
+                                progressDialog.dismiss();
+                                BulletinFactory.of(this).createSimpleBulletin(R.raw.done, getString(R.string.Done)).show();
+                                reloadData();
+                            });
+                        } catch (Exception e) {
+                            FileLog.e(e);
+                            AndroidUtilities.runOnUIThread(() -> {
+                                progressDialog.dismiss();
+                                BulletinFactory.of(this).createErrorBulletin(getString(R.string.ErrorOccurred)).show();
+                            });
+                        }
+                    });
+                }
+            );
+            
+        } catch (Exception e) {
+            FileLog.e(e);
+            FileLog.d("BookmarkManager", "Error clearing chat bookmarks: " + e.getMessage());
+            BulletinFactory.of(this).createErrorBulletin(getString(R.string.ErrorOccurred)).show();
+        }
+    }
+
+    private void dimBehindView(boolean dim) {
+        if (fragmentView != null) {
+            fragmentView.setAlpha(dim ? 0.7f : 1.0f);
         }
     }
 

@@ -723,18 +723,22 @@ public class MessageHelper extends BaseController {
 
             final boolean newestFirst = deleteNewestFirst[0];
             final int messageTypeFilter = selectedFilter[0];
+            FileLog.d("DeleteMyMessages", "Delete requested. chatId=" + chat.id + ", limit=" + limit + ", newestFirst=" + newestFirst + ", filter=" + messageTypeFilter + ", adminMode=" + (cell != null && cell.isChecked()));
             if (cell != null && cell.isChecked()) {
                 final int finalLimit = limit;
                 showDeleteHistoryBulletin(fragment, 0, false, () -> {
                     if (finalLimit <= 0 && messageTypeFilter == FILTER_ALL) {
                         // Use direct API call only if no limit and no specific filter
+                        FileLog.d("DeleteMyMessages", "Using direct API call (admin mode, no limit, all messages)");
                         getMessagesController().deleteUserChannelHistory(chat, getUserConfig().getCurrentUser(), null, 0);
                     } else {
                         // Use search-based deletion to respect limit and/or filter
+                        FileLog.d("DeleteMyMessages", "Using search-based deletion (admin mode with limit/filter)");
                         deleteUserHistoryWithSearch(fragment, -chat.id, forumTopic != null ? forumTopic.id : 0, mergeDialogId, before == -1 ? getConnectionsManager().getCurrentTime() : before, finalLimit, newestFirst, messageTypeFilter, (count, deleteAction) -> deleteAction.run());
                     }
                 }, resourcesProvider);
             } else {
+                FileLog.d("DeleteMyMessages", "Using search-based deletion (normal mode)");
                 deleteUserHistoryWithSearch(fragment, -chat.id, forumTopic != null ? forumTopic.id : 0, mergeDialogId, before == -1 ? getConnectionsManager().getCurrentTime() : before, limit, newestFirst, messageTypeFilter, (count, deleteAction) -> showDeleteHistoryBulletin(fragment, count, true, deleteAction, resourcesProvider));
             }
         });
@@ -842,12 +846,14 @@ public class MessageHelper extends BaseController {
                 var latch = new CountDownLatch(1);
                 var peer = getMessagesController().getInputPeer(dialogId);
                 var fromId = MessagesController.getInputPeer(getUserConfig().getCurrentUser());
+                FileLog.d("DeleteMyMessages", "Starting search for messages to delete. dialogId=" + dialogId + ", limit=" + limit + ", filter=" + messageTypeFilter);
                 doSearchMessages(fragment, latch, messageIds, peer, replyMessageId, fromId, before, Integer.MAX_VALUE, 0, limit, newestFirst, messageTypeFilter);
                 try {
                     latch.await();
                 } catch (Exception e) {
                     FileLog.e(e);
                 }
+                FileLog.d("DeleteMyMessages", "Search completed. Found " + messageIds.size() + " messages to delete");
                 if (!messageIds.isEmpty()) {
                     if (!newestFirst) {
                         Collections.reverse(messageIds);
@@ -861,14 +867,18 @@ public class MessageHelper extends BaseController {
                     for (int i = 0; i < N; i += 100) {
                         lists.add(new ArrayList<>(messageIds.subList(i, Math.min(N, i + 100))));
                     }
+                    final ArrayList<ArrayList<Integer>> finalLists = lists;
+                    final int finalMessageCount = messageIds.size();
                     Runnable deleteAction = () -> {
                         try {
-                            for (ArrayList<Integer> list : lists) {
+                            FileLog.d("DeleteMyMessages", "Starting deletion of " + finalMessageCount + " messages in " + finalLists.size() + " batches");
+                            for (ArrayList<Integer> list : finalLists) {
                                 for (int msgId : list) {
                                     AyuState.permitDeleteMessage(dialogId, msgId);
                                 }
                                 getMessagesController().deleteMessages(list, null, null, dialogId, 0, true, 0);
                             }
+                            FileLog.d("DeleteMyMessages", "Deletion completed successfully");
                         } catch (Exception e) {
                             FileLog.e(e);
                         }
@@ -876,6 +886,13 @@ public class MessageHelper extends BaseController {
                     final int deletedCount = messageIds.size();
                     Runnable result = callback != null ? () -> callback.run(deletedCount, deleteAction) : deleteAction;
                     AndroidUtilities.runOnUIThread(result);
+                } else {
+                    FileLog.d("DeleteMyMessages", "No messages found to delete. Showing alert to user.");
+                    AndroidUtilities.runOnUIThread(() -> {
+                        if (fragment != null && fragment.getParentActivity() != null) {
+                            AlertsCreator.showSimpleAlert(fragment, getString(R.string.NoResult));
+                        }
+                    });
                 }
                 if (mergeDialogId != 0) {
                     deleteUserHistoryWithSearch(fragment, mergeDialogId, 0, 0, before, 0, newestFirst, messageTypeFilter, null);
@@ -921,8 +938,10 @@ public class MessageHelper extends BaseController {
             }
         }
         req.hash = hash;
+        FileLog.d("DeleteMyMessages", "Sending search request. dialogId=" + dialogId + ", filter=" + messageTypeFilter + ", offsetId=" + offsetId);
         getConnectionsManager().sendRequest(req, (response, error) -> {
                 if (response instanceof TLRPC.messages_Messages res) {
+                FileLog.d("DeleteMyMessages", "Search response received. Messages count: " + res.messages.size());
                 if (response instanceof TLRPC.TL_messages_messagesNotModified || res.messages.isEmpty()) {
                     latch.countDown();
                     return;
@@ -948,9 +967,11 @@ public class MessageHelper extends BaseController {
                         return;
                     }
                 }
+                FileLog.d("DeleteMyMessages", "Current batch: " + messageIds.size() + " messages found. Continuing search...");
                 doSearchMessages(fragment, latch, messageIds, peer, replyMessageId, fromId, before, newOffsetId, calcMessagesHash(res.messages), limit, newestFirst, messageTypeFilter);
             } else {
                 if (error != null) {
+                    FileLog.d("DeleteMyMessages", "Search error: " + error.text);
                     AndroidUtilities.runOnUIThread(() -> AlertsCreator.showSimpleAlert(fragment, getString(R.string.ErrorOccurred) + "\n" + error.text));
                 }
                 latch.countDown();
