@@ -45,11 +45,6 @@ subprojects {
                 arg('ksp.incremental', 'true')
                 arg('ksp.incremental.intermodule', 'true')
             }
-
-            tasks.withType(com.google.devtools.ksp.gradle.KspTask).configureEach {
-                it.jvmArgs '-Xmx6g', '-XX:MaxMetaspaceSize=1g'
-                it.maxWorkers = 1
-            }
         }
 
         // Disable parallel execution for KSP and D8 tasks to reduce memory pressure
