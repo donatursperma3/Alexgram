@@ -1506,7 +1506,7 @@ public class FileRefController extends BaseController {
                         }
                         if (result == null && newStoryItem != null && storyItem.media != null && storyItem.media.video_cover == null && storyItem.media.document == null && storyItem.media.photo == null) {
                             // fallback: sometimes the story may only have a video file reference in a different media branch
-                            result = getFileReference(storyItem.media, requester.location, needReplacement, locationReplacement);
+                            result = getFileReferenceForMediaImpl(storyItem.media, requester.location, needReplacement, locationReplacement);
                         }
                     }
                     Object arg = requester.args[1];
