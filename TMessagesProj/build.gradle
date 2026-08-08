@@ -186,19 +186,23 @@ android {
         externalNativeBuild {
             cmake {
                 arguments '-DANDROID_STL=c++_static', '-DANDROID_PLATFORM=android-27', '-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON', '-DCMAKE_WARN_DEPRECATED=OFF', '-Wno-dev'
-                System.getenv('PATH').split(File.pathSeparator).any { path ->
-                    if (path == null || path.trim().isEmpty()) {
-                        return false
-                    }
-                    try {
-                        def ccacheName = "ccache${OperatingSystem.current().windows ? ".exe" : ""}"
-                        def file = Paths.get(path, ccacheName).toFile()
-                        if (file.exists()) {
-                            println("Using ccache ${file.getAbsolutePath()}")
-                            arguments += "-DANDROID_CCACHE=${file.getAbsolutePath()}"
-                            return true
+                def pathEnv = System.getenv('PATH') ?: ''
+                if (!pathEnv.trim().isEmpty()) {
+                    pathEnv.split(File.pathSeparator).any { path ->
+                        if (path == null || path.trim().isEmpty()) {
+                            return false
                         }
-                    } catch (Exception ignored) {
+                        try {
+                            def ccacheName = "ccache${OperatingSystem.current().windows ? ".exe" : ""}"
+                            def file = Paths.get(path, ccacheName).toFile()
+                            if (file.exists()) {
+                                println("Using ccache ${file.getAbsolutePath()}")
+                                arguments += "-DANDROID_CCACHE=${file.getAbsolutePath()}"
+                                return true
+                            }
+                        } catch (Exception ignored) {
+                            return false
+                        }
                         return false
                     }
                 }
