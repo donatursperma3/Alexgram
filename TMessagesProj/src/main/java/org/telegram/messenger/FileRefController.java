@@ -394,6 +394,19 @@ public class FileRefController extends BaseController {
         if (BuildVars.LOGS_ENABLED) {
             FileLog.d("start loading request reference parent " + getObjectString(parentObject) + " args = " + (args != null && args.length > 0 ? args[0] : "null"));
         }
+        if (BuildVars.DEBUG_VERSION) {
+            try {
+                if (parentObject instanceof TL_stories.StoryItem) {
+                    TL_stories.StoryItem s = (TL_stories.StoryItem) parentObject;
+                    FileLog.d("FileRefRequest: StoryItem dialogId=" + s.dialogId + " id=" + s.id + " mediaDoc=" + (s.media != null && s.media.document != null ? s.media.document.id : -1) + " mediaPhoto=" + (s.media != null && s.media.photo != null ? s.media.photo.id : -1));
+                } else if (parentObject instanceof StoriesController.BotPreview) {
+                    StoriesController.BotPreview bp = (StoriesController.BotPreview) parentObject;
+                    FileLog.d("FileRefRequest: BotPreview id=" + bp.id + " mediaDoc=" + (bp.media != null && bp.media.document != null ? bp.media.document.id : -1) + " mediaPhoto=" + (bp.media != null && bp.media.photo != null ? bp.media.photo.id : -1));
+                }
+            } catch (Throwable e) {
+                FileLog.e(e);
+            }
+        }
         if (args == null || args.length == 0 || args[0] == null) {
             FileLog.e("FileRefController.requestReference called with invalid args");
             return;
@@ -572,9 +585,15 @@ public class FileRefController extends BaseController {
             TL_stories.TL_stories_getStoriesByID req = new TL_stories.TL_stories_getStoriesByID();
             req.peer = getMessagesController().getInputPeer(storyItem.dialogId);
             req.id.add(storyItem.id);
-            getConnectionsManager().sendRequest(req, (response, error) -> {
-                onRequestComplete(locationKey, parentKey, response, error, true, false);
-            });
+                if (BuildVars.DEBUG_VERSION) {
+                    FileLog.d("FileRefController: requesting story by id peer=" + storyItem.dialogId + " id=" + storyItem.id + " (req) ");
+                }
+                getConnectionsManager().sendRequest(req, (response, error) -> {
+                    if (error != null && BuildVars.LOGS_ENABLED) {
+                        FileLog.e("FileRefController: getStoriesByID error=" + (error == null ? "null" : error.text));
+                    }
+                    onRequestComplete(locationKey, parentKey, response, error, true, false);
+                });
         } else if (parentObject instanceof TLRPC.TL_help_premiumPromo) {
             TLRPC.TL_help_getPremiumPromo req = new TLRPC.TL_help_getPremiumPromo();
             getConnectionsManager().sendRequest(req, (response, error) -> {

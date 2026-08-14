@@ -216,7 +216,7 @@ public final class SettingsBackupHelper {
         try {
             FileLog.d("SettingsBackup", "Scheduling settings import from file: " + settingsFile.getAbsolutePath());
             org.telegram.ui.ActionBar.AlertDialog progressDialog = new org.telegram.ui.ActionBar.AlertDialog(context, 3);
-            progressDialog.setMessage(getString(org.telegram.messenger.R.string.Restoring) + "...");
+            progressDialog.setMessage(getString(R.string.Restore) + "...");
             progressDialog.setCanceledOnTouchOutside(false);
             progressDialog.setCancelable(false);
             try {

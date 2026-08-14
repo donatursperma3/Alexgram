@@ -14832,6 +14832,27 @@ public class ChatActivityEnterView extends FrameLayout implements
         builder.setPositiveButton(LocaleController.getString("Send", R.string.Send), (dialogInterface, i) -> {
             int protectedCount = 0;
             int failedCount = 0;
+            if (BuildVars.DEBUG_VERSION) {
+                try {
+                    for (org.telegram.ui.ChatActivity.FileRefClipboardItem item : org.telegram.ui.ChatActivity.fileRefClipboard) {
+                        if (item == null) continue;
+                        if (item.parentObject instanceof TL_stories.StoryItem) {
+                            TL_stories.StoryItem s = (TL_stories.StoryItem) item.parentObject;
+                            FileLog.d("PasteFileRef: story parent dialogId=" + s.dialogId + " id=" + s.id + " mediaDoc=" + (s.media != null && s.media.document != null ? s.media.document.id : -1) + " mediaPhoto=" + (s.media != null && s.media.photo != null ? s.media.photo.id : -1));
+                        } else if (item.parentObject != null) {
+                            FileLog.d("PasteFileRef: parentObject class=" + item.parentObject.getClass().getSimpleName());
+                        }
+                        if (item.document != null) {
+                            FileLog.d("PasteFileRef: document id=" + item.document.id + " access_hash=" + item.document.access_hash + " file_ref_len=" + (item.document.file_reference == null ? 0 : item.document.file_reference.length));
+                        }
+                        if (item.photo != null) {
+                            FileLog.d("PasteFileRef: photo id=" + item.photo.id + " access_hash=" + item.photo.access_hash + " file_ref_len=" + (item.photo.file_reference == null ? 0 : item.photo.file_reference.length));
+                        }
+                    }
+                } catch (Throwable e) {
+                    FileLog.e(e);
+                }
+            }
             for (org.telegram.ui.ChatActivity.FileRefClipboardItem item : org.telegram.ui.ChatActivity.fileRefClipboard) {
                 if (item == null) {
                     continue;
