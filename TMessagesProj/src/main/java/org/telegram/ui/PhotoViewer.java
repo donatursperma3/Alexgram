@@ -8162,8 +8162,25 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             if (showCaptionTranslate) {
                 addTranslateCommentOption(options, LlmConfig.llmIsDefaultProvider() ? R.drawable.magic_stick_solar : R.drawable.ic_translate, getString(R.string.TranslateMessage) + ' ' + "(" + languageText + ")", 0);
             }
+
+            if (showSendAsFile) {
+                Runnable onLong = () -> {
+                    if (parentActivity == null) return;
+                    final long dialogId;
+                    if (parentChatActivity != null) {
+                        dialogId = parentChatActivity.getDialogId();
+                    } else if (placeProvider != null) {
+                        dialogId = placeProvider.getDialogId();
+                    } else {
+                        return;
+                    }
+                    final AlertsCreator.ScheduleDatePickerColors colors = new AlertsCreator.ScheduleDatePickerColors(0xffffffff, 0xff252525, 0xffffffff, 0x1effffff, 0xffffffff, 0xf9222222, 0x24ffffff);
+                    AlertsCreator.createScheduleDatePickerDialog(parentActivity, dialogId, (notify, scheduleDate, scheduleRepeatPeriod) -> sendPressed(notify, scheduleDate, scheduleRepeatPeriod, false, true, false), colors);
+                };
+                options.add(R.drawable.msg_sendfile, (Drawable) null, getString(multipleSelected ? R.string.SendAsFiles : R.string.SendAsFile), Theme.key_actionBarDefaultSubmenuItemIcon, Theme.key_actionBarDefaultSubmenuItem, onLong, () -> sendPressed(!silentByDefault, 0, 0, false, true, false));
+            }
+
             options
-                .addIf(showSendAsFile, R.drawable.msg_sendfile, getString(multipleSelected ? R.string.SendAsFiles : R.string.SendAsFile), () -> sendPressed(!silentByDefault, 0, 0, false, true, false))
                 .addIf(canReplace, R.drawable.msg_send, getString(R.string.SendAsNewPhoto), () -> sendPressed(!silentByDefault, 0, 0))
                 .addIf(canReplace, R.drawable.msg_replace, getString(R.string.ReplacePhoto), this::replacePressed)
                 .addIf(showSchedule, R.drawable.msg_calendar2, getString(userIsSelf ? R.string.SetReminder : R.string.ScheduleMessage), this::showScheduleDatePickerDialog)

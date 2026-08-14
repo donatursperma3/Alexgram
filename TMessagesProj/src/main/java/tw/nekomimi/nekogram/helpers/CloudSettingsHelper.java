@@ -307,10 +307,19 @@ public class CloudSettingsHelper {
                     } else {
                         json = payload;
                     }
-                    SettingsBackupHelper.importSettings(GsonUtil.toJsonObject(json));
-                    localSyncedDate = System.currentTimeMillis();
-                    preferences.edit().putLong("updated_at", localSyncedDate).apply();
-                    callback.run(true, null);
+                    // Run import on background thread to avoid blocking callback/UI
+                    final String jsonFinal = json;
+                    org.telegram.messenger.Utilities.globalQueue.postRunnable(() -> {
+                        try {
+                            SettingsBackupHelper.importSettings(GsonUtil.toJsonObject(jsonFinal));
+                            localSyncedDate = System.currentTimeMillis();
+                            preferences.edit().putLong("updated_at", localSyncedDate).apply();
+                            AndroidUtilities.runOnUIThread(() -> callback.run(true, null));
+                        } catch (Throwable e) {
+                            FileLog.e(e);
+                            AndroidUtilities.runOnUIThread(() -> callback.run(false, e.getLocalizedMessage()));
+                        }
+                    });
                 } catch (Exception e) {
                     FileLog.e(e);
                     callback.run(false, e.getLocalizedMessage());

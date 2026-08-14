@@ -214,19 +214,55 @@ public final class SettingsBackupHelper {
 
     public static void importSettingsConfirmed(Context context, File settingsFile) {
         try {
-            FileLog.d("SettingsBackup", "Starting settings import from file: " + settingsFile.getAbsolutePath());
-            JsonObject configJson = GsonUtil.toJsonObject(FileUtil.readUtf8String(settingsFile));
-            FileLog.d("SettingsBackup", "Settings JSON parsed successfully. Sections: " + configJson.size());
-            importSettings(configJson);
+            FileLog.d("SettingsBackup", "Scheduling settings import from file: " + settingsFile.getAbsolutePath());
+            org.telegram.ui.ActionBar.AlertDialog progressDialog = new org.telegram.ui.ActionBar.AlertDialog(context, 3);
+            progressDialog.setMessage(getString(org.telegram.messenger.R.string.Restoring) + "...");
+            progressDialog.setCanceledOnTouchOutside(false);
+            progressDialog.setCancelable(false);
+            try {
+                progressDialog.show();
+            } catch (Exception ignore) {
+            }
 
-            AlertDialog restart = new AlertDialog(context, 0);
-            restart.setTitle(getString(R.string.NagramX));
-            restart.setMessage(getString(R.string.RestartAppToTakeEffect));
-            restart.setPositiveButton(getString(R.string.OK), (__, ___) -> AppRestartHelper.triggerRebirth(context, new Intent(context, LaunchActivity.class)));
-            restart.show();
+            org.telegram.messenger.Utilities.globalQueue.postRunnable(() -> {
+                try {
+                    FileLog.d("SettingsBackup", "Starting settings import (background thread)");
+                    JsonObject configJson = GsonUtil.toJsonObject(FileUtil.readUtf8String(settingsFile));
+                    FileLog.d("SettingsBackup", "Settings JSON parsed successfully. Sections: " + configJson.size());
+                    importSettings(configJson);
+                    AndroidUtilities.runOnUIThread(() -> {
+                        try {
+                            try {
+                                if (progressDialog.isShowing()) progressDialog.dismiss();
+                            } catch (Exception ignore) {
+                            }
+                            AlertDialog restart = new AlertDialog(context, 0);
+                            restart.setTitle(getString(R.string.NagramX));
+                            restart.setMessage(getString(R.string.RestartAppToTakeEffect));
+                            restart.setPositiveButton(getString(R.string.OK), (__, ___) -> AppRestartHelper.triggerRebirth(context, new Intent(context, LaunchActivity.class)));
+                            restart.show();
+                        } catch (Exception uiEx) {
+                            FileLog.e(uiEx);
+                        }
+                    });
+                } catch (Throwable e) {
+                    FileLog.e(e);
+                    FileLog.d("SettingsBackup", "Settings import failed: " + e.getMessage());
+                    AndroidUtilities.runOnUIThread(() -> {
+                        try {
+                            try {
+                                if (progressDialog.isShowing()) progressDialog.dismiss();
+                            } catch (Exception ignore) {
+                            }
+                        } catch (Throwable ignore) {
+                        }
+                        AlertUtil.showSimpleAlert(context, e);
+                    });
+                }
+            });
         } catch (Exception e) {
             FileLog.e(e);
-            FileLog.d("SettingsBackup", "Settings import failed: " + e.getMessage());
+            FileLog.d("SettingsBackup", "Settings import scheduling failed: " + e.getMessage());
             AlertUtil.showSimpleAlert(context, e);
         }
     }
@@ -267,59 +303,94 @@ public final class SettingsBackupHelper {
             SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences(spName, Activity.MODE_PRIVATE);
             SharedPreferences.Editor editor = preferences.edit();
             int sectionKeys = 0;
-            for (Map.Entry<String, JsonElement> config : ((JsonObject) element.getValue()).entrySet()) {
+            JsonObject sectionObj = (JsonObject) element.getValue();
+            for (Map.Entry<String, JsonElement> config : sectionObj.entrySet()) {
                 String key = config.getKey();
-                JsonPrimitive value = (JsonPrimitive) config.getValue();
-                
-                // Handle special sections
-                if ("nkmrcfg".equals(spName)) {
-                    boolean shouldSkip = true;
-                    for (String prefix : preservePrefixes) {
-                        if (key.startsWith(prefix)) {
-                            shouldSkip = false;
-                            break;
+                JsonElement valElem = config.getValue();
+                try {
+                    // Handle special sections
+                    if ("nkmrcfg".equals(spName)) {
+                        boolean shouldSkip = true;
+                        for (String prefix : preservePrefixes) {
+                            if (key.startsWith(prefix)) {
+                                shouldSkip = false;
+                                break;
+                            }
+                        }
+                        if (shouldSkip) {
+                            String actualKey = key;
+                            if (key.endsWith("_long")) {
+                                actualKey = StringsKt.substringBeforeLast(key, "_long", key);
+                            } else if (key.endsWith("_float")) {
+                                actualKey = StringsKt.substringBeforeLast(key, "_float", key);
+                            }
+                            shouldSkip = !allowedKeys.contains(actualKey);
+                        }
+                        if (shouldSkip) {
+                            continue;
                         }
                     }
-                    if (shouldSkip) {
-                        String actualKey = key;
-                        if (key.endsWith("_long")) {
-                            actualKey = StringsKt.substringBeforeLast(key, "_long", key);
-                        } else if (key.endsWith("_float")) {
-                            actualKey = StringsKt.substringBeforeLast(key, "_float", key);
+
+                    if (valElem == null || valElem.isJsonNull()) {
+                        editor.putString(key, null);
+                    } else if (valElem.isJsonPrimitive()) {
+                        JsonPrimitive value = valElem.getAsJsonPrimitive();
+                        if (value.isBoolean()) {
+                            editor.putBoolean(key, value.getAsBoolean());
+                        } else if (value.isNumber()) {
+                            boolean isLong = false;
+                            boolean isFloat = false;
+                            if (key.endsWith("_long")) {
+                                key = StringsKt.substringBeforeLast(key, "_long", key);
+                                isLong = true;
+                            } else if (key.endsWith("_float")) {
+                                key = StringsKt.substringBeforeLast(key, "_float", key);
+                                isFloat = true;
+                            }
+                            if (isLong) {
+                                editor.putLong(key, value.getAsLong());
+                            } else if (isFloat) {
+                                editor.putFloat(key, value.getAsFloat());
+                            } else {
+                                try {
+                                    editor.putInt(key, value.getAsInt());
+                                } catch (Exception ex) {
+                                    editor.putLong(key, value.getAsLong());
+                                }
+                            }
+                        } else if (value.isString()) {
+                            editor.putString(key, value.getAsString());
+                        } else {
+                            editor.putString(key, value.getAsString());
                         }
-                        shouldSkip = !allowedKeys.contains(actualKey);
-                    }
-                    if (shouldSkip) {
-                        continue;
-                    }
-                }
-                
-                // Import based on value type
-                if (value.isBoolean()) {
-                    editor.putBoolean(key, value.getAsBoolean());
-                } else if (value.isNumber()) {
-                    boolean isLong = false;
-                    boolean isFloat = false;
-                    if (key.endsWith("_long")) {
-                        key = StringsKt.substringBeforeLast(key, "_long", key);
-                        isLong = true;
-                    } else if (key.endsWith("_float")) {
-                        key = StringsKt.substringBeforeLast(key, "_float", key);
-                        isFloat = true;
-                    }
-                    if (isLong) {
-                        editor.putLong(key, value.getAsLong());
-                    } else if (isFloat) {
-                        editor.putFloat(key, value.getAsFloat());
+                    } else if (valElem.isJsonArray()) {
+                        // Convert JSON array to Set<String>
+                        JsonArray arr = valElem.getAsJsonArray();
+                        HashSet<String> set = new HashSet<>();
+                        for (JsonElement e : arr) {
+                            if (e != null && !e.isJsonNull()) set.add(e.getAsString());
+                        }
+                        editor.putStringSet(key, set);
                     } else {
-                        editor.putInt(key, value.getAsInt());
+                        // Fallback to string
+                        editor.putString(key, valElem.toString());
                     }
-                } else {
-                    editor.putString(key, value.getAsString());
+                    sectionKeys++;
+                } catch (Throwable ke) {
+                    FileLog.e(ke);
+                    FileLog.d("SettingsBackup", "Failed to import key '" + key + "' in section '" + spName + "': " + ke.getMessage());
                 }
-                sectionKeys++;
             }
-            editor.commit();
+            try {
+                editor.apply();
+            } catch (Throwable ee) {
+                FileLog.e(ee);
+                try {
+                    editor.commit();
+                } catch (Throwable ce) {
+                    FileLog.e(ce);
+                }
+            }
             totalKeys += sectionKeys;
             
             // Special logging for important sections
@@ -1153,7 +1224,16 @@ public final class SettingsBackupHelper {
                 editor.putStringSet(key, set);
             }
         }
-        editor.commit();
+        try {
+            editor.apply();
+        } catch (Throwable e) {
+            FileLog.e(e);
+            try {
+                editor.commit();
+            } catch (Throwable ce) {
+                FileLog.e(ce);
+            }
+        }
     }
 
     public static void backupSettings(Context context, Theme.ResourcesProvider resourceProvider) {
