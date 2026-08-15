@@ -14857,6 +14857,21 @@ public class ChatActivityEnterView extends FrameLayout implements
                 if (item == null) {
                     continue;
                 }
+                // Validate file ref data before attempting to send
+                boolean isValidFileRef = validateFileRefItem(item);
+                if (!isValidFileRef) {
+                    if (BuildVars.DEBUG_VERSION) {
+                        String debugMsg = "PasteFileRef: Invalid file ref - ";
+                        if (item.document != null) {
+                            debugMsg += "document id=" + item.document.id + " access_hash=" + item.document.access_hash + " file_ref_empty=" + (item.document.file_reference == null || item.document.file_reference.length == 0);
+                        } else if (item.photo != null) {
+                            debugMsg += "photo id=" + item.photo.id + " access_hash=" + item.photo.access_hash + " file_ref_empty=" + (item.photo.file_reference == null || item.photo.file_reference.length == 0);
+                        }
+                        FileLog.w(debugMsg);
+                    }
+                    failedCount++;
+                    continue;
+                }
                 if (item.parentObject instanceof TL_stories.StoryItem && ((TL_stories.StoryItem) item.parentObject).noforwards) {
                     protectedCount++;
                     continue;
@@ -14882,7 +14897,7 @@ public class ChatActivityEnterView extends FrameLayout implements
                     }
                 } catch (Throwable t) {
                     failedCount++;
-                    FileLog.e(t);
+                    FileLog.e("PasteFileRef send failed: ", t);
                 }
             }
             if (protectedCount > 0) {
@@ -14906,6 +14921,44 @@ public class ChatActivityEnterView extends FrameLayout implements
         } else {
             builder.show();
         }
+    }
+
+    /**
+     * Validates file reference item from clipboard before sending
+     * Checks if document/photo has valid id, access_hash, and file_reference
+     */
+    private boolean validateFileRefItem(org.telegram.ui.ChatActivity.FileRefClipboardItem item) {
+        try {
+            if (item.document != null) {
+                TLRPC.TL_document doc = item.document;
+                // Check if document has valid id and access_hash
+                if (doc.id == 0 || doc.access_hash == 0) {
+                    if (BuildVars.DEBUG_VERSION) {
+                        FileLog.w("PasteFileRef: document invalid - id=" + doc.id + " access_hash=" + doc.access_hash);
+                    }
+                    return false;
+                }
+                // File reference might be empty and will be refreshed by FileRefController on demand
+                return true;
+            } else if (item.photo != null) {
+                TLRPC.TL_photo photo = item.photo;
+                // Check if photo has valid id and access_hash
+                if (photo.id == 0 || photo.access_hash == 0) {
+                    if (BuildVars.DEBUG_VERSION) {
+                        FileLog.w("PasteFileRef: photo invalid - id=" + photo.id + " access_hash=" + photo.access_hash);
+                    }
+                    return false;
+                }
+                // File reference might be empty and will be refreshed by FileRefController on demand
+                return true;
+            }
+        } catch (Exception e) {
+            if (BuildVars.DEBUG_VERSION) {
+                FileLog.e("PasteFileRef: validation error", e);
+            }
+            return false;
+        }
+        return false;
     }
 
     private MessageObject getThreadMessage() {
