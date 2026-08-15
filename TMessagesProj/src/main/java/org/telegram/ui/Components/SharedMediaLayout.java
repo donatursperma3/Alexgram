@@ -446,7 +446,54 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
 
     // Set additional top inset when filter containers are present above the media tabs
     public void setAdditionalTopInset(int inset) {
+        if (this.additionalTopInset == inset) {
+            return;
+        }
         this.additionalTopInset = inset;
+
+        if (scrollSlidingTextTabStrip != null) {
+            ViewGroup.LayoutParams layoutParams = scrollSlidingTextTabStrip.getLayoutParams();
+            if (layoutParams instanceof FrameLayout.LayoutParams) {
+                FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) layoutParams;
+                if (params.topMargin != getEffectiveTopInset()) {
+                    params.topMargin = getEffectiveTopInset();
+                    scrollSlidingTextTabStrip.setLayoutParams(params);
+                }
+            }
+        }
+        if (searchTagsList != null) {
+            ViewGroup.LayoutParams layoutParams = searchTagsList.getLayoutParams();
+            if (layoutParams instanceof FrameLayout.LayoutParams) {
+                FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) layoutParams;
+                if (params.topMargin != 4 + getEffectiveTopInset()) {
+                    params.topMargin = 4 + getEffectiveTopInset();
+                    searchTagsList.setLayoutParams(params);
+                }
+            }
+        }
+        if (actionModeLayout != null) {
+            ViewGroup.LayoutParams layoutParams = actionModeLayout.getLayoutParams();
+            if (layoutParams instanceof FrameLayout.LayoutParams) {
+                FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) layoutParams;
+                if (params.topMargin != getEffectiveTopInset()) {
+                    params.topMargin = getEffectiveTopInset();
+                    actionModeLayout.setLayoutParams(params);
+                }
+            }
+        }
+        if (mediaPages != null) {
+            for (MediaPage page : mediaPages) {
+                if (page != null && page.listView != null) {
+                    page.listView.setPadding(
+                        page.listView.getPaddingLeft(),
+                        getPagePaddingTop(page.selectedType),
+                        page.listView.getPaddingRight(),
+                        page.listView.hintPaddingBottom = getPagePaddingBottom(isStoriesView())
+                    );
+                }
+            }
+        }
+        requestLayout();
     }
 
     // Get the effective top inset including any additional offset for filter containers
@@ -1774,6 +1821,15 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
     private Theme.ResourcesProvider resourcesProvider;
 
     private Runnable applyBulletin;
+    private static final int ACTION_MODE_BUTTON_SIZE_DP = 42;
+    private static final int ACTION_MODE_BUTTON_GAP_DP = 2;
+
+    private LinearLayout.LayoutParams createActionModeButtonLayoutParams() {
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(ACTION_MODE_BUTTON_SIZE_DP), ViewGroup.LayoutParams.MATCH_PARENT);
+        lp.leftMargin = dp(ACTION_MODE_BUTTON_GAP_DP);
+        lp.rightMargin = dp(ACTION_MODE_BUTTON_GAP_DP);
+        return lp;
+    }
 
     public boolean hasInternet() {
         return profileActivity.getConnectionsManager().getConnectionState() == ConnectionsManager.ConnectionStateConnected;
@@ -2462,7 +2518,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         backDrawable.setColor(getThemedColor(Theme.key_actionBarActionModeDefaultIcon));
         closeButton.setBackground(Theme.createSelectorDrawable(getThemedColor(Theme.key_actionBarActionModeDefaultSelector), 1));
         closeButton.setContentDescription(getString("Close", R.string.Close));
-        actionModeLayout.addView(closeButton, new LinearLayout.LayoutParams(dp(54), ViewGroup.LayoutParams.MATCH_PARENT));
+        actionModeLayout.addView(closeButton, createActionModeButtonLayoutParams());
         actionModeViews.add(closeButton);
         closeButton.setOnClickListener(v -> closeActionMode());
 
@@ -2480,7 +2536,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                 forwardNoQuoteItem.setContentDescription(LocaleController.getString("NoQuoteForward", R.string.NoQuoteForward));
                 forwardNoQuoteItem.setDuplicateParentStateEnabled(false);
                 forwardNoQuoteItem.setVisibility(View.VISIBLE);
-                actionModeLayout.addView(forwardNoQuoteItem, new LinearLayout.LayoutParams(dp(54), ViewGroup.LayoutParams.MATCH_PARENT));
+                actionModeLayout.addView(forwardNoQuoteItem, createActionModeButtonLayoutParams());
                 actionModeViews.add(forwardNoQuoteItem);
                 forwardNoQuoteItem.setOnClickListener(v -> onActionBarItemClick(v, forward_noquote));
 
@@ -2489,7 +2545,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                 gotoItem.setContentDescription(getString(R.string.AccDescrGoToMessage));
                 gotoItem.setDuplicateParentStateEnabled(false);
                 gotoItem.setVisibility(View.VISIBLE);
-                actionModeLayout.addView(gotoItem, new LinearLayout.LayoutParams(dp(54), ViewGroup.LayoutParams.MATCH_PARENT));
+                actionModeLayout.addView(gotoItem, createActionModeButtonLayoutParams());
                 actionModeViews.add(gotoItem);
                 gotoItem.setOnClickListener(v -> onActionBarItemClick(v, gotochat));
 
@@ -2498,7 +2554,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                 copyLinkItem.setContentDescription(getString(R.string.CopyLink));
                 copyLinkItem.setDuplicateParentStateEnabled(false);
                 copyLinkItem.setVisibility(View.VISIBLE);
-                actionModeLayout.addView(copyLinkItem, new LinearLayout.LayoutParams(dp(54), ViewGroup.LayoutParams.MATCH_PARENT));
+                actionModeLayout.addView(copyLinkItem, createActionModeButtonLayoutParams());
                 actionModeViews.add(copyLinkItem);
                 copyLinkItem.setOnClickListener(v -> onActionBarItemClick(v, copy_link));
 
@@ -2507,7 +2563,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                 specialForwardItem.setContentDescription(getString(R.string.SpecialForward));
                 specialForwardItem.setDuplicateParentStateEnabled(false);
                 specialForwardItem.setVisibility(View.VISIBLE);
-                actionModeLayout.addView(specialForwardItem, new LinearLayout.LayoutParams(dp(54), ViewGroup.LayoutParams.MATCH_PARENT));
+                actionModeLayout.addView(specialForwardItem, createActionModeButtonLayoutParams());
                 actionModeViews.add(specialForwardItem);
                 specialForwardItem.setOnClickListener(v -> onActionBarItemClick(v, special_forward));
 
@@ -2516,7 +2572,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                 forwardItem.setContentDescription(getString(R.string.Forward));
                 forwardItem.setDuplicateParentStateEnabled(false);
                 forwardItem.setVisibility(View.VISIBLE);
-                actionModeLayout.addView(forwardItem, new LinearLayout.LayoutParams(dp(54), ViewGroup.LayoutParams.MATCH_PARENT));
+                actionModeLayout.addView(forwardItem, createActionModeButtonLayoutParams());
                 actionModeViews.add(forwardItem);
                 forwardItem.setOnClickListener(v -> onActionBarItemClick(v, forward));
             }
@@ -2526,7 +2582,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
             pinItem.setContentDescription(getString(R.string.PinMessage));
             pinItem.setDuplicateParentStateEnabled(false);
             pinItem.setVisibility(View.GONE);
-            actionModeLayout.addView(pinItem, new LinearLayout.LayoutParams(dp(54), ViewGroup.LayoutParams.MATCH_PARENT));
+            actionModeLayout.addView(pinItem, createActionModeButtonLayoutParams());
             actionModeViews.add(pinItem);
             pinItem.setOnClickListener(v -> onActionBarItemClick(v, pin));
 
@@ -2535,7 +2591,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
             unpinItem.setContentDescription(getString(R.string.UnpinMessage));
             unpinItem.setDuplicateParentStateEnabled(false);
             unpinItem.setVisibility(View.GONE);
-            actionModeLayout.addView(unpinItem, new LinearLayout.LayoutParams(dp(54), ViewGroup.LayoutParams.MATCH_PARENT));
+            actionModeLayout.addView(unpinItem, createActionModeButtonLayoutParams());
             actionModeViews.add(unpinItem);
             unpinItem.setOnClickListener(v -> onActionBarItemClick(v, unpin));
 
@@ -2546,7 +2602,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         selectRangeItem.setContentDescription(LocaleController.getString("SelectBetween", R.string.SelectBetween));
         selectRangeItem.setDuplicateParentStateEnabled(false);
         selectRangeItem.setVisibility(View.GONE);
-        actionModeLayout.addView(selectRangeItem, new LinearLayout.LayoutParams(dp(54), ViewGroup.LayoutParams.MATCH_PARENT));
+        actionModeLayout.addView(selectRangeItem, createActionModeButtonLayoutParams());
         actionModeViews.add(selectRangeItem);
         selectRangeItem.setOnClickListener(v -> performSelectBetween());
 
@@ -2556,7 +2612,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
             bookmarkItem.setContentDescription(getString(R.string.AddBookmark));
             bookmarkItem.setDuplicateParentStateEnabled(false);
             bookmarkItem.setVisibility(View.VISIBLE);
-            actionModeLayout.addView(bookmarkItem, new LinearLayout.LayoutParams(dp(54), ViewGroup.LayoutParams.MATCH_PARENT));
+            actionModeLayout.addView(bookmarkItem, createActionModeButtonLayoutParams());
             actionModeViews.add(bookmarkItem);
             bookmarkItem.setOnClickListener(v -> onActionBarItemClick(v, bookmark));
         }
@@ -2566,7 +2622,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         deleteItem.setContentDescription(getString("Delete", R.string.Delete));
         deleteItem.setDuplicateParentStateEnabled(false);
         deleteItem.setVisibility(View.VISIBLE);
-        actionModeLayout.addView(deleteItem, new LinearLayout.LayoutParams(dp(54), ViewGroup.LayoutParams.MATCH_PARENT));
+        actionModeLayout.addView(deleteItem, createActionModeButtonLayoutParams());
         actionModeViews.add(deleteItem);
         deleteItem.setOnClickListener(v -> onActionBarItemClick(v, delete));
 
