@@ -8287,6 +8287,20 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
             if (error != null && FileRefController.isFileRefError(error.text)) {
                 final int fileRefIndex = FileRefController.getFileRefErrorIndex(error.text);
                 if (parentObjects != null) {
+                    // CRITICAL FIX: Story item file_refs expire quickly and cause ANR in retry loops
+                    // Check if the failed item is from a story - if so, don't retry
+                    if (fileRefIndex >= 0 && fileRefIndex < parentObjects.size()) {
+                        Object parentObj = parentObjects.get(fileRefIndex);
+                        if (parentObj instanceof TL_stories.StoryItem) {
+                            if (BuildVars.DEBUG_VERSION) {
+                                FileLog.w("SendMessagesHelper: FILE_REFERENCE_EXPIRED for StoryItem in multi-media, not retrying to prevent ANR");
+                            }
+                            AndroidUtilities.runOnUIThread(() -> {
+                                removeFromSendingMessages(msgObjs.get(fileRefIndex).getId(), scheduled);
+                            });
+                            return;
+                        }
+                    }
                     ArrayList<Object> arrayList = new ArrayList<>(parentObjects);
                     if (fileRefIndex >= 0) {
                         for (int i = 0; i < arrayList.size(); ++i) {
@@ -8674,15 +8688,43 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
 
         newMsgObj.reqId = getConnectionsManager().sendRequest(req, (response, error) -> {
             if (error != null && (req instanceof TLRPC.TL_messages_sendMedia || req instanceof TLRPC.TL_ephemeral_sendMessage || req instanceof TLRPC.TL_messages_editMessage || req instanceof TLRPC.TL_messages_addPollAnswer) && FileRefController.isFileRefError(error.text)) {
+                if (BuildVars.DEBUG_VERSION) {
+                    FileLog.d("SendMessagesHelper: FILE_REF_ERROR - error.text=" + error.text + " parentObject=" + (parentObject != null ? parentObject.getClass().getSimpleName() : "null") + " delayedMessage=" + (delayedMessage != null ? "present" : "null"));
+                }
                 if (FileRefController.isFileRefErrorCover(error.text)) {
                     if (removeCoverFromRequest(req)) {
                         performSendMessageRequest(req, msgObj, originalPath, parentMessage, check, delayedMessage, parentObject, params, scheduled);
                         return;
                     }
                 } else if (parentObject != null) {
+                    // CRITICAL FIX: Story item file_refs expire quickly (5-15 min) and retry loops cause ANR
+                    // Don't retry FILE_REFERENCE_EXPIRED for story items - they can't be reliably refreshed
+                    if (parentObject instanceof TL_stories.StoryItem) {
+                        if (BuildVars.DEBUG_VERSION) {
+                            FileLog.w("SendMessagesHelper: FILE_REFERENCE_EXPIRED for StoryItem (type=" + FileRefController.getFileRefErrorIndex(error.text) + "), not retrying to prevent ANR deadlock");
+                        }
+                        AndroidUtilities.runOnUIThread(() -> {
+                            removeFromSendingMessages(newMsgObj.id, scheduled);
+                        });
+                        return;
+                    }
+                    // For other types, allow retry
+                    if (BuildVars.DEBUG_VERSION) {
+                        FileLog.d("SendMessagesHelper: FILE_REFERENCE_EXPIRED for " + parentObject.getClass().getSimpleName() + ", requesting reference refresh");
+                    }
                     getFileRefController().requestReference(parentObject, req, msgObj, originalPath, parentMessage, check, delayedMessage, scheduled);
                     return;
                 } else if (delayedMessage != null) {
+                    // Check delayedMessage for story parent objects
+                    if (delayedMessage.parentObject instanceof TL_stories.StoryItem) {
+                        if (BuildVars.DEBUG_VERSION) {
+                            FileLog.w("SendMessagesHelper: FILE_REFERENCE_EXPIRED for StoryItem in delayedMessage, not retrying");
+                        }
+                        AndroidUtilities.runOnUIThread(() -> {
+                            removeFromSendingMessages(newMsgObj.id, scheduled);
+                        });
+                        return;
+                    }
                     AndroidUtilities.runOnUIThread(() -> {
                         removeFromSendingMessages(newMsgObj.id, scheduled);
                         if (req instanceof TLRPC.TL_messages_addPollAnswer) {

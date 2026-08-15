@@ -14857,6 +14857,17 @@ public class ChatActivityEnterView extends FrameLayout implements
                 if (item == null) {
                     continue;
                 }
+                
+                // CRITICAL: Story file_refs expire in 5-15 minutes and cause ANR deadlock on retry
+                // BLOCK story items entirely - they cannot be reliably sent via copy-paste mechanism
+                if (item.parentObject instanceof TL_stories.StoryItem) {
+                    if (BuildVars.DEBUG_VERSION) {
+                        FileLog.w("PasteFileRef: BLOCKED story item - expiry risk too high, would cause ANR on retry");
+                    }
+                    protectedCount++; // Count as "protected" to inform user why it was skipped
+                    continue;
+                }
+                
                 // Validate file ref data before attempting to send
                 boolean isValidFileRef = validateFileRefItem(item);
                 if (!isValidFileRef) {
@@ -14870,10 +14881,6 @@ public class ChatActivityEnterView extends FrameLayout implements
                         FileLog.w(debugMsg);
                     }
                     failedCount++;
-                    continue;
-                }
-                if (item.parentObject instanceof TL_stories.StoryItem && ((TL_stories.StoryItem) item.parentObject).noforwards) {
-                    protectedCount++;
                     continue;
                 }
                 if (item.parentObject instanceof MessageObject) {
@@ -14926,6 +14933,7 @@ public class ChatActivityEnterView extends FrameLayout implements
     /**
      * Validates file reference item from clipboard before sending
      * Checks if document/photo has valid id, access_hash, and file_reference
+     * Story file refs expire quickly (5-15 min), so warnings and checks are strict
      */
     private boolean validateFileRefItem(org.telegram.ui.ChatActivity.FileRefClipboardItem item) {
         try {
@@ -14938,7 +14946,18 @@ public class ChatActivityEnterView extends FrameLayout implements
                     }
                     return false;
                 }
-                // File reference might be empty and will be refreshed by FileRefController on demand
+                // CRITICAL: Story file_refs expire in 5-15 minutes, retry causes ANR
+                // Require minimum file_ref length (>16 bytes) for story items to be safe
+                if (item.parentObject instanceof TL_stories.StoryItem) {
+                    if (doc.file_reference == null || doc.file_reference.length < 16) {
+                        if (BuildVars.DEBUG_VERSION) {
+                            int refLen = doc.file_reference != null ? doc.file_reference.length : 0;
+                            FileLog.w("PasteFileRef: story document file_ref too short (" + refLen + " bytes, need >=16) - will expire immediately, skipping to prevent ANR");
+                        }
+                        return false;
+                    }
+                }
+                // For non-story items, file_ref can be refreshed by FileRefController on demand
                 return true;
             } else if (item.photo != null) {
                 TLRPC.TL_photo photo = item.photo;
@@ -14949,7 +14968,18 @@ public class ChatActivityEnterView extends FrameLayout implements
                     }
                     return false;
                 }
-                // File reference might be empty and will be refreshed by FileRefController on demand
+                // CRITICAL: Story file_refs expire in 5-15 minutes, retry causes ANR
+                // Require minimum file_ref length (>16 bytes) for story items to be safe
+                if (item.parentObject instanceof TL_stories.StoryItem) {
+                    if (photo.file_reference == null || photo.file_reference.length < 16) {
+                        if (BuildVars.DEBUG_VERSION) {
+                            int refLen = photo.file_reference != null ? photo.file_reference.length : 0;
+                            FileLog.w("PasteFileRef: story photo file_ref too short (" + refLen + " bytes, need >=16) - will expire immediately, skipping to prevent ANR");
+                        }
+                        return false;
+                    }
+                }
+                // For non-story items, file_ref can be refreshed by FileRefController on demand
                 return true;
             }
         } catch (Exception e) {
