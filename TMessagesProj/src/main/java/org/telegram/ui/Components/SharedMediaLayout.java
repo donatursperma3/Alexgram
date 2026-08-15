@@ -1160,24 +1160,16 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                         if (did == dialogId && lastMediaCount[a] != 0 && lastLoadMediaCount[a] != mediaCount[a]) {
                             int type = a;
                             if (type == 0) {
-                                if (sharedMediaData[0].filterType == FILTER_PHOTOS_ONLY) {
-                                    type = MediaDataController.MEDIA_PHOTOS_ONLY;
-                                } else if (sharedMediaData[0].filterType == FILTER_VIDEOS_ONLY) {
-                                    type = MediaDataController.MEDIA_VIDEOS_ONLY;
-                                }
+                                type = SharedMediaLayout.getEffectivePhotoVideoTypeForFilter(sharedMediaData[0].filterType);
                             }
-                            parentFragment.getMediaDataController().loadMedia(did, lastLoadMediaCount[a] == -1 ? 30 : 20, 0, 0, type, topicId, 1, parentFragment.getClassGuid(), sharedMediaData[a].requestIndex, null, null);
+                            parentFragment.getMediaDataController().loadMedia(did, lastLoadMediaCount[a] == -1 ? 40 : 30, 0, 0, type, topicId, 1, parentFragment.getClassGuid(), sharedMediaData[a].requestIndex, null, null);
                             lastLoadMediaCount[a] = mediaCount[a];
                         } else if (did == mergeDialogId && lastMediaCount[a] != 0 && lastLoadMergeMediaCount[a] != mediaMergeCount[a]) {
                             int type = a;
                             if (type == 0) {
-                                if (sharedMediaData[0].filterType == FILTER_PHOTOS_ONLY) {
-                                    type = MediaDataController.MEDIA_PHOTOS_ONLY;
-                                } else if (sharedMediaData[0].filterType == FILTER_VIDEOS_ONLY) {
-                                    type = MediaDataController.MEDIA_VIDEOS_ONLY;
-                                }
+                                type = SharedMediaLayout.getEffectivePhotoVideoTypeForFilter(sharedMediaData[0].filterType);
                             }
-                            parentFragment.getMediaDataController().loadMedia(did, lastLoadMergeMediaCount[a] == -1 ? 30 : 20, 0, 0, type, topicId, 1, parentFragment.getClassGuid(), sharedMediaData[a].requestIndex, null, null);
+                            parentFragment.getMediaDataController().loadMedia(did, lastLoadMergeMediaCount[a] == -1 ? 40 : 30, 0, 0, type, topicId, 1, parentFragment.getClassGuid(), sharedMediaData[a].requestIndex, null, null);
                             lastLoadMergeMediaCount[a] = mediaMergeCount[a];
                         }
                     }
@@ -1278,10 +1270,15 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                     boolean enc = DialogObject.isEncryptedDialog(did);
                     int loadIndex = did == dialogId ? 0 : 1;
                     if (type == 0 || type == 6 || type == 7) {
-                        if (type != sharedMediaData[0].filterType) {
+                        if (sharedMediaData[0].filterType == FILTER_PHOTOS_ONLY && type != MediaDataController.MEDIA_PHOTOS_ONLY) {
                             return;
                         }
-                        type = 0;
+                        if (sharedMediaData[0].filterType == FILTER_VIDEOS_ONLY && type != MediaDataController.MEDIA_VIDEOS_ONLY) {
+                            return;
+                        }
+                        if (type == 6 || type == 7) {
+                            type = 0;
+                        }
                     }
                     if (type != 0 && type != 1 && type != 2 && type != 4) {
                         sharedMediaData[type].setTotalCount(loadIndex, (Integer) args[1]);
@@ -4309,6 +4306,54 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
 
     private boolean changeTypeAnimation;
 
+    private static int getEffectivePhotoVideoTypeForFilter(int filterType) {
+        if (filterType == FILTER_PHOTOS_ONLY) {
+            return MediaDataController.MEDIA_PHOTOS_ONLY;
+        }
+        if (filterType == FILTER_VIDEOS_ONLY) {
+            return MediaDataController.MEDIA_VIDEOS_ONLY;
+        }
+        return MediaDataController.MEDIA_PHOTOVIDEO;
+    }
+
+    private boolean matchesActivePhotoVideoFilter(MessageObject messageObject) {
+        if (messageObject == null) {
+            return false;
+        }
+        if (sharedMediaData[0].filterType == FILTER_PHOTOS_AND_VIDEOS) {
+            return true;
+        }
+        if (sharedMediaData[0].filterType == FILTER_PHOTOS_ONLY) {
+            return messageObject.isPhoto();
+        }
+        if (sharedMediaData[0].filterType == FILTER_VIDEOS_ONLY) {
+            return messageObject.isVideo();
+        }
+        return true;
+    }
+
+    private void clearPhotoVideoDataForReload() {
+        SharedMediaData data = sharedMediaData[0];
+        if (data == null) {
+            return;
+        }
+        data.messages.clear();
+        data.messagesDict[0].clear();
+        data.messagesDict[1].clear();
+        data.sections.clear();
+        data.sectionArrays.clear();
+        data.fastScrollPeriods.clear();
+        data.startOffset = 0;
+        data.endLoadingStubs = 0;
+        data.endReached[0] = false;
+        data.endReached[1] = false;
+        data.startReached = true;
+        data.loading = false;
+        data.loadingAfterFastScroll = false;
+        data.min_id = 0;
+        data.requestIndex++;
+    }
+
     private void changeMediaFilterType() {
         MediaPage mediaPage = getMediaPage(0);
         if (mediaPage != null && mediaPage.getMeasuredHeight() > 0 && mediaPage.getMeasuredWidth() > 0) {
@@ -4345,6 +4390,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
 
         final int[] counts = sharedMediaPreloader.getLastMediaCount();
         final ArrayList<MessageObject> messages = sharedMediaPreloader.getSharedMediaData()[0].messages;
+        clearPhotoVideoDataForReload();
         sharedMediaData[0].setTotalCount(1, 0);
         if (sharedMediaData[0].filterType == FILTER_PHOTOS_AND_VIDEOS) {
             sharedMediaData[0].setTotalCount(0, counts[0]);
@@ -4360,16 +4406,8 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         boolean enc = DialogObject.isEncryptedDialog(dialog_id);
         for (int i = 0; i < messages.size(); i++) {
             MessageObject messageObject = messages.get(i);
-            if (sharedMediaData[0].filterType == FILTER_PHOTOS_AND_VIDEOS) {
+            if (matchesActivePhotoVideoFilter(messageObject)) {
                 sharedMediaData[0].addMessage(messageObject, 0, false, enc);
-            } else if (sharedMediaData[0].filterType == FILTER_PHOTOS_ONLY) {
-                if (messageObject.isPhoto()) {
-                    sharedMediaData[0].addMessage(messageObject, 0, false, enc);
-                }
-            } else {
-                if (!messageObject.isPhoto()) {
-                    sharedMediaData[0].addMessage(messageObject, 0, false, enc);
-                }
             }
         }
     }
@@ -5223,12 +5261,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
             if ((firstVisibleItem + visibleItemCount > totalItemCount - threshold || sharedMediaData[stype].loadingAfterFastScroll) && !sharedMediaData[stype].loading) {
                 int type;
                 if (mediaPage.selectedType == TAB_PHOTOVIDEO) {
-                    type = MEDIA_PHOTOVIDEO;
-                    if (sharedMediaData[0].filterType == FILTER_PHOTOS_ONLY) {
-                        type = MediaDataController.MEDIA_PHOTOS_ONLY;
-                    } else if (sharedMediaData[0].filterType == FILTER_VIDEOS_ONLY) {
-                        type = MediaDataController.MEDIA_VIDEOS_ONLY;
-                    }
+                    type = SharedMediaLayout.getEffectivePhotoVideoTypeForFilter(sharedMediaData[0].filterType);
                 } else if (mediaPage.selectedType == TAB_FILES) {
                     type = MediaDataController.MEDIA_FILE;
                 } else if (mediaPage.selectedType == TAB_VOICE) {
@@ -5307,12 +5340,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         }
         int type;
         if (selectedType == TAB_PHOTOVIDEO) {
-            type = MEDIA_PHOTOVIDEO;
-            if (sharedMediaData[0].filterType == FILTER_PHOTOS_ONLY) {
-                type = MediaDataController.MEDIA_PHOTOS_ONLY;
-            } else if (sharedMediaData[0].filterType == FILTER_VIDEOS_ONLY) {
-                type = MediaDataController.MEDIA_VIDEOS_ONLY;
-            }
+            type = SharedMediaLayout.getEffectivePhotoVideoTypeForFilter(sharedMediaData[0].filterType);
         } else if (selectedType == TAB_FILES) {
             type = MediaDataController.MEDIA_FILE;
         } else if (selectedType == TAB_VOICE) {
