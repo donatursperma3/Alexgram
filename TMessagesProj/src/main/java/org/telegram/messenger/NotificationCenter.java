@@ -161,6 +161,11 @@ public class NotificationCenter {
     // [Alexgram: Main Tabs Hiding Search Bar] - Start
     public static final int mainTabsLayoutChanged = totalEvents++;
     // [Alexgram: Main Tabs Hiding Search Bar] - End
+    // [Alexgram: Feed Notifications] - Start
+    public static final int feedNeedReload = totalEvents++;
+    public static final int feedTabVisibleToggled = totalEvents++;
+    public static final int feedUnreadCountUpdated = totalEvents++;
+    // [Alexgram: Feed Notifications] - End
     public static final int messageTranslating = totalEvents++;
     public static final int dialogIsTranslatable = totalEvents++;
     public static final int dialogTranslate = totalEvents++;
@@ -592,6 +597,10 @@ public class NotificationCenter {
     }
 
     public void postNotificationName(final int id, Object... args) {
+        if (Thread.currentThread() != ApplicationLoader.applicationHandler.getLooper().getThread()) {
+            AndroidUtilities.runOnUIThread(() -> postNotificationName(id, args));
+            return;
+        }
         boolean allowDuringAnimation = id == startAllHeavyOperations || id == stopAllHeavyOperations || id == didReplacedPhotoInMemCache || id == closeChats || id == invalidateMotionBackground || id == needCheckSystemBarColors || id == messageReceivedByServer2;
         ArrayList<Integer> expiredIndices = null;
         if (!allowDuringAnimation && allowedNotifications.size() > 0) {

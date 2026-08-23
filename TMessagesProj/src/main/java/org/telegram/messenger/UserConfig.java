@@ -334,6 +334,13 @@ public class UserConfig extends BaseController {
         }
     }
 
+    public void reloadConfig() {
+        synchronized (sync) {
+            configLoaded = false;
+            loadConfig();
+        }
+    }
+
     public void
     loadConfig() {
         synchronized (sync) {
@@ -599,12 +606,12 @@ public class UserConfig extends BaseController {
 
     public long[] getDialogLoadOffsets(int folderId) {
         SharedPreferences preferences = getPreferences();
-        int dialogsLoadOffsetId = preferences.getInt("2dialogsLoadOffsetId" + (folderId == 0 ? "" : folderId), hasValidDialogLoadIds ? 0 : -1);
-        int dialogsLoadOffsetDate = preferences.getInt("2dialogsLoadOffsetDate" + (folderId == 0 ? "" : folderId), hasValidDialogLoadIds ? 0 : -1);
+        int dialogsLoadOffsetId = (int) AndroidUtilities.getPrefIntOrLong(preferences, "2dialogsLoadOffsetId" + (folderId == 0 ? "" : folderId), hasValidDialogLoadIds ? 0 : -1);
+        int dialogsLoadOffsetDate = (int) AndroidUtilities.getPrefIntOrLong(preferences, "2dialogsLoadOffsetDate" + (folderId == 0 ? "" : folderId), hasValidDialogLoadIds ? 0 : -1);
         long dialogsLoadOffsetUserId = AndroidUtilities.getPrefIntOrLong(preferences, "2dialogsLoadOffsetUserId" + (folderId == 0 ? "" : folderId), hasValidDialogLoadIds ? 0 : -1);
         long dialogsLoadOffsetChatId = AndroidUtilities.getPrefIntOrLong(preferences, "2dialogsLoadOffsetChatId" + (folderId == 0 ? "" : folderId), hasValidDialogLoadIds ? 0 : -1);
         long dialogsLoadOffsetChannelId = AndroidUtilities.getPrefIntOrLong(preferences, "2dialogsLoadOffsetChannelId" + (folderId == 0 ? "" : folderId), hasValidDialogLoadIds ? 0 : -1);
-        long dialogsLoadOffsetAccess = preferences.getLong("2dialogsLoadOffsetAccess" + (folderId == 0 ? "" : folderId), hasValidDialogLoadIds ? 0 : -1);
+        long dialogsLoadOffsetAccess = AndroidUtilities.getPrefIntOrLong(preferences, "2dialogsLoadOffsetAccess" + (folderId == 0 ? "" : folderId), hasValidDialogLoadIds ? 0 : -1);
         return new long[]{dialogsLoadOffsetId, dialogsLoadOffsetDate, dialogsLoadOffsetUserId, dialogsLoadOffsetChatId, dialogsLoadOffsetChannelId, dialogsLoadOffsetAccess};
     }
 

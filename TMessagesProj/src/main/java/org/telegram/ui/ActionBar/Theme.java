@@ -3126,7 +3126,7 @@ public class Theme {
     public static Paint avatar_backgroundPaint;
 
     public static Drawable listSelector;
-    public static Drawable[] avatarDrawables = new Drawable[25];
+    public static Drawable[] avatarDrawables = new Drawable[26];
 
     public static Drawable moveUpDrawable;
 
@@ -8366,6 +8366,7 @@ public class Theme {
             avatarDrawables[22] = resources.getDrawable(R.drawable.filled_giveaway_premium);
             avatarDrawables[23] = resources.getDrawable(R.drawable.filled_giveaway_stars);
             avatarDrawables[24] = resources.getDrawable(R.drawable.filled_suggest_chat_avatar);
+            avatarDrawables[25] = resources.getDrawable(R.drawable.ic_feed_filled);
 
             if (dialogs_archiveAvatarDrawable != null) {
                 dialogs_archiveAvatarDrawable.setCallback(null);
@@ -9678,6 +9679,37 @@ public class Theme {
                 return animatingColors.valueAt(index);
             }
         }
+        // [Alexgram: Bubble Style Customization] - Start
+        if (tw.nekomimi.nekogram.NekoConfig.enableCustomBubbleStyle.Bool()) {
+            if (key == key_chat_inBubble || key == key_chat_inBubbleSelected) {
+                int def = getDefaultColor(key_chat_inBubble);
+                if (currentColors != null && currentColors.indexOfKey(key_chat_inBubble) >= 0) {
+                    def = currentColors.get(key_chat_inBubble);
+                }
+                int color = tw.nekomimi.nekogram.NekoConfig.getEffectiveInBubbleColor(def);
+                return key == key_chat_inBubbleSelected ? multAlpha(color, 0.85f) : color;
+            } else if (key == key_chat_outBubble || key == key_chat_outBubbleSelected) {
+                int def = getDefaultColor(key_chat_outBubble);
+                if (currentColors != null && currentColors.indexOfKey(key_chat_outBubble) >= 0) {
+                    def = currentColors.get(key_chat_outBubble);
+                }
+                int color = tw.nekomimi.nekogram.NekoConfig.getEffectiveOutBubbleColor(def);
+                return key == key_chat_outBubbleSelected ? multAlpha(color, 0.85f) : color;
+            } else if (key == key_chat_messageTextIn) {
+                int def = getDefaultColor(key_chat_messageTextIn);
+                if (currentColors != null && currentColors.indexOfKey(key_chat_messageTextIn) >= 0) {
+                    def = currentColors.get(key_chat_messageTextIn);
+                }
+                return tw.nekomimi.nekogram.NekoConfig.getEffectiveInTextColor(def);
+            } else if (key == key_chat_messageTextOut) {
+                int def = getDefaultColor(key_chat_messageTextOut);
+                if (currentColors != null && currentColors.indexOfKey(key_chat_messageTextOut) >= 0) {
+                    def = currentColors.get(key_chat_messageTextOut);
+                }
+                return tw.nekomimi.nekogram.NekoConfig.getEffectiveOutTextColor(def);
+            }
+        }
+        // [Alexgram: Bubble Style Customization] - End
         if (NaConfig.INSTANCE.getHideDividers().Bool() && key_divider == key) {
             return 0x00ffffff;
         }

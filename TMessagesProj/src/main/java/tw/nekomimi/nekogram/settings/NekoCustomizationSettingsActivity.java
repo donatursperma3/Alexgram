@@ -67,12 +67,24 @@ public class NekoCustomizationSettingsActivity extends BaseNekoXSettingsActivity
             new ConfigCellTextCheckIcon(null, "PillStack", getString(R.string.PillStackPills), R.drawable.ic_ab_search, false, () ->
                     presentFragment(new com.exteragram.messenger.pillstack.ui.PillStackPreferencesActivity()))
     );
+    // [Alexgram: Feed Settings] - Start
+    private final AbstractConfigCell feedSettingsRow = cellGroup.appendCell(
+            new ConfigCellTextCheckIcon(null, "FeedSettings", getString(R.string.FeedSettings), R.drawable.msg_channel, false, () ->
+                    presentFragment(new com.exteragram.messenger.feed.ui.FeedChannelsActivity()))
+    );
+    // [Alexgram: Feed Settings] - End
     // [Alexgram: Fonts] - Start
     private final AbstractConfigCell fontsRow = cellGroup.appendCell(
             new ConfigCellTextCheckIcon(null, "Fonts", getString(R.string.Fonts), R.drawable.msg_theme, false, () ->
                     presentFragment(new tw.nekomimi.nekogram.settings.FontsSettingsActivity()))
     );
     // [Alexgram: Fonts] - End
+    // [Alexgram: Bubble Style Customization] - Start
+    private final AbstractConfigCell bubbleStyleRow = cellGroup.appendCell(
+            new ConfigCellTextCheckIcon(null, "BubbleStyle", getString(R.string.BubbleStyleTitle), R.drawable.msg_theme, false, () ->
+                    presentFragment(new tw.nekomimi.nekogram.settings.BubbleStyleSettingsActivity()))
+    );
+    // [Alexgram: Bubble Style Customization] - End
     // [Alexgram: Launch Animation] - Start
     private final AbstractConfigCell launchAnimationStyleRow = cellGroup.appendCell(
             new ConfigCellSelectBox(

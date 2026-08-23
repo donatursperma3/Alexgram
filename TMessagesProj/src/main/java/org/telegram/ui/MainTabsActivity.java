@@ -115,15 +115,17 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
     private static final int INDEX_SETTINGS = 2;
     private static final int INDEX_CALLS = 3;
     private static final int INDEX_PROFILE = 4;
+    private static final int INDEX_FEED = 5;
 
     private int indexToPosition(int index) {
-        // return index > 2 ? index - 1 : index;
         if (index == INDEX_CHATS) {
             return MainTabsHelper.getChatsPosition();
         } else if (index == INDEX_CONTACTS) {
             return MainTabsHelper.isContactsTabHidden() ? -1 : MainTabsHelper.getContactsPosition();
         } else if (index == INDEX_PROFILE) {
             return MainTabsHelper.getProfilePosition();
+        } else if (index == INDEX_FEED) {
+            return MainTabsHelper.getFeedPosition();
         } else {
             return MainTabsHelper.getCallsOrSettingsPosition();
         }
@@ -331,12 +333,13 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         final int paddingV = dp(mainTabsMargin + 4);
         tabsView.setPadding(paddingH, paddingV, paddingH, paddingV);
 
-        tabs = new GlassTabView[5];
+        tabs = new GlassTabView[6];
         tabs[INDEX_CHATS] = GlassTabView.createMainTab(context, resourceProvider, GlassTabView.TabAnimation.CHATS, R.string.MainTabsChats);
         tabs[INDEX_CONTACTS] = GlassTabView.createMainTab(context, resourceProvider, GlassTabView.TabAnimation.CONTACTS, R.string.MainTabsContacts);
         tabs[INDEX_SETTINGS] = GlassTabView.createMainTab(context, resourceProvider, GlassTabView.TabAnimation.SETTINGS, R.string.Settings);
         tabs[INDEX_CALLS] = GlassTabView.createMainTab(context, resourceProvider, GlassTabView.TabAnimation.CALLS, R.string.MainTabsCalls);
         tabs[INDEX_PROFILE] = GlassTabView.createAvatar(context, resourceProvider, currentAccount, R.string.MainTabsProfile);
+        tabs[INDEX_FEED] = GlassTabView.createMainTab(context, resourceProvider, GlassTabView.TabAnimation.FEED, R.string.Feed);
         tabs[INDEX_CHATS].setOnLongClickListener(this::openFoldersSelector);
         tabs[INDEX_CONTACTS].setOnLongClickListener(this::openContactsSelector);
         tabs[INDEX_CALLS].setOnLongClickListener(this::openCallsSelector);
@@ -350,8 +353,19 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         tabsView.addTabToIgnoreClick(tabs[INDEX_SETTINGS]);
         tabsView.addTabToIgnoreClick(tabs[INDEX_PROFILE]);
         tabsView.addTabToIgnoreClick(tabs[INDEX_CALLS]);
+        tabsView.addTabToIgnoreClick(tabs[INDEX_FEED]);
 
-        for (int index = 0; index < tabs.length; index++) {
+        Integer[] tabIndices = new Integer[]{INDEX_CHATS, INDEX_FEED, INDEX_CONTACTS, INDEX_SETTINGS, INDEX_CALLS, INDEX_PROFILE};
+        java.util.Arrays.sort(tabIndices, (a, b) -> {
+            int posA = indexToPosition(a);
+            int posB = indexToPosition(b);
+            if (posA < 0) posA = 99;
+            if (posB < 0) posB = 99;
+            return Integer.compare(posA, posB);
+        });
+
+        for (int i = 0; i < tabIndices.length; i++) {
+            int index = tabIndices[i];
             final GlassTabView view = tabs[index];
             final int tabIndex = index;
             final int position = indexToPosition(index);
@@ -396,6 +410,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         }
         checkUi_callTabVisible(getUserConfig().showCallsTab, false);
         tabsView.setViewVisible(tabs[INDEX_CONTACTS], !hideContacts, false);
+        tabsView.setViewVisible(tabs[INDEX_FEED], MainTabsHelper.isFeedTabShown(), false);
 
         selectTab(viewPager.getCurrentPosition(), false);
 
@@ -885,9 +900,12 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
             Bundle args = new Bundle();
             args.putLong("user_id", UserConfig.getInstance(currentAccount).getClientUserId());
             args.putBoolean("my_profile", true);
-            // args.putBoolean("expandPhoto", true);
             args.putBoolean("hasMainTabs", true);
             return new ProfileActivity(args);
+        } else if (position == MainTabsHelper.getFeedPosition()) {
+            Bundle args = new Bundle();
+            args.putBoolean("hasMainTabs", true);
+            return new com.exteragram.messenger.feed.ui.FeedActivity(args);
         }
         return null;
     }
@@ -1092,6 +1110,21 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         } else if (id == NotificationCenter.setTabsVisible) {
             animatorTabsVisible.setValue((Boolean) args[0], true);
         // [Alexgram: Hide Navigation Bar on Scroll] - End
+        } else if (id == NotificationCenter.feedTabVisibleToggled) {
+            final boolean feedTabVisible = MainTabsHelper.isFeedTabShown();
+            if (tabsView != null) {
+                tabsView.setViewVisible(tabs[INDEX_FEED], feedTabVisible, true);
+            }
+            if (!feedTabVisible && viewPager != null) {
+                final int feedPos = MainTabsHelper.getFeedPosition();
+                if (viewPager.getCurrentPosition() == feedPos) {
+                    viewPager.scrollToPosition(MainTabsHelper.getChatsPosition());
+                    selectTab(MainTabsHelper.getChatsPosition(), true);
+                } else {
+                    dropFragmentAtPosition(feedPos);
+                }
+            }
+            clearViews();
         } else if (id == NotificationCenter.mainTabsLayoutChanged) {
             updateSearchTabButtonVisibility();
         }
@@ -1110,6 +1143,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
             .add(NotificationCenter.notificationsCountUpdated)
             .add(NotificationCenter.updateInterfaces)
             .add(NotificationCenter.callTabsVisibleToggled)
+            .add(NotificationCenter.feedTabVisibleToggled)
             .add(NotificationCenter.mainUserInfoChanged)
             .add(NotificationCenter.contactsPermissionBadgeCheck)
             // [Alexgram: Hide Navigation Bar on Scroll] - Start
@@ -1206,6 +1240,12 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         if (tabsView != null) {
             tabsView.setViewVisible(tabs[INDEX_SETTINGS], !callTabsVisible, animated);
             tabsView.setViewVisible(tabs[INDEX_CALLS], callTabsVisible, animated);
+        }
+    }
+
+    private void checkUi_feedTabVisible(boolean feedTabVisible, boolean animated) {
+        if (tabsView != null) {
+            tabsView.setViewVisible(tabs[INDEX_FEED], feedTabVisible, animated);
         }
     }
 
