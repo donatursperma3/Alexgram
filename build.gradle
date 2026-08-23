@@ -42,8 +42,8 @@ subprojects {
 
         if (plugins.hasPlugin("com.google.devtools.ksp")) {
             ksp {
-                arg('ksp.incremental', 'true')
-                arg('ksp.incremental.intermodule', 'true')
+                arg('ksp.incremental', providers.gradleProperty('ksp.incremental').orElse('true').get())
+                arg('ksp.incremental.intermodule', providers.gradleProperty('ksp.incremental.intermodule').orElse('true').get())
             }
         }
 

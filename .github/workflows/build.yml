@@ -64,6 +64,9 @@ jobs:
           echo "org.gradle.workers.max=1" >> gradle.properties
           echo "org.gradle.parallel=false" >> gradle.properties
           echo "kotlin.incremental=false" >> gradle.properties
+          echo "ksp.incremental=false" >> gradle.properties
+          echo "ksp.incremental.intermodule=false" >> gradle.properties
+          echo "kotlin.compiler.execution.strategy=in-process" >> gradle.properties
 
       - name: Decode google-services.json (optional)
         run: |
@@ -91,7 +94,7 @@ jobs:
       # - dev  -> assembleStaging
       # - lainnya -> assembleDebug
       - name: Clean build artifacts
-        run: ./gradlew clean --no-daemon --max-workers=1 --console=plain
+        run: ./gradlew clean --no-daemon --no-build-cache --max-workers=1 --console=plain
 
       - name: Build APK (select task by branch)
         env:
@@ -101,11 +104,11 @@ jobs:
           echo "Building on branch: ${GIT_REF_NAME}"
           echo "ENABLE_ABI_SPLITS=${ENABLE_ABI_SPLITS}"
           if [ "${GIT_REF_NAME}" = "main" ]; then
-            ./gradlew TMessagesProj:assembleRelease --no-daemon --max-workers=1 --console=plain --stacktrace
+            ./gradlew TMessagesProj:assembleRelease --no-daemon --no-build-cache --max-workers=1 --console=plain --stacktrace
           elif [ "${GIT_REF_NAME}" = "dev" ]; then
-            ./gradlew TMessagesProj:assembleStaging --no-daemon --max-workers=1 --console=plain --stacktrace
+            ./gradlew TMessagesProj:assembleStaging --no-daemon --no-build-cache --max-workers=1 --console=plain --stacktrace
           else
-            ./gradlew TMessagesProj:assembleDebug --no-daemon --max-workers=1 --console=plain --stacktrace
+            ./gradlew TMessagesProj:assembleDebug --no-daemon --no-build-cache --max-workers=1 --console=plain --stacktrace
           fi
 
       - name: Prepare artifact name

@@ -217,8 +217,8 @@ android {
 
         ksp {
             arg('room.schemaLocation', "$projectDir/schemas".toString())
-            arg('ksp.incremental', 'true')
-            arg('ksp.incremental.intermodule', 'true')
+            arg('ksp.incremental', providers.gradleProperty('ksp.incremental').orElse('true').get())
+            arg('ksp.incremental.intermodule', providers.gradleProperty('ksp.incremental.intermodule').orElse('true').get())
         }
 
         // D8 memory configuration (AGP 9+ may not expose task-level jvmArgs)
