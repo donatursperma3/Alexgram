@@ -86,18 +86,18 @@ if (nativeTarget == 'SKIP') {
     }
 }
 
-android {
-    kotlin {
-        compilerOptions {
-            jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
-            // Opt in to apply some annotations to both the value parameter and the backing field.
-            // Keep this minimal to avoid noisy compiler warnings on CI.
-            freeCompilerArgs.set([
-                '-Xannotation-default-target=param-property'
-            ])
-        }
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+        // Opt in to apply some annotations to both the value parameter and the backing field.
+        // Keep this minimal to avoid noisy compiler warnings on CI.
+        freeCompilerArgs.set([
+            '-Xannotation-default-target=param-property'
+        ])
     }
+}
 
+android {
     defaultConfig.applicationId = APP_PACKAGE
 
     packaging {
