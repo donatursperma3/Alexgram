@@ -139,6 +139,7 @@ jobs:
             build/reports/**
             TMessagesProj/build/reports/**
             TMessagesProj/build/outputs/logs/**
+            ~/.gradle/daemon/**/*.log
             hs_err_pid*.log
           if-no-files-found: warn
           retention-days: 14

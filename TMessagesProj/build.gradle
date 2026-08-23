@@ -54,43 +54,6 @@ if (properties != null) {
     pwd = properties.getProperty('ALIAS_PASS')
 }
 
-// Normalize Android SDK path so stale or invalid sdk.dir values in local.properties
-// do not break Android Gradle builds on CI or other machines.
-def envSdkDir = System.getenv('ANDROID_SDK_ROOT') ?: System.getenv('ANDROID_HOME')
-def localPropertiesFile = project.rootProject.file('local.properties')
-def isValidSdkDir = { String path ->
-    if (path == null || path.trim().isEmpty()) return false
-    def file = new File(path)
-    return file.exists() && file.isDirectory()
-}
-if (localPropertiesFile.exists()) {
-    def currentSdkDir = properties?.getProperty('sdk.dir')
-    if (envSdkDir != null && !envSdkDir.trim().isEmpty()) {
-        if (!isValidSdkDir(currentSdkDir) || !new File(currentSdkDir).canonicalPath.equals(new File(envSdkDir).canonicalPath)) {
-            def lines = localPropertiesFile.readLines()
-            def sanitized = lines.findAll { !it.startsWith('sdk.dir=') }
-            sanitized << "sdk.dir=${envSdkDir}"
-            localPropertiesFile.withWriter('UTF-8') { writer ->
-                sanitized.each { writer.println(it) }
-            }
-            println "✅ Normalized sdk.dir in local.properties to ${envSdkDir}"
-            if (properties != null) {
-                properties.setProperty('sdk.dir', envSdkDir)
-            }
-        }
-    } else if (!isValidSdkDir(currentSdkDir)) {
-        def lines = localPropertiesFile.readLines()
-        def sanitized = lines.findAll { !it.startsWith('sdk.dir=') }
-        localPropertiesFile.withWriter('UTF-8') { writer ->
-            sanitized.each { writer.println(it) }
-        }
-        println "⚠️ Removed invalid sdk.dir from local.properties"
-        if (properties != null) {
-            properties.remove('sdk.dir')
-        }
-    }
-}
-
 // Ensure defaults for build if not set
 keystorePwd = keystorePwd ?: System.getenv('KEYSTORE_PASS') ?: "123456"
 alias = alias ?: System.getenv('ALIAS_NAME') ?: "key0"
