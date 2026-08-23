@@ -60,7 +60,7 @@ jobs:
           echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
           echo "Configuring gradle.properties for CI"
-          echo "org.gradle.jvmargs=-Xmx6G -XX:MaxMetaspaceSize=1G -XX:+UseParallelGC -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8" >> gradle.properties
+          echo "org.gradle.jvmargs=-Xmx4G -XX:MaxMetaspaceSize=768M -XX:+UseSerialGC -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8" >> gradle.properties
           echo "org.gradle.workers.max=1" >> gradle.properties
           echo "org.gradle.parallel=false" >> gradle.properties
           echo "kotlin.incremental=false" >> gradle.properties
@@ -129,3 +129,16 @@ jobs:
             TMessagesProj/build/outputs/apk/*/*/*.apk
           if-no-files-found: error
           retention-days: 7000 # APK akan dihapus dari server GitHub setelah 7000 hari
+
+      - name: Upload build diagnostics on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: Alexgram-build-diagnostics-${{ github.run_id }}
+          path: |
+            build/reports/**
+            TMessagesProj/build/reports/**
+            TMessagesProj/build/outputs/logs/**
+            hs_err_pid*.log
+          if-no-files-found: warn
+          retention-days: 14
