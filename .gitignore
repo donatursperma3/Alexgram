@@ -26,3 +26,6 @@ google-services.json
 .kiro/
 gradle_help*
 hs_err_pid*.log
+build_verify.log
+debug_build.log
+build_log.txt
