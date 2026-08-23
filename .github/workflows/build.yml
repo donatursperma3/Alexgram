@@ -60,7 +60,7 @@ jobs:
           echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
           echo "Configuring gradle.properties for CI"
-          echo "org.gradle.jvmargs=-Xmx4G -XX:MaxMetaspaceSize=768M -XX:+UseSerialGC -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8" >> gradle.properties
+          echo "org.gradle.jvmargs=-Xmx3G -XX:MaxMetaspaceSize=512M -XX:+UseSerialGC -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8" >> gradle.properties
           echo "org.gradle.workers.max=1" >> gradle.properties
           echo "org.gradle.parallel=false" >> gradle.properties
           echo "kotlin.incremental=false" >> gradle.properties
@@ -103,12 +103,15 @@ jobs:
           export ENABLE_ABI_SPLITS="${ENABLE_ABI_SPLITS:-false}"
           echo "Building on branch: ${GIT_REF_NAME}"
           echo "ENABLE_ABI_SPLITS=${ENABLE_ABI_SPLITS}"
+          java -version
+          free -h || true
+          df -h . || true
           if [ "${GIT_REF_NAME}" = "main" ]; then
-            ./gradlew TMessagesProj:assembleRelease --no-daemon --no-build-cache --max-workers=1 --console=plain --stacktrace
+            ./gradlew TMessagesProj:assembleRelease --no-daemon --no-build-cache --max-workers=1 --console=plain --stacktrace --info
           elif [ "${GIT_REF_NAME}" = "dev" ]; then
-            ./gradlew TMessagesProj:assembleStaging --no-daemon --no-build-cache --max-workers=1 --console=plain --stacktrace
+            ./gradlew TMessagesProj:assembleStaging --no-daemon --no-build-cache --max-workers=1 --console=plain --stacktrace --info
           else
-            ./gradlew TMessagesProj:assembleDebug --no-daemon --no-build-cache --max-workers=1 --console=plain --stacktrace
+            ./gradlew TMessagesProj:assembleDebug --no-daemon --no-build-cache --max-workers=1 --console=plain --stacktrace --info
           fi
 
       - name: Prepare artifact name
@@ -130,16 +133,21 @@ jobs:
           if-no-files-found: error
           retention-days: 7000 # APK akan dihapus dari server GitHub setelah 7000 hari
 
+      - name: Collect build diagnostics on failure
+        if: failure()
+        run: |
+          mkdir -p ci-diagnostics
+          cp -R build/reports ci-diagnostics/root-reports 2>/dev/null || true
+          cp -R TMessagesProj/build/reports ci-diagnostics/project-reports 2>/dev/null || true
+          cp -R TMessagesProj/build/outputs/logs ci-diagnostics/output-logs 2>/dev/null || true
+          cp "$HOME"/.gradle/daemon/*/*.log ci-diagnostics/ 2>/dev/null || true
+          cp hs_err_pid*.log ci-diagnostics/ 2>/dev/null || true
+
       - name: Upload build diagnostics on failure
         uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: Alexgram-build-diagnostics-${{ github.run_id }}
-          path: |
-            build/reports/**
-            TMessagesProj/build/reports/**
-            TMessagesProj/build/outputs/logs/**
-            ~/.gradle/daemon/**/*.log
-            hs_err_pid*.log
+          path: ci-diagnostics/**
           if-no-files-found: warn
           retention-days: 14
