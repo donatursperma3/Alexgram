@@ -15,68 +15,112 @@ plugins {
     id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
 }
 
-// Globally pin Kotlin stdlib + related artifacts to the version matching
-// the compiler plugin. This fires BEFORE subprojects.allprojects evaluation,
-// so it covers EVERY configuration in the build, including:
-//   - buildscript classpath
-//   - kotlinCompilerClasspath, kotlinCompilerPluginClasspath
-//   - ksp configurations
-//   - detached configurations spawned by Gradle workers
-// Layer 0: enforced platforms + version catalog alignment (if used) is skipped.
-// Layer 1: rules here (strongest) then allprojects { resolutionStrategy } in build.gradle.
+// ---------------------------------------------------------------------------
+// GLOBALLY PIN KOTLIN STDLIB + KOTLIN COMPILER ARTIFACTS TO 2.1.10
+// ---------------------------------------------------------------------------
+// The Kotlin compiler plugin version used by this project is 2.1.10 (see the
+// plugins block in root build.gradle). Any transitive upgrade of
+// org.jetbrains.kotlin:* artifacts to a newer version (e.g. 2.3.0, pulled in
+// by Compose BOM / androidx.core-ktx) will produce the error:
+//
+//   Module was compiled with an incompatible version of Kotlin.
+//   The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+//
+// Because Gradle evaluates settings.gradle BEFORE any project buildscript is
+// executed, we register the `gradle.beforeProject` hook here. This hook fires
+// BEFORE project buildscripts and BEFORE Android/Kotlin/KSP plugins create
+// their custom configurations (kotlinCompilerClasspath, kspDebugKotlinClasspath,
+// etc.). As a result, our resolutionStrategy rules are attached to EVERY
+// configuration in the build — including plugin classpaths, compiler
+// classpaths, and KSP worker configurations.
+// ---------------------------------------------------------------------------
 def kotlinLockedVersion = '2.1.10'
+def kotlinForcedArtifacts = [
+    "org.jetbrains.kotlin:kotlin-stdlib:${kotlinLockedVersion}",
+    "org.jetbrains.kotlin:kotlin-stdlib-common:${kotlinLockedVersion}",
+    "org.jetbrains.kotlin:kotlin-stdlib-jdk7:${kotlinLockedVersion}",
+    "org.jetbrains.kotlin:kotlin-stdlib-jdk8:${kotlinLockedVersion}",
+    "org.jetbrains.kotlin:kotlin-reflect:${kotlinLockedVersion}",
+    "org.jetbrains.kotlin:kotlin-test:${kotlinLockedVersion}",
+    "org.jetbrains.kotlin:kotlin-test-common:${kotlinLockedVersion}",
+    "org.jetbrains.kotlin:kotlin-test-junit:${kotlinLockedVersion}",
+    "org.jetbrains.kotlin:kotlin-test-junit5:${kotlinLockedVersion}",
+    "org.jetbrains.kotlin:kotlin-test-annotations-common:${kotlinLockedVersion}",
+    "org.jetbrains.kotlin:kotlin-script-runtime:${kotlinLockedVersion}",
+    "org.jetbrains.kotlin:kotlin-daemon-embeddable:${kotlinLockedVersion}",
+    "org.jetbrains.kotlin:kotlin-compiler-embeddable:${kotlinLockedVersion}",
+    "org.jetbrains.kotlin:kotlin-annotation-processing-embeddable:${kotlinLockedVersion}",
+    "org.jetbrains.kotlin:kotlin-android-extensions-runtime:${kotlinLockedVersion}"
+]
+
+/**
+ * Apply Kotlin version-locking rules to all configurations reachable from the
+ * given ConfigurationContainer. Uses a try/catch guard because some
+ * configurations (legacy, detached, locked by Gradle internals) may throw
+ * when resolutionStrategy is mutated.
+ *
+ * @param cfgContainer the configurations container of a project / buildscript
+ */
+void lockKotlinConfigurations(Object cfgContainer, String kotlinVer, List<String> forcedArtifacts) {
+    try {
+        // `all` eagerly registers the rule for BOTH existing configurations AND
+        // configurations that will be added later (e.g. kspDebugKotlinClasspath
+        // that the KSP plugin creates after project evaluation).
+        cfgContainer.all { cfg ->
+            try {
+                cfg.resolutionStrategy.force(forcedArtifacts)
+            } catch (Exception ignored) {
+                // force() unsupported on this configuration; fall through
+            }
+            try {
+                cfg.resolutionStrategy.eachDependency { details ->
+                    if (details.requested.group == 'org.jetbrains.kotlin'
+                        && details.requested.name != null
+                        && details.requested.name.startsWith('kotlin-')) {
+                        if (details.requested.version != null
+                            && details.requested.version != kotlinVer) {
+                            details.useVersion kotlinVer
+                        }
+                    }
+                }
+            } catch (Exception ignored2) {
+                // eachDependency unsupported; silently skip
+            }
+        }
+    } catch (Exception ignoredOuter) {
+        // cfgContainer.all unsupported or container is immutable
+    }
+}
+
+// Hook fires before every project (root + TMessagesProj) is evaluated.
+// Locks both the regular project configurations AND the buildscript classpath
+// configurations (the latter carry the Kotlin compiler plugin artifacts).
+gradle.beforeProject { Project project ->
+    // (1) Regular project configurations (compileClasspath, ksp*, etc.)
+    lockKotlinConfigurations(project.configurations, kotlinLockedVersion, kotlinForcedArtifacts)
+
+    // (2) Buildscript classpath configurations (kotlin-gradle-plugin classpath)
+    try {
+        lockKotlinConfigurations(project.buildscript.configurations, kotlinLockedVersion, kotlinForcedArtifacts)
+    } catch (Exception ignored) {
+        // buildscript.configurations may not be accessible in composite builds
+    }
+}
+
+// Also lock the Settings' buildscript classpath for completeness (covers any
+// classpath plugins applied at settings level).
+try {
+    lockKotlinConfigurations(settings.buildscript.configurations, kotlinLockedVersion, kotlinForcedArtifacts)
+} catch (Exception ignored) {
+    // settings.buildscript not accessible in older Gradle versions; ignore
+}
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
         mavenCentral()
         maven { url = uri('https://jitpack.io') }
-    }
-
-    // Globally force Kotlin stdlib + related artifacts to the version matching
-    // the compiler plugin. This fires BEFORE subprojects/allprojects evaluation,
-    // so it covers EVERY configuration in the build including:
-    //   - buildscript classpath
-    //   - kotlinCompilerClasspath, kotlinCompilerPluginClasspath
-    //   - ksp configurations (kspDebugKotlinClasspath etc.)
-    //   - detached configurations spawned by Gradle workers
-    def kotlinArtifacts = [
-        'kotlin-stdlib',
-        'kotlin-stdlib-common',
-        'kotlin-stdlib-jdk7',
-        'kotlin-stdlib-jdk8',
-        'kotlin-reflect',
-        'kotlin-test',
-        'kotlin-test-common',
-        'kotlin-test-junit',
-        'kotlin-test-junit5',
-        'kotlin-test-annotations-common',
-        'kotlin-script-runtime',
-        'kotlin-daemon-embeddable',
-        'kotlin-compiler-embeddable',
-        'kotlin-annotation-processing-embeddable',
-        'kotlin-android-extensions-runtime'
-    ]
-    configurations.all { cfg ->
-        try {
-            resolutionStrategy.force(kotlinArtifacts.collect { "org.jetbrains.kotlin:${it}:2.1.10" })
-        } catch (Exception ignored) {
-            // Some configurations are locked by the time this runs; skip silently,
-            // the eachDependency fallback + allprojects rule in root build.gradle cover them.
-        }
-        try {
-            resolutionStrategy.eachDependency { details ->
-                if (details.requested.group == 'org.jetbrains.kotlin'
-                    && details.requested.name.startsWith('kotlin-')) {
-                    if (details.requested.version != null
-                        && details.requested.version != '2.1.10') {
-                        details.useVersion '2.1.10'
-                    }
-                }
-            }
-        } catch (Exception ignored2) {
-            // ignore locked/legacy/detached configs that do not allow mutation
-        }
     }
 }
 

@@ -15,12 +15,21 @@ plugins {
 // the Kotlin compiler plugin (2.1.10). Prevents newer transitive stdlib
 // (e.g. 2.3.0 pulled by Compose BOM) from causing "incompatible metadata"
 // errors during ksp/kotlin compilation.
+//
+// NOTE: settings.gradle already registers a `gradle.beforeProject` hook that
+// applies the same force rules EARLIER (before project buildscripts run).
+// The block below is a redundant safety-net layer that fires during project
+// evaluation, catching any edge-case configurations that somehow escaped
+// the settings-level hook.
 def kotlinVersion = '2.1.10'
 ext {
     kotlinVersion = kotlinVersion
 }
 allprojects {
-    configurations.configureEach { config ->
+    // Use `all` (not `configureEach`) so rules are registered for BOTH
+    // existing configurations AND configurations that plugins create later
+    // (e.g. kspDebugKotlinClasspath, kotlinCompilerClasspath).
+    configurations.all { config ->
         // Strongest mechanism: force the exact version for all Kotlin libs.
         def kotlinArtifacts = [
             "org.jetbrains.kotlin:kotlin-stdlib:${kotlinVersion}",
@@ -36,21 +45,25 @@ allprojects {
         try {
             config.resolutionStrategy.force(kotlinArtifacts)
         } catch (Exception ignored) {
-            // Some configurations (e.g. detached) may not support force();
-            // fall through to the eachDependency layer below.
+            // Some configurations (e.g. detached, plugin classpath, locked)
+            // do not support force(). Silently skip; settings-level hook covers.
         }
 
         // Second layer: catch any other org.jetbrains.kotlin:* artifact
         // (kotlin-android-extensions, kotlin-compiler-embeddable, etc.)
-        config.resolutionStrategy.eachDependency { details ->
-            if (details.requested.group == 'org.jetbrains.kotlin'
-                && details.requested.name.startsWith('kotlin-')) {
-                if (details.requested.version != null
-                    && details.requested.version != kotlinVersion) {
-                    details.useVersion kotlinVersion
-                    details.because("Kotlin stdlib must match compiler plugin version ${kotlinVersion} to avoid metadata incompatibility")
+        try {
+            config.resolutionStrategy.eachDependency { details ->
+                if (details.requested.group == 'org.jetbrains.kotlin'
+                    && details.requested.name.startsWith('kotlin-')) {
+                    if (details.requested.version != null
+                        && details.requested.version != kotlinVersion) {
+                        details.useVersion kotlinVersion
+                        details.because("Kotlin stdlib must match compiler plugin version ${kotlinVersion} to avoid metadata incompatibility")
+                    }
                 }
             }
+        } catch (Exception ignored2) {
+            // eachDependency unsupported on this config; skip silently
         }
     }
 }
