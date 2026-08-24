@@ -87,6 +87,7 @@ if (nativeTarget == 'SKIP') {
 }
 
 kotlin {
+    jvmToolchain(17)
     compilerOptions {
         jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
         // Opt in to apply some annotations to both the value parameter and the backing field.
@@ -205,7 +206,7 @@ android {
 
     externalNativeBuild {
         cmake {
-            version = '3.31.6+'
+            version = '3.22.1+'
             path = 'jni/CMakeLists.txt'
         }
     }
