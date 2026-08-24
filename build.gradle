@@ -11,6 +11,50 @@ plugins {
     id 'com.chaquo.python' version '17.0.0' apply false
 }
 
+// Lock Kotlin standard library versions across all subprojects to match
+// the Kotlin compiler plugin (2.1.10). Prevents newer transitive stdlib
+// (e.g. 2.3.0 pulled by Compose BOM) from causing "incompatible metadata"
+// errors during ksp/kotlin compilation.
+def kotlinVersion = '2.1.10'
+ext {
+    kotlinVersion = kotlinVersion
+}
+allprojects {
+    configurations.configureEach { config ->
+        // Strongest mechanism: force the exact version for all Kotlin libs.
+        def kotlinArtifacts = [
+            "org.jetbrains.kotlin:kotlin-stdlib:${kotlinVersion}",
+            "org.jetbrains.kotlin:kotlin-stdlib-common:${kotlinVersion}",
+            "org.jetbrains.kotlin:kotlin-stdlib-jdk7:${kotlinVersion}",
+            "org.jetbrains.kotlin:kotlin-stdlib-jdk8:${kotlinVersion}",
+            "org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}",
+            "org.jetbrains.kotlin:kotlin-test:${kotlinVersion}",
+            "org.jetbrains.kotlin:kotlin-test-common:${kotlinVersion}",
+            "org.jetbrains.kotlin:kotlin-test-junit:${kotlinVersion}",
+            "org.jetbrains.kotlin:kotlin-test-junit5:${kotlinVersion}"
+        ]
+        try {
+            config.resolutionStrategy.force(kotlinArtifacts)
+        } catch (Exception ignored) {
+            // Some configurations (e.g. detached) may not support force();
+            // fall through to the eachDependency layer below.
+        }
+
+        // Second layer: catch any other org.jetbrains.kotlin:* artifact
+        // (kotlin-android-extensions, kotlin-compiler-embeddable, etc.)
+        config.resolutionStrategy.eachDependency { details ->
+            if (details.requested.group == 'org.jetbrains.kotlin'
+                && details.requested.name.startsWith('kotlin-')) {
+                if (details.requested.version != null
+                    && details.requested.version != kotlinVersion) {
+                    details.useVersion kotlinVersion
+                    details.because("Kotlin stdlib must match compiler plugin version ${kotlinVersion} to avoid metadata incompatibility")
+                }
+            }
+        }
+    }
+}
+
 subprojects {
     afterEvaluate {
         if (plugins.hasPlugin("com.android.library") || plugins.hasPlugin("com.android.application")) {

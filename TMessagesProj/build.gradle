@@ -299,13 +299,42 @@ androidComponents {
     }
 }
 
-configurations.configureEach {
+configurations.configureEach { config ->
     exclude group: 'androidx.recyclerview', module: 'recyclerview'
     exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'
     exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8'
+
+    // Second layer of defense: align any Kotlin lib to the compiler version
+    // in case the allprojects resolutionStrategy in root build.gradle
+    // does not fire early enough for configuration-cache workers.
+    def kotlinVer = rootProject.ext.has('kotlinVersion') ? rootProject.ext.kotlinVersion : '2.1.10'
+    config.resolutionStrategy.eachDependency { details ->
+        if (details.requested.group == 'org.jetbrains.kotlin'
+            && details.requested.name.startsWith('kotlin-')) {
+            if (details.requested.version != null
+                && details.requested.version != kotlinVer) {
+                details.useVersion kotlinVer
+            }
+        }
+    }
 }
 
 dependencies {
+    // Pin Kotlin stdlib explicitly to the version matching the compiler plugin
+    // so transitive pulls (e.g. Compose BOM 2025.02) cannot upgrade it past 2.1.10.
+    def kotlinVer = rootProject.ext.has('kotlinVersion') ? rootProject.ext.kotlinVersion : '2.1.10'
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:${kotlinVer}") {
+        force = true
+    }
+    constraints {
+        implementation("org.jetbrains.kotlin:kotlin-stdlib:${kotlinVer}") {
+            because("Prevent transitive upgrade to Kotlin stdlib 2.3.0 which is incompatible with Kotlin compiler 2.1.10")
+        }
+        implementation("org.jetbrains.kotlin:kotlin-stdlib-common:${kotlinVer}") {
+            because("Same as kotlin-stdlib - lock to compiler version")
+        }
+    }
+
     // official
     implementation 'androidx.core:core-ktx:1.17.0' // 1.10.1
     implementation 'androidx.palette:palette-ktx:1.0.0'
