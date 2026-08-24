@@ -377,7 +377,7 @@ dependencies {
     implementation 'app.nekogram.translator:translator:1.5.5'
 
     // Analytics & Control System
-    def hilt_version = "2.59.2"
+    def hilt_version = "2.58"
     implementation "com.google.dagger:hilt-android:$hilt_version"
     ksp "com.google.dagger:hilt-compiler:$hilt_version"
 
