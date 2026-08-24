@@ -308,24 +308,31 @@ configurations.configureEach { config ->
     // in case the allprojects resolutionStrategy in root build.gradle
     // does not fire early enough for configuration-cache workers.
     def kotlinVer = rootProject.ext.has('kotlinVersion') ? rootProject.ext.kotlinVersion : '2.1.10'
-    config.resolutionStrategy.eachDependency { details ->
-        if (details.requested.group == 'org.jetbrains.kotlin'
-            && details.requested.name.startsWith('kotlin-')) {
-            if (details.requested.version != null
-                && details.requested.version != kotlinVer) {
-                details.useVersion kotlinVer
+    try {
+        config.resolutionStrategy.eachDependency { details ->
+            if (details.requested.group == 'org.jetbrains.kotlin'
+                && details.requested.name.startsWith('kotlin-')) {
+                if (details.requested.version != null
+                    && details.requested.version != kotlinVer) {
+                    details.useVersion kotlinVer
+                }
             }
         }
+    } catch (Exception ignored) {
+        // Some configurations (e.g. detached configurations used by lint,
+        // classpath for plugins, etc.) do not allow eachDependency rules.
+        // The root-level resolutionStrategy handles those cases.
     }
 }
 
 dependencies {
     // Pin Kotlin stdlib explicitly to the version matching the compiler plugin
     // so transitive pulls (e.g. Compose BOM 2025.02) cannot upgrade it past 2.1.10.
+    // Note: Forcing is done via resolutionStrategy.force(...) in root build.gradle
+    // (and constraints below) because Gradle 8.x deprecated force=true property setter
+    // on individual dependency closures.
     def kotlinVer = rootProject.ext.has('kotlinVersion') ? rootProject.ext.kotlinVersion : '2.1.10'
-    implementation("org.jetbrains.kotlin:kotlin-stdlib:${kotlinVer}") {
-        force = true
-    }
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:${kotlinVer}"
     constraints {
         implementation("org.jetbrains.kotlin:kotlin-stdlib:${kotlinVer}") {
             because("Prevent transitive upgrade to Kotlin stdlib 2.3.0 which is incompatible with Kotlin compiler 2.1.10")
