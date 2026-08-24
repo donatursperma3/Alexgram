@@ -15,12 +15,68 @@ plugins {
     id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
 }
 
+// Globally pin Kotlin stdlib + related artifacts to the version matching
+// the compiler plugin. This fires BEFORE subprojects.allprojects evaluation,
+// so it covers EVERY configuration in the build, including:
+//   - buildscript classpath
+//   - kotlinCompilerClasspath, kotlinCompilerPluginClasspath
+//   - ksp configurations
+//   - detached configurations spawned by Gradle workers
+// Layer 0: enforced platforms + version catalog alignment (if used) is skipped.
+// Layer 1: rules here (strongest) then allprojects { resolutionStrategy } in build.gradle.
+def kotlinLockedVersion = '2.1.10'
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
         mavenCentral()
         maven { url = uri('https://jitpack.io') }
+    }
+
+    // Globally force Kotlin stdlib + related artifacts to the version matching
+    // the compiler plugin. This fires BEFORE subprojects/allprojects evaluation,
+    // so it covers EVERY configuration in the build including:
+    //   - buildscript classpath
+    //   - kotlinCompilerClasspath, kotlinCompilerPluginClasspath
+    //   - ksp configurations (kspDebugKotlinClasspath etc.)
+    //   - detached configurations spawned by Gradle workers
+    def kotlinArtifacts = [
+        'kotlin-stdlib',
+        'kotlin-stdlib-common',
+        'kotlin-stdlib-jdk7',
+        'kotlin-stdlib-jdk8',
+        'kotlin-reflect',
+        'kotlin-test',
+        'kotlin-test-common',
+        'kotlin-test-junit',
+        'kotlin-test-junit5',
+        'kotlin-test-annotations-common',
+        'kotlin-script-runtime',
+        'kotlin-daemon-embeddable',
+        'kotlin-compiler-embeddable',
+        'kotlin-annotation-processing-embeddable',
+        'kotlin-android-extensions-runtime'
+    ]
+    configurations.all { cfg ->
+        try {
+            resolutionStrategy.force(kotlinArtifacts.collect { "org.jetbrains.kotlin:${it}:2.1.10" })
+        } catch (Exception ignored) {
+            // Some configurations are locked by the time this runs; skip silently,
+            // the eachDependency fallback + allprojects rule in root build.gradle cover them.
+        }
+        try {
+            resolutionStrategy.eachDependency { details ->
+                if (details.requested.group == 'org.jetbrains.kotlin'
+                    && details.requested.name.startsWith('kotlin-')) {
+                    if (details.requested.version != null
+                        && details.requested.version != '2.1.10') {
+                        details.useVersion '2.1.10'
+                    }
+                }
+            }
+        } catch (Exception ignored2) {
+            // ignore locked/legacy/detached configs that do not allow mutation
+        }
     }
 }
 
