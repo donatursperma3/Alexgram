@@ -58,15 +58,6 @@ jobs:
           export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/opt/android-sdk}}"
           mkdir -p "$ANDROID_SDK_ROOT"
           echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
-          echo "org.gradle.jvmargs=-Xmx4G -XX:MaxMetaspaceSize=1G -XX:+UseSerialGC -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8" >> gradle.properties
-          echo "org.gradle.workers.max=1" >> gradle.properties
-          echo "org.gradle.parallel=false" >> gradle.properties
-          echo "kotlin.incremental=false" >> gradle.properties
-          echo "kotlin.daemon.jvmargs=-Xmx2G -XX:MaxMetaspaceSize=512M -XX:+UseSerialGC -XX:+HeapDumpOnOutOfMemoryError" >> gradle.properties
-          echo "ksp.incremental=false" >> gradle.properties
-          echo "ksp.incremental.intermodule=false" >> gradle.properties
-          echo "ksp.useKSP2=false" >> gradle.properties
-          echo "kotlin.compiler.execution.strategy=in-process" >> gradle.properties
 
       - name: Decode google-services.json (optional)
         run: |
@@ -94,43 +85,21 @@ jobs:
       # - dev  -> assembleStaging
       # - lainnya -> assembleDebug
       - name: Clean build artifacts
-        env:
-          GRADLE_OPTS: "-Xmx2G -XX:MaxMetaspaceSize=512M -XX:+UseSerialGC -Dfile.encoding=UTF-8"
         run: |
-          set +e
-          ./gradlew clean --no-daemon --build-cache --max-workers=1 --console=plain --stacktrace 2>&1 | tee gradle-clean.log
-          CLEAN_EXIT=$?
-          set -e
-          mkdir -p ci-diagnostics
-          cp gradle-clean.log ci-diagnostics/gradle-clean.log || true
-          exit 0
+          ./gradlew clean --quiet
 
       - name: Build APK (select task by branch)
         env:
           GIT_REF_NAME: ${{ github.ref_name }}
-          GRADLE_OPTS: "-Xmx4G -XX:MaxMetaspaceSize=1G -XX:+UseSerialGC -Dfile.encoding=UTF-8"
         run: |
           export ENABLE_ABI_SPLITS="${ENABLE_ABI_SPLITS:-false}"
-          mkdir -p ci-diagnostics
-          set +e
           if [ "${GIT_REF_NAME}" = "main" ]; then
-            ./gradlew TMessagesProj:assembleRelease --no-daemon --build-cache --max-workers=1 --console=plain --stacktrace --info 2>&1 | tee ci-diagnostics/gradle-build.log
+            ./gradlew TMessagesProj:assembleRelease --quiet
           elif [ "${GIT_REF_NAME}" = "dev" ]; then
-            ./gradlew TMessagesProj:assembleStaging --no-daemon --build-cache --max-workers=1 --console=plain --stacktrace --info 2>&1 | tee ci-diagnostics/gradle-build.log
+            ./gradlew TMessagesProj:assembleStaging --quiet
           else
-            ./gradlew TMessagesProj:assembleDebug --no-daemon --build-cache --max-workers=1 --console=plain --stacktrace --info 2>&1 | tee ci-diagnostics/gradle-build.log
+            ./gradlew TMessagesProj:assembleDebug --quiet
           fi
-          BUILD_EXIT=${PIPESTATUS[0]}
-          set -e
-          echo "Gradle exit code: ${BUILD_EXIT}"
-          # Always collect a dependency insight report for kotlin-stdlib if we failed,
-          # so that the next debugging session is faster.
-          if [ "${BUILD_EXIT}" -ne 0 ]; then
-            echo "Build failed (exit ${BUILD_EXIT}); gathering dependency insights for kotlin-stdlib..."
-            ./gradlew :TMessagesProj:dependencyInsight --dependency "org.jetbrains.kotlin:kotlin-stdlib" --configuration debugCompileClasspath --no-daemon --console=plain > ci-diagnostics/kotlin-stdlib-insight.log 2>&1 || true
-            ./gradlew :TMessagesProj:dependencyInsight --dependency "org.jetbrains.kotlin:kotlin-stdlib" --configuration kspDebugKotlinClasspath --no-daemon --console=plain > ci-diagnostics/kotlin-stdlib-ksp-insight.log 2>&1 || true
-          fi
-          exit ${BUILD_EXIT}
 
       - name: Prepare artifact name
         id: artifact_name
@@ -150,22 +119,3 @@ jobs:
             TMessagesProj/build/outputs/apk/*/*/*.apk
           if-no-files-found: error
           retention-days: 7000 # APK akan dihapus dari server GitHub setelah 7000 hari
-
-      - name: Collect build diagnostics on failure
-        if: failure()
-        run: |
-          mkdir -p ci-diagnostics
-          cp -R build/reports ci-diagnostics/root-reports 2>/dev/null || true
-          cp -R TMessagesProj/build/reports ci-diagnostics/project-reports 2>/dev/null || true
-          cp -R TMessagesProj/build/outputs/logs ci-diagnostics/output-logs 2>/dev/null || true
-          cp "$HOME"/.gradle/daemon/*/*.log ci-diagnostics/ 2>/dev/null || true
-          cp hs_err_pid*.log ci-diagnostics/ 2>/dev/null || true
-
-      - name: Upload build diagnostics on failure
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: Alexgram-build-diagnostics-${{ github.run_id }}
-          path: ci-diagnostics/**
-          if-no-files-found: warn
-          retention-days: 14

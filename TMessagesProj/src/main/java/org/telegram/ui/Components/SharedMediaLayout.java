@@ -361,19 +361,22 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                             
                             long dialogId = mo.getDialogId();
                             boolean matchesFilter = false;
+                            final int currentAccount = profileActivity.getCurrentAccount();
+                            final long chatId = dialogId < 0 ? -dialogId : dialogId;
+                            final boolean isChatDialog = DialogObject.isChatDialog(dialogId);
                             
                             switch (chatFilterState) {
                                 case CHAT_FILTER_USERS:
                                     matchesFilter = DialogObject.isUserDialog(dialogId);
                                     break;
                                 case CHAT_FILTER_GROUPS:
-                                    matchesFilter = DialogObject.isChatDialog(dialogId) && !ChatObject.isChannel(dialogId, profileActivity.getCurrentAccount());
+                                    matchesFilter = isChatDialog && !ChatObject.isChannel(chatId, currentAccount);
                                     break;
                                 case CHAT_FILTER_CHANNELS:
-                                    matchesFilter = ChatObject.isChannel(dialogId, profileActivity.getCurrentAccount());
+                                    matchesFilter = isChatDialog && ChatObject.isChannel(chatId, currentAccount);
                                     break;
                                 case CHAT_FILTER_BOTS:
-                                    if (profileActivity != null && profileActivity.getMessagesController() != null) {
+                                    if (DialogObject.isUserDialog(dialogId) && profileActivity != null && profileActivity.getMessagesController() != null) {
                                         TLRPC.User user = profileActivity.getMessagesController().getUser(dialogId);
                                         matchesFilter = user != null && user.bot;
                                     }
@@ -5411,7 +5414,8 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         if (sharedMediaData[selectedType] != null) {
             sharedMediaData[selectedType].loading = true;
         }
-        profileActivity.getMediaDataController().loadMedia(dialog_id, 50, 0, 0, type, topicId, 1, profileActivity.getClassGuid(), sharedMediaData[selectedType].requestIndex, null, null);
+        int fromCache = dialog_id == 0 ? 1 : 0;
+        profileActivity.getMediaDataController().loadMedia(dialog_id, 50, 0, 0, type, topicId, fromCache, profileActivity.getClassGuid(), sharedMediaData[selectedType].requestIndex, null, null);
         
         // Reapply filters after reload
         applyFilesFilter();
@@ -6924,6 +6928,12 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                 if (!fromStart && loadIndex == 0 && sharedMediaData[type].endReached[loadIndex] && mergeDialogId != 0) {
                     sharedMediaData[type].loading = true;
                     profileActivity.getMediaDataController().loadMedia(mergeDialogId, 50, sharedMediaData[type].max_id[1], 0, type, topicId, 1, profileActivity.getClassGuid(), sharedMediaData[type].requestIndex, null, null, skipPhotos);
+                }
+                try {
+                    applyFilesFilter();
+                    applyChatFilter();
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
                 if (adapter != null) {
                     RecyclerListView listView = null;

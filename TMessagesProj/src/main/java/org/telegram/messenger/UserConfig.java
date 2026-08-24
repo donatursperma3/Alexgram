@@ -435,13 +435,6 @@ public class UserConfig extends BaseController {
         }
     }
 
-    public void reloadConfig() {
-        synchronized (sync) {
-            configLoaded = false;
-            loadConfig();
-        }
-    }
-
     public boolean isConfigLoaded() {
         return configLoaded;
     }
