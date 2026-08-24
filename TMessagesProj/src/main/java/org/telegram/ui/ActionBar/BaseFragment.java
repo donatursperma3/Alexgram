@@ -20,6 +20,7 @@ import android.graphics.Paint;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Trace;
 import android.text.TextUtils;
 import android.view.Menu;
 import android.view.MotionEvent;
@@ -260,7 +261,23 @@ public abstract class BaseFragment {
         this.fragmentView = fragmentView;
     }
 
-    public View createView(Context context) {
+    public View performCreateView(Context context) {
+        if (!BuildConfig.DEBUG_PRIVATE_VERSION) {
+            return createView(context);
+        }
+
+        final String className = getClass().getSimpleName();
+        final String sectionNameBase = "Fragment#createView#";
+        final String sectionName = TextUtils.isEmpty(className) ? sectionNameBase : (sectionNameBase + className);
+        Trace.beginSection(sectionName);
+        try {
+            return createView(context);
+        } finally {
+            Trace.endSection();
+        }
+    }
+
+    protected View createView(Context context) {
         return null;
     }
 
@@ -301,13 +318,13 @@ public abstract class BaseFragment {
     }
 
     public boolean isActionBarCrossfadeEnabled() {
-        if (NaConfig.INSTANCE.getBackAnimationStyle().Int() == ActionBarLayout.BACK_ANIMATION_SPRING) {
-            if (getLastStoryViewer() != null && getLastStoryViewer().attachedToParent()) {
-                return false;
-            }
-            return actionBar != null && !actionBar.isActionModeShowed();
+        if (NaConfig.INSTANCE.getBackAnimationStyle().Int() != ActionBarLayout.BACK_ANIMATION_SPRING || !NaConfig.INSTANCE.getSpringAnimationCrossfade().Bool()) {
+            return false;
         }
-        return actionBar != null;
+        if (getLastStoryViewer() != null && getLastStoryViewer().attachedToParent()) {
+            return false;
+        }
+        return actionBar != null && !actionBar.isActionModeShowed();
     }
 
     public INavigationLayout.BackButtonState getBackButtonState() {
@@ -1442,6 +1459,13 @@ public abstract class BaseFragment {
         public boolean occupyNavigationBar;
     }
 
+    public EdgeToEdgeSupportMode getEdgeToEdgeSupportMode() {
+        return isSupportEdgeToEdge() ?
+            EdgeToEdgeSupportMode.VERTICAL :
+            EdgeToEdgeSupportMode.NONE;
+    }
+
+    @Deprecated
     public boolean isSupportEdgeToEdge() {
         // warn: overridden method must return a constant
         return false;

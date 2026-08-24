@@ -1,11 +1,22 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:9.0.1'
+        classpath 'org.jetbrains.kotlin:kotlin-reflect:2.1.10'
+        classpath 'com.google.devtools.ksp:symbol-processing-gradle-plugin:2.1.10-1.0.31'
+    }
+}
+
 plugins {
-    id 'com.android.application' version '8.9.1' apply false
-    id 'org.jetbrains.kotlin.android' version '2.1.10' apply false
+    id 'com.android.application' apply false
     id 'com.google.gms.google-services' version '4.4.4' apply false
     id 'com.google.firebase.crashlytics' version '3.0.6' apply false
-    id 'com.google.dagger.hilt.android' version '2.57.2' apply false
+    id 'com.google.dagger.hilt.android' version '2.59.2' apply false
     id 'com.google.devtools.ksp' version '2.1.10-1.0.31' apply false
     id 'org.jetbrains.kotlin.plugin.compose' version '2.1.10' apply false
     id 'com.chaquo.python' version '17.0.0' apply false
@@ -15,22 +26,12 @@ plugins {
 // the Kotlin compiler plugin (2.1.10). Prevents newer transitive stdlib
 // (e.g. 2.3.0 pulled by Compose BOM) from causing "incompatible metadata"
 // errors during ksp/kotlin compilation.
-//
-// NOTE: settings.gradle already registers a `gradle.beforeProject` hook that
-// applies the same force rules EARLIER (before project buildscripts run).
-// The block below is a redundant safety-net layer that fires during project
-// evaluation, catching any edge-case configurations that somehow escaped
-// the settings-level hook.
 def kotlinVersion = '2.1.10'
 ext {
     kotlinVersion = kotlinVersion
 }
 allprojects {
-    // Use `all` (not `configureEach`) so rules are registered for BOTH
-    // existing configurations AND configurations that plugins create later
-    // (e.g. kspDebugKotlinClasspath, kotlinCompilerClasspath).
     configurations.all { config ->
-        // Strongest mechanism: force the exact version for all Kotlin libs.
         def kotlinArtifacts = [
             "org.jetbrains.kotlin:kotlin-stdlib:${kotlinVersion}",
             "org.jetbrains.kotlin:kotlin-stdlib-common:${kotlinVersion}",
@@ -45,12 +46,8 @@ allprojects {
         try {
             config.resolutionStrategy.force(kotlinArtifacts)
         } catch (Exception ignored) {
-            // Some configurations (e.g. detached, plugin classpath, locked)
-            // do not support force(). Silently skip; settings-level hook covers.
         }
 
-        // Second layer: catch any other org.jetbrains.kotlin:* artifact
-        // (kotlin-android-extensions, kotlin-compiler-embeddable, etc.)
         try {
             config.resolutionStrategy.eachDependency { details ->
                 if (details.requested.group == 'org.jetbrains.kotlin'
@@ -63,7 +60,6 @@ allprojects {
                 }
             }
         } catch (Exception ignored2) {
-            // eachDependency unsupported on this config; skip silently
         }
     }
 }
@@ -82,8 +78,8 @@ subprojects {
                 }
 
                 compileOptions {
-                    sourceCompatibility = JavaVersion.VERSION_17
-                    targetCompatibility = JavaVersion.VERSION_17
+                    sourceCompatibility = JavaVersion.VERSION_21
+                    targetCompatibility = JavaVersion.VERSION_21
 
                     coreLibraryDesugaringEnabled = true
                 }
@@ -104,7 +100,6 @@ subprojects {
             }
         }
 
-        // Disable parallel execution for KSP and D8 tasks to reduce memory pressure
         tasks.withType(com.google.devtools.ksp.gradle.KspTask).configureEach {
             it.enabled = true
         }

@@ -18,19 +18,9 @@
 #include <cmath>
 
 extern "C" {
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#pragma clang diagnostic ignored "-Wnull-arithmetic"
-#pragma clang diagnostic ignored "-Wundefined-internal"
-#pragma clang diagnostic ignored "-Wmissing-prototypes"
-#endif
 #include <libavformat/avformat.h>
 #include <libavutil/eval.h>
 #include <libswscale/swscale.h>
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif
 #include <libavutil/display.h>
 }
 
@@ -53,15 +43,11 @@ jmethodID jclass_AnimatedFileDrawableStream_isCanceled;
 jmethodID jclass_AnimatedFileDrawableStream_isFinishedLoadingFile;
 jmethodID jclass_AnimatedFileDrawableStream_getFinishedFilePath;
 
-<<<<<<< HEAD
-struct VideoInfo {
-=======
 struct OffsetIOContext;
 struct VideoInfo;
 static void freeOffsetIO(VideoInfo *info);
 
 typedef struct VideoInfo {
->>>>>>> 89911fcc0 (update to 12.9.2 (6991))
 
     ~VideoInfo() {
         delete reader;
@@ -213,37 +199,6 @@ int open_codec_context(int *stream_idx, AVCodecContext **dec_ctx, AVFormatContex
     return 0;
 }
 
-<<<<<<< HEAD
-int decode_packet(VideoInfo *info, int *got_frame) {
-    int ret = 0;
-    int decoded = info->pkt.size;
-    *got_frame = 0;
-
-    if (info->pkt.stream_index == info->video_stream_idx) {
-        while (decoded > 0) {
-            ret = avcodec_send_packet(info->video_dec_ctx, &info->pkt);
-            if (ret < 0 && ret != AVERROR(EAGAIN)) {
-                return ret;
-            }
-            if (ret >= 0) {
-                ret = avcodec_receive_frame(info->video_dec_ctx, info->frame);
-                if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
-                    return 0;
-                } else if (ret < 0) {
-                    return ret;
-                }
-                *got_frame = 1;
-                return info->pkt.size;
-            }
-            decoded = info->pkt.size;
-        }
-    }
-
-    return decoded;
-}
-
-=======
->>>>>>> 89911fcc0 (update to 12.9.2 (6991))
 void requestFd(VideoInfo *info) {
     JNIEnv *jniEnv = nullptr;
 
@@ -639,24 +594,12 @@ extern "C" JNIEXPORT jlong JNICALL Java_org_telegram_ui_Components_AnimatedFileN
         return 0;
     }
 
-<<<<<<< HEAD
-    info->frame = av_frame_alloc();
-    if (info->frame == nullptr) {
-        LOGE("can't allocate frame %s", info->src);
-        delete info;
-        return 0;
-    }
-
-    info->pkt.data = NULL;
-    info->pkt.size = 0;
-=======
     info->reader = new VideoFrameReader(info->fmt_ctx, info->video_dec_ctx, info->video_stream_idx);
     VideoInfo *self = info;
     info->reader->shouldAbort = [self]() {
         // Covers nStopDecoder (stopped), nPrepareToSeek (seeking) and stream cancel.
         return self->stopped || self->seeking || isStreamCanceled(self);
     };
->>>>>>> 89911fcc0 (update to 12.9.2 (6991))
 
     jint *dataArr = env->GetIntArrayElements(data, 0);
     if (dataArr != nullptr) {
@@ -697,7 +640,7 @@ extern "C" JNIEXPORT jlong JNICALL Java_org_telegram_ui_Components_AnimatedFileN
 }
 
 extern "C" JNIEXPORT void JNICALL Java_org_telegram_ui_Components_AnimatedFileNative_nDestroyDecoder(JNIEnv *env, jclass clazz, jlong ptr) {
-    if (ptr == 0) {
+    if (ptr == NULL) {
         return;
     }
     VideoInfo *info = (VideoInfo *) (intptr_t) ptr;
@@ -722,7 +665,7 @@ extern "C" JNIEXPORT void JNICALL Java_org_telegram_ui_Components_AnimatedFileNa
 }
 
 extern "C" JNIEXPORT void JNICALL Java_org_telegram_ui_Components_AnimatedFileNative_nStopDecoder(JNIEnv *env, jclass clazz, jlong ptr) {
-    if (ptr == 0) {
+    if (ptr == NULL) {
         return;
     }
     VideoInfo *info = (VideoInfo *) (intptr_t) ptr;
@@ -730,7 +673,7 @@ extern "C" JNIEXPORT void JNICALL Java_org_telegram_ui_Components_AnimatedFileNa
 }
 
 extern "C" JNIEXPORT void JNICALL Java_org_telegram_ui_Components_AnimatedFileNative_nPrepareToSeek(JNIEnv *env, jclass clazz, jlong ptr) {
-    if (ptr == 0) {
+    if (ptr == NULL) {
         return;
     }
     VideoInfo *info = (VideoInfo *) (intptr_t) ptr;
