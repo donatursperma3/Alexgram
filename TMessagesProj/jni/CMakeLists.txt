@@ -319,8 +319,12 @@ target_compile_definitions(sqlite PUBLIC
 include(${CMAKE_HOME_DIRECTORY}/voip/CMakeLists.txt)
 
 # cpu features
-include_directories(${ANDROID_NDK}/sources/android/cpufeatures)
-add_library(cpufeatures ${ANDROID_NDK}/sources/android/cpufeatures/cpu-features.c)
+if(EXISTS "${ANDROID_NDK}/sources/android/cpufeatures/cpu-features.c")
+    include_directories(${ANDROID_NDK}/sources/android/cpufeatures)
+    add_library(cpufeatures ${ANDROID_NDK}/sources/android/cpufeatures/cpu-features.c)
+else()
+    add_library(cpufeatures INTERFACE)
+endif()
 
 set(NATIVE_LIB "tmessages.49")
 
