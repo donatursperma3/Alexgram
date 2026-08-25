@@ -121,6 +121,7 @@ android {
     }
 
     defaultConfig {
+        manifestPlaceholders = [appName: '@string/AppName']
         ndk {
             if (abiList.contains('armeabi-v7a')) {
                 abiFilters 'armeabi-v7a'
