@@ -2,14 +2,15 @@ import java.nio.file.Paths
 import org.gradle.internal.os.OperatingSystem
 
 plugins {
-    id 'com.android.application'
     id 'com.google.gms.google-services'
     id 'com.google.firebase.crashlytics'
     id 'com.google.dagger.hilt.android'
     id 'com.google.devtools.ksp'
     id 'org.jetbrains.kotlin.plugin.compose'
-    id 'com.chaquo.python'
 }
+
+apply plugin: 'com.android.application'
+apply plugin: 'com.chaquo.python'
 
 def buildTimestamp = System.getenv('BUILD_TIMESTAMP') ?: '0'
 def commitId = System.getenv('COMMIT_ID')
