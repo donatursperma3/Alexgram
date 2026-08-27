@@ -329,11 +329,11 @@ configurations.configureEach { config ->
 
 dependencies {
     // Pin Kotlin stdlib explicitly to the version matching the compiler plugin
-    // so transitive pulls (e.g. Compose BOM 2025.02) cannot upgrade it past 2.1.10.
+    // so transitive pulls (e.g. Compose BOM 2025.02) cannot upgrade it past 2.2.10.
     // Note: Forcing is done via resolutionStrategy.force(...) in root build.gradle
     // (and constraints below) because Gradle 8.x deprecated force=true property setter
     // on individual dependency closures.
-    def kotlinVer = rootProject.ext.has('kotlinVersion') ? rootProject.ext.kotlinVersion : '2.1.10'
+    def kotlinVer = rootProject.ext.has('kotlinVersion') ? rootProject.ext.kotlinVersion : '2.2.10'
     implementation "org.jetbrains.kotlin:kotlin-stdlib:${kotlinVer}"
     constraints {
         implementation("org.jetbrains.kotlin:kotlin-stdlib:${kotlinVer}") {
