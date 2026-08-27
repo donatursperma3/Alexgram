@@ -19,10 +19,10 @@ plugins {
 }
 
 // Lock Kotlin standard library versions across all subprojects to match
-// the Kotlin compiler plugin (2.1.10). Prevents newer transitive stdlib
+// the Kotlin compiler plugin (2.2.10). Prevents newer transitive stdlib
 // (e.g. 2.3.0 pulled by Compose BOM) from causing "incompatible metadata"
 // errors during ksp/kotlin compilation.
-def kotlinVersion = '2.1.10'
+def kotlinVersion = '2.2.10'
 ext {
     kotlinVersion = kotlinVersion
 }

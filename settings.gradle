@@ -5,11 +5,11 @@ pluginManagement {
         gradlePluginPortal()
     }
     plugins {
-        id 'com.google.devtools.ksp' version '2.1.10-1.0.31'
+        id 'com.google.devtools.ksp' version '2.2.10-2.0.2'
         id 'com.google.gms.google-services' version '4.4.4'
         id 'com.google.firebase.crashlytics' version '3.0.6'
         id 'com.google.dagger.hilt.android' version '2.59.2'
-        id 'org.jetbrains.kotlin.plugin.compose' version '2.1.10'
+        id 'org.jetbrains.kotlin.plugin.compose' version '2.2.10'
     }
 }
 plugins {
@@ -17,9 +17,9 @@ plugins {
 }
 
 // ---------------------------------------------------------------------------
-// GLOBALLY PIN KOTLIN STDLIB + KOTLIN COMPILER ARTIFACTS TO 2.1.10
+// GLOBALLY PIN KOTLIN STDLIB + KOTLIN COMPILER ARTIFACTS TO 2.2.10
 // ---------------------------------------------------------------------------
-// The Kotlin compiler plugin version used by this project is 2.1.10 (see the
+// The Kotlin compiler plugin version used by this project is 2.2.10 (see the
 // plugins block in root build.gradle). Any transitive upgrade of
 // org.jetbrains.kotlin:* artifacts to a newer version (e.g. 2.3.0, pulled in
 // by Compose BOM / androidx.core-ktx) will produce the error:
@@ -35,7 +35,7 @@ plugins {
 // configuration in the build — including plugin classpaths, compiler
 // classpaths, and KSP worker configurations.
 // ---------------------------------------------------------------------------
-def kotlinLockedVersion = '2.1.10'
+def kotlinLockedVersion = '2.2.10'
 def kotlinForcedArtifacts = [
     "org.jetbrains.kotlin:kotlin-stdlib:${kotlinLockedVersion}",
     "org.jetbrains.kotlin:kotlin-stdlib-common:${kotlinLockedVersion}",

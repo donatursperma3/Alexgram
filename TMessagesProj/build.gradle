@@ -309,7 +309,7 @@ configurations.configureEach { config ->
     // Second layer of defense: align any Kotlin lib to the compiler version
     // in case the allprojects resolutionStrategy in root build.gradle
     // does not fire early enough for configuration-cache workers.
-    def kotlinVer = rootProject.ext.has('kotlinVersion') ? rootProject.ext.kotlinVersion : '2.1.10'
+    def kotlinVer = rootProject.ext.has('kotlinVersion') ? rootProject.ext.kotlinVersion : '2.2.10'
     try {
         config.resolutionStrategy.eachDependency { details ->
             if (details.requested.group == 'org.jetbrains.kotlin'
@@ -337,7 +337,7 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib:${kotlinVer}"
     constraints {
         implementation("org.jetbrains.kotlin:kotlin-stdlib:${kotlinVer}") {
-            because("Prevent transitive upgrade to Kotlin stdlib 2.3.0 which is incompatible with Kotlin compiler 2.1.10")
+            because("Prevent transitive upgrade to Kotlin stdlib 2.3.0 which is incompatible with Kotlin compiler 2.2.10")
         }
         implementation("org.jetbrains.kotlin:kotlin-stdlib-common:${kotlinVer}") {
             because("Same as kotlin-stdlib - lock to compiler version")
