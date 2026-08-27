@@ -328,6 +328,14 @@ target_sources(${NATIVE_LIB} PRIVATE
         third_party/libyuv/source/scale_rgb.cc)
 
 target_include_directories(${NATIVE_LIB} PUBLIC
+        third_party/xiph/ogg/include
+        third_party/xiph/opus/include
+        third_party/xiph/opus/silk
+        third_party/xiph/opus/silk/fixed
+        third_party/xiph/opus/celt
+        third_party/xiph/opus
+        third_party/xiph/opusfile/include
+        third_party/xiph/opusfile
         opus/include
         opus/silk
         opus/silk/fixed
