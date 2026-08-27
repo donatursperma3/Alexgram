@@ -75,7 +75,7 @@ jobs:
       - name: Set up Android SDK Tools
         uses: android-actions/setup-android@v3
         with:
-          packages: "build-tools;36.0.0 ndk;26.2.11394342 platforms;android-36 cmake;3.22.1"
+          packages: "build-tools;36.0.0 ndk;27.2.12479018 platforms;android-36 cmake;3.22.1"
       - name: Configure Android SDK Path
         run: |
           echo "sdk.dir=${ANDROID_HOME}" >> local.properties
