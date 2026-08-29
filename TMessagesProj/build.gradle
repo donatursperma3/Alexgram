@@ -227,7 +227,9 @@ android {
             debuggable = true
             jniDebuggable = true
             multiDexEnabled = true
-            signingConfig = signingConfigs.release
+            if (properties?.getProperty('KEYSTORE_PASS') != null && (System.getenv('DEBUG_BUILD') ?: 'false') != 'true') {
+                signingConfig = signingConfigs.release
+            }
         }
 
         staging {

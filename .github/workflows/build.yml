@@ -104,6 +104,8 @@ jobs:
           elif [ "${GIT_REF_NAME}" = "dev" ]; then
             ./gradlew TMessagesProj:assembleStaging --stacktrace
           else
+            export DEBUG_BUILD=true
+            sed -i 's/signingConfig = signingConfigs.release//g' TMessagesProj/build.gradle || true
             ./gradlew TMessagesProj:assembleDebug --stacktrace
           fi
 
