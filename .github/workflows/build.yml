@@ -26,6 +26,7 @@ jobs:
       TELEGRAM_APP_ID: ${{ secrets.APP_ID }}
       TELEGRAM_APP_HASH: ${{ secrets.APP_HASH }}
       ANDROID_SDK_ROOT: /opt/android-sdk
+      NATIVE_TARGET: "arm64-v8a"
 
     steps:
       - name: Checkout Code
@@ -33,12 +34,14 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Set up JDK 17
+      - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
-          cache: gradle # Mempercepat build dengan cache
+          java-version: '21'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
 
       # 3. Berikan izin eksekusi pada gradlew
       - name: Grant execute permission for gradlew
@@ -89,7 +92,7 @@ jobs:
       # - lainnya -> assembleDebug
       - name: Clean build artifacts
         run: |
-          ./gradlew clean --quiet
+          ./gradlew clean
 
       - name: Build APK (select task by branch)
         env:
@@ -97,11 +100,11 @@ jobs:
         run: |
           export ENABLE_ABI_SPLITS="${ENABLE_ABI_SPLITS:-false}"
           if [ "${GIT_REF_NAME}" = "main" ]; then
-            ./gradlew TMessagesProj:assembleRelease --quiet
+            ./gradlew TMessagesProj:assembleRelease --stacktrace
           elif [ "${GIT_REF_NAME}" = "dev" ]; then
-            ./gradlew TMessagesProj:assembleStaging --quiet
+            ./gradlew TMessagesProj:assembleStaging --stacktrace
           else
-            ./gradlew TMessagesProj:assembleDebug --quiet
+            ./gradlew TMessagesProj:assembleDebug --stacktrace
           fi
 
       - name: Prepare artifact name
