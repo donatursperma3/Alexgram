@@ -349,6 +349,7 @@ target_include_directories(${NATIVE_LIB} PUBLIC
         exoplayer/include
         exoplayer/libFLAC/include
         intro
+        tlottie_lib/include
         tlottie/include
         tlottie
         tgcalls/
